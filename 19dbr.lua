@@ -9,33 +9,39 @@ local function aggressiveBlinkHack()
     local blink = character:FindFirstChild("Blink")
     if not blink then return end
 
-    -- Изменяем атрибуты дальности
+    -- Только параметры дальности
     local attributesToSet = {
         "ChargedDistance", "Distance_Max", "MaxDistance",
         "BlinkDistance", "Range", "MaxRange",
-        "Distance", "Limit", "MaxLimit",
-        "Power", "Strength"
+        "Distance"
     }
 
     for _, attrName in ipairs(attributesToSet) do
         pcall(function()
-            local currentValue = blink:GetAttribute(attrName)
-            if currentValue and tonumber(currentValue) < MAX_DISTANCE then
+            local val = blink:GetAttribute(attrName)
+            if val and tonumber(val) and val < MAX_DISTANCE then
                 blink:SetAttribute(attrName, MAX_DISTANCE)
             end
         end)
     end
 
-    -- Изменяем дочерние объекты Blink
+    -- Меняем только безопасные дочерние значения
     for _, child in ipairs(blink:GetChildren()) do
         if (child:IsA("NumberValue") or child:IsA("IntValue")) and child.Value < MAX_DISTANCE then
-            pcall(function()
-                child.Value = MAX_DISTANCE
-            end)
+            local n = child.Name:lower()
+            if not (n:find("blink") or n:find("charge") or n:find("power") or n:find("count")) then
+                pcall(function()
+                    child.Value = MAX_DISTANCE
+                end)
+            end
         end
 
+        -- Также фильтруем атрибуты дочерних объектов
         for attrName, attrValue in pairs(child:GetAttributes()) do
-            if tonumber(attrValue) and tonumber(attrValue) < MAX_DISTANCE then
+            local nameLower = attrName:lower()
+            if tonumber(attrValue) and tonumber(attrValue) < MAX_DISTANCE and not (
+                nameLower:find("blink") or nameLower:find("charge") or nameLower:find("power") or nameLower:find("count")
+            ) then
                 pcall(function()
                     child:SetAttribute(attrName, MAX_DISTANCE)
                 end)
@@ -43,19 +49,22 @@ local function aggressiveBlinkHack()
         end
     end
 
-    -- Изменяем PowerValues
+    -- PowerValues: фильтруем только на "дальность"
     local powerValues = blink:FindFirstChild("PowerValues")
     if powerValues then
         for _, child in ipairs(powerValues:GetChildren()) do
             if (child:IsA("NumberValue") or child:IsA("IntValue")) and child.Value < MAX_DISTANCE then
-                pcall(function()
-                    child.Value = MAX_DISTANCE
-                end)
+                local n = child.Name:lower()
+                if not (n:find("blink") or n:find("charge") or n:find("power") or n:find("count")) then
+                    pcall(function()
+                        child.Value = MAX_DISTANCE
+                    end)
+                end
             end
         end
     end
 
-    -- Изменяем модуль Blink, если есть
+    -- Модификация модуля Blink: безопасно только для Distance
     local blinkModule = blink:FindFirstChild("Blink")
     if blinkModule and blinkModule:IsA("ModuleScript") then
         pcall(function()
@@ -70,7 +79,6 @@ end
 
 RunService.Heartbeat:Connect(aggressiveBlinkHack)
 
--- Автоперехват изменений при респавне
 local function hookBlinkEvents()
     local character = player.Character
     if not character then return end
@@ -80,8 +88,8 @@ local function hookBlinkEvents()
 
     blink.AttributeChanged:Connect(function(attributeName)
         if attributeName == "ChargedDistance" or attributeName == "Distance_Max" then
-            local value = blink:GetAttribute(attributeName)
-            if value and tonumber(value) < MAX_DISTANCE then
+            local val = blink:GetAttribute(attributeName)
+            if val and tonumber(val) and val < MAX_DISTANCE then
                 task.wait()
                 blink:SetAttribute(attributeName, MAX_DISTANCE)
             end
@@ -98,4 +106,4 @@ player.CharacterAdded:Connect(function()
     hookBlinkEvents()
 end)
 
-print("🚀 Усиленный Blink Hack активен. Дальность:", MAX_DISTANCE)
+print("🚀 Blink дальность увеличена, без затрагивания количества зарядов")
