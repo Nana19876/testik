@@ -1,3 +1,4 @@
+-- Усиленный скрипт для изменения дальности Blink
 local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local MAX_DISTANCE = 200
@@ -119,4 +120,4 @@ player.CharacterAdded:Connect(function()
 end)
 
 print("Агрессивный хак запущен! Дистанция:", MAX_DISTANCE)
-print("Если не работает - игра использует серверную валидацию")*
+print("Если не работает - игра использует серверную валидацию")
