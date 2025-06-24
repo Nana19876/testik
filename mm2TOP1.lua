@@ -1,355 +1,222 @@
--- skeet-menu-with-proper-color-picker.lua
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- Services
-local UserInputService = game:GetService("UserInputService")
-
--- Settings
-local BoxESPSettings = {
-    useBoxESP = true,
-    boxColor = Color3.new(1, 1, 1),
-    useCustomColor = false,
-    customColor = Color3.new(1, 0, 0)
-}
-
--- Helper Functions
-local function HSVtoRGB(h, s, v)
-    local r, g, b
-
-    local i = math.floor(h * 6)
-    local f = h * 6 - i
-    local p = v * (1 - s)
-    local q = v * (1 - f * s)
-    local t = v * (1 - (1 - f) * s)
-
-    i = i % 6
-
-    if i == 0 then
-        r, g, b = v, t, p
-    elseif i == 1 then
-        r, g, b = q, v, p
-    elseif i == 2 then
-        r, g, b = p, v, t
-    elseif i == 3 then
-        r, g, b = p, q, v
-    elseif i == 4 then
-        r, g, b = t, p, v
-    elseif i == 5 then
-        r, g, b = v, p, q
-    end
-
-    return Color3.new(r, g, b)
+-- Удаляем старое меню
+if playerGui:FindFirstChild("MyCustomGui") then
+    playerGui.MyCustomGui:Destroy()
 end
 
--- UI Creation
+-- ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SkeetMenu"
+screenGui.Name = "MyCustomGui"
+screenGui.Parent = playerGui
 screenGui.ResetOnSpawn = false
-screenGui.Parent = game.CoreGui
 
+-- Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-mainFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-mainFrame.BorderSizePixel = 0
+mainFrame.Name = "MainFrame"
 mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 700, 0, 320)
+mainFrame.Position = UDim2.new(0, 40, 0, 40)
+mainFrame.BackgroundColor3 = Color3.fromRGB(28, 25, 29)
+mainFrame.BorderSizePixel = 0
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3 = Color3.new(1, 1, 1)
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextSize = 20
-titleLabel.Text = "Skeet Menu"
-titleLabel.Parent = mainFrame
+-- Sidebar
+local sidebar = Instance.new("Frame")
+sidebar.Name = "Sidebar"
+sidebar.Parent = mainFrame
+sidebar.Size = UDim2.new(0, 120, 1, 0)
+sidebar.Position = UDim2.new(0, 0, 0, 0)
+sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+sidebar.BorderSizePixel = 0
 
-local boxESPButton = Instance.new("TextButton")
-boxESPButton.Size = UDim2.new(1, 0, 0, 30)
-boxESPButton.Position = UDim2.new(0, 0, 0, 40)
-boxESPButton.Text = "Toggle Box ESP"
-boxESPButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-boxESPButton.TextColor3 = Color3.new(1, 1, 1)
-boxESPButton.Parent = mainFrame
+-- Кнопки и их имена
+local buttonNames = {"ESP", "AIMBOT", "AVTOFARM", "MISC", "PROTECTION"}
+local buttonRefs = {}
 
-boxESPButton.MouseButton1Click:Connect(function()
-    BoxESPSettings.useBoxESP = not BoxESPSettings.useBoxESP
-    print("Box ESP:", BoxESPSettings.useBoxESP)
-end)
+for i, name in ipairs(buttonNames) do
+    local btn = Instance.new("TextButton")
+    btn.Name = "Button" .. name
+    btn.Text = name
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, 20 + (i-1)*50)
+    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    btn.TextColor3 = Color3.fromRGB(220, 220, 240)
+    btn.TextSize = 18
+    btn.BorderSizePixel = 0
+    btn.Font = Enum.Font.SourceSans
+    btn.Parent = sidebar
+    buttonRefs[i] = btn
+end
 
-local colorPickerButton = Instance.new("TextButton")
-colorPickerButton.Size = UDim2.new(1, 0, 0, 30)
-colorPickerButton.Position = UDim2.new(0, 0, 0, 80)
-colorPickerButton.Text = "Open Color Picker"
-colorPickerButton.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-colorPickerButton.TextColor3 = Color3.new(1, 1, 1)
-colorPickerButton.Parent = mainFrame
+-- Текстовое поле для информации
+local textLabel = Instance.new("TextLabel")
+textLabel.Name = "InfoLabel"
+textLabel.Size = UDim2.new(1, -150, 0, 40)
+textLabel.Position = UDim2.new(0, 130, 0, 5)
+textLabel.BackgroundTransparency = 1
+textLabel.TextColor3 = Color3.fromRGB(180, 180, 255)
+textLabel.TextSize = 22
+textLabel.Font = Enum.Font.SourceSansSemibold
+textLabel.TextXAlignment = Enum.TextXAlignment.Left
+textLabel.Text = "esp player"
+textLabel.Parent = mainFrame
 
-local colorPickerFrame
+-- Функция создания чекбокса "Box"
+local function createBoxOption()
+    local line = Instance.new("Frame")
+    line.Name = "BoxOption"
+    line.Parent = mainFrame
+    line.Size = UDim2.new(0, 300, 0, 30)
+    line.Position = UDim2.new(0, 130, 0, 60)
+    line.BackgroundTransparency = 1
 
-local function createColorPicker()
-    if colorPickerFrame then return end
+    local checkbox = Instance.new("TextButton")
+    checkbox.Name = "BoxCheckbox"
+    checkbox.Parent = line
+    checkbox.Size = UDim2.new(0, 18, 0, 18)
+    checkbox.Position = UDim2.new(0, 2, 0, 6)
+    checkbox.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    checkbox.BorderSizePixel = 1
+    checkbox.Text = ""
+    checkbox.AutoButtonColor = false
 
-    colorPickerFrame = Instance.new("Frame")
-    colorPickerFrame.Name = "ColorPickerFrame"
-    colorPickerFrame.Size = UDim2.new(0, 250, 0, 250)
-    colorPickerFrame.Position = UDim2.new(0.5, -125, 0.5, -125)
-    colorPickerFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
-    colorPickerFrame.BorderSizePixel = 0
-    colorPickerFrame.ZIndex = 30
-    colorPickerFrame.Parent = screenGui
+    local check = Instance.new("Frame")
+    check.Name = "Check"
+    check.Parent = checkbox
+    check.Size = UDim2.new(1, -6, 1, -6)
+    check.Position = UDim2.new(0, 3, 0, 3)
+    check.BackgroundColor3 = Color3.fromRGB(80, 200, 255)
+    check.Visible = false
 
-    local closeButton = Instance.new("TextButton")
-    closeButton.Size = UDim2.new(0, 20, 0, 20)
-    closeButton.Position = UDim2.new(1, -20, 0, 0)
-    closeButton.Text = "X"
-    closeButton.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-    closeButton.TextColor3 = Color3.new(1, 1, 1)
-    closeButton.Parent = colorPickerFrame
+    local label = Instance.new("TextLabel")
+    label.Name = "BoxLabel"
+    label.Parent = line
+    label.Position = UDim2.new(0, 28, 0, 2)
+    label.Size = UDim2.new(0, 80, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = "Box"
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.Font = Enum.Font.SourceSansSemibold
+    label.TextSize = 18
+    label.TextXAlignment = Enum.TextXAlignment.Left
 
-    closeButton.MouseButton1Click:Connect(function()
-        colorPickerFrame:Destroy()
-        colorPickerFrame = nil
+    local colorBar = Instance.new("TextButton")
+    colorBar.Name = "ColorBar"
+    colorBar.Parent = line
+    colorBar.AnchorPoint = Vector2.new(1, 0)
+    colorBar.Position = UDim2.new(1, -6, 0.23, 0)
+    colorBar.Size = UDim2.new(0, 28, 0, 12)
+    colorBar.BackgroundColor3 = Color3.fromRGB(92, 135, 200)
+    colorBar.BorderSizePixel = 0
+    colorBar.BackgroundTransparency = 0.15
+    colorBar.ZIndex = 2
+    colorBar.Text = ""
+
+    -- Логика чекбокса
+    local toggled = false
+    checkbox.MouseButton1Click:Connect(function()
+        toggled = not toggled
+        check.Visible = toggled
+        print("Box toggled:", toggled)
     end)
 
-    local colorPreview = Instance.new("Frame")
-    colorPreview.Name = "ColorPreview"
-    colorPreview.Size = UDim2.new(0, 50, 0, 50)
-    colorPreview.Position = UDim2.new(0, 10, 0, 10)
-    colorPreview.BackgroundColor3 = BoxESPSettings.customColor
-    colorPreview.BorderSizePixel = 0
-    colorPreview.Parent = colorPickerFrame
+    -- Цвет
+    local lastColor = Color3.fromRGB(92, 135, 200)
+    local userInput = game:GetService("UserInputService")
 
-    local rgbValue = Instance.new("TextLabel")
-    rgbValue.Name = "RGBValue"
-    rgbValue.Size = UDim2.new(1, 0, 0, 20)
-    rgbValue.Position = UDim2.new(0, 0, 0, 70)
-    rgbValue.BackgroundTransparency = 1
-    rgbValue.TextColor3 = Color3.new(1, 1, 1)
-    rgbValue.Font = Enum.Font.SourceSans
-    rgbValue.TextSize = 14
-    rgbValue.Text = string.format("%d, %d, %d", 
-        BoxESPSettings.customColor.R * 255, 
-        BoxESPSettings.customColor.G * 255, 
-        BoxESPSettings.customColor.B * 255)
-    rgbValue.Parent = colorPickerFrame
-
-    local hueBar = Instance.new("Frame")
-    hueBar.Name = "HueBar"
-    hueBar.Size = UDim2.new(0, 20, 0, 150)
-    hueBar.Position = UDim2.new(0, 70, 0, 10)
-    hueBar.BackgroundColor3 = Color3.new(1, 0, 0)
-    hueBar.BorderSizePixel = 0
-    hueBar.Parent = colorPickerFrame
-
-    -- Create gradient for hue bar
-    for i = 0, 30 do
-        local stripe = Instance.new("Frame")
-        stripe.Size = UDim2.new(1, 0, 0, 5)
-        stripe.Position = UDim2.new(0, 0, 0, i * 5)
-        stripe.BackgroundColor3 = HSVtoRGB(i / 30, 1, 1)
-        stripe.BorderSizePixel = 0
-        stripe.Parent = hueBar
-    end
-
-    local colorArea = Instance.new("Frame")
-    colorArea.Name = "ColorArea"
-    colorArea.Size = UDim2.new(0, 150, 0, 150)
-    colorArea.Position = UDim2.new(0, 100, 0, 10)
-    colorArea.BackgroundColor3 = Color3.new(1, 1, 1)
-    colorArea.BorderSizePixel = 0
-    colorArea.Parent = colorPickerFrame
-
-    local colorIndicator = Instance.new("Frame")
-    colorIndicator.Name = "ColorIndicator"
-    colorIndicator.Size = UDim2.new(0, 8, 0, 8)
-    colorIndicator.Position = UDim2.new(0, 0, 0, 0)
-    colorIndicator.BackgroundColor3 = Color3.new(0, 0, 0)
-    colorIndicator.BorderSizePixel = 1
-    colorIndicator.BorderColor3 = Color3.new(1, 1, 1)
-    colorIndicator.ZIndex = 30
-    colorIndicator.Parent = colorArea
-
-    local hueIndicator = Instance.new("Frame")
-    hueIndicator.Name = "HueIndicator"
-    hueIndicator.Size = UDim2.new(0, 4, 0, 4)
-    hueIndicator.Position = UDim2.new(0, -2, 0, 0)
-    hueIndicator.BackgroundColor3 = Color3.new(0, 0, 0)
-    hueIndicator.BorderSizePixel = 1
-    hueIndicator.BorderColor3 = Color3.new(1, 1, 1)
-    hueIndicator.ZIndex = 30
-    hueIndicator.Parent = hueBar
-
-    local currentHue = 0
-    local currentSaturation = 0
-    local currentValue = 1
-
-    -- Функция обновления цвета (исправленная версия)
-    local function updateColor(h, s, v)
-        currentHue = h
-        currentSaturation = s
-        currentValue = v
-        
-        local newColor = HSVtoRGB(h, s, v)
-        BoxESPSettings.customColor = newColor
-        BoxESPSettings.useCustomColor = true
-        
-        colorPickerFrame.BackgroundColor3 = newColor
-        colorPreview.BackgroundColor3 = newColor
-        rgbValue.Text = string.format("%d, %d, %d", 
-            math.floor(newColor.R * 255), 
-            math.floor(newColor.G * 255), 
-            math.floor(newColor.B * 255))
-        
-        -- Правильное позиционирование индикатора в пикселях
-        local areaSize = colorArea.AbsoluteSize
-        local indicatorX = s * areaSize.X - 4  -- s от 0 до 1, центрируем индикатор
-        local indicatorY = (1-v) * areaSize.Y - 4  -- v от 1 до 0 (инвертируем), центрируем индикатор
-        
-        colorIndicator.Position = UDim2.new(0, indicatorX, 0, indicatorY)
-        
-        -- Обновляем позицию индикатора на полосе оттенков
-        hueIndicator.Position = UDim2.new(0, -2, h, -2)
-        
-        -- Обновляем цвет основной области
-        local hueColor = HSVtoRGB(h, 1, 1)
-        colorArea.BackgroundColor3 = hueColor
-        
-        print("Цвет обновлен:", newColor, "HSV:", h, s, v)
-    end
-
-    -- Обработка кликов по полосе оттенков
-    local hueBarButton = Instance.new("TextButton")
-    hueBarButton.Size = UDim2.new(1, 0, 1, 0)
-    hueBarButton.Text = ""
-    hueBarButton.BackgroundTransparency = 1
-    hueBarButton.ZIndex = 29
-    hueBarButton.Parent = hueBar
-
-    hueBarButton.MouseButton1Click:Connect(function()
-        local mouse = UserInputService:GetMouseLocation()
-        local barPos = hueBar.AbsolutePosition
-        local barSize = hueBar.AbsoluteSize
-
-        local relativeY = math.clamp((mouse.Y - barPos.Y) / barSize.Y, 0, 1)
-        local hue = relativeY
-
-        -- Точное позиционирование индикатора
-        local indicatorY = relativeY * barSize.Y - 1.5
-        hueIndicator.Position = UDim2.new(0, -2, 0, indicatorY)
-
-        updateColor(hue, currentSaturation, currentValue)
-    end)
-
-    -- Обработка цветовой области с точным выравниванием курсора (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-    local colorAreaButton = Instance.new("TextButton")
-    colorAreaButton.Size = UDim2.new(1, 0, 1, 0)
-    colorAreaButton.Text = ""
-    colorAreaButton.BackgroundTransparency = 1
-    colorAreaButton.ZIndex = 29
-    colorAreaButton.Parent = colorArea
-
-    local colorAreaDragging = false
-
-    local function updateColorFromMouse()
-        local mouse = UserInputService:GetMouseLocation()
-        
-        -- Получаем точные границы цветовой области
-        local areaPos = colorArea.AbsolutePosition
-        local areaSize = colorArea.AbsoluteSize
-        
-        -- Вычисляем относительные координаты ТОЧНО в пределах области
-        local relativeX = math.clamp((mouse.X - areaPos.X) / areaSize.X, 0, 1)
-        local relativeY = math.clamp((mouse.Y - areaPos.Y) / areaSize.Y, 0, 1)
-        
-        -- Вычисляем точную позицию индикатора (центрируем его на курсоре)
-        local indicatorX = relativeX * areaSize.X - 4  -- -4 это половина размера индикатора (8/2)
-        local indicatorY = relativeY * areaSize.Y - 4  -- -4 это половина размера индикатора (8/2)
-        
-        -- Устанавливаем позицию индикатора в пикселях
-        colorIndicator.Position = UDim2.new(0, indicatorX, 0, indicatorY)
-        
-        local saturation = relativeX  -- 0 = слева (белый), 1 = справа (насыщенный)
-        local value = 1 - relativeY   -- 0 = снизу (черный), 1 = сверху (яркий)
-        
-        -- Обновляем цвет
-        currentSaturation = saturation
-        currentValue = value
-        
-        local newColor = HSVtoRGB(currentHue, saturation, value)
-        BoxESPSettings.customColor = newColor
-        BoxESPSettings.useCustomColor = true
-        
-        colorPickerFrame.BackgroundColor3 = newColor
-        colorPreview.BackgroundColor3 = newColor
-        rgbValue.Text = string.format("%d, %d, %d", 
-            math.floor(newColor.R * 255), 
-            math.floor(newColor.G * 255), 
-            math.floor(newColor.B * 255))
-        
-        -- Обновляем цвет основной области
-        local hueColor = HSVtoRGB(currentHue, 1, 1)
-        colorArea.BackgroundColor3 = hueColor
-        
-        print("Цвет обновлен:", newColor, "Позиция индикатора:", indicatorX, indicatorY)
-    end
-
-    colorAreaButton.MouseButton1Down:Connect(function()
-        colorAreaDragging = true
-        updateColorFromMouse()
-    end)
-
-    colorAreaButton.MouseButton1Click:Connect(function()
-        updateColorFromMouse()
-    end)
-
-    -- Глобальная обработка перетаскивания
-    UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            if colorAreaDragging then
-                updateColorFromMouse()
-            end
+    local picker = nil
+    local function openColorPicker()
+        if picker and picker.Parent then
+            picker:Destroy()
         end
-    end)
+        picker = Instance.new("Frame")
+        picker.Size = UDim2.new(0, 200, 0, 200)
+        picker.Position = UDim2.new(0, colorBar.AbsolutePosition.X, 0, colorBar.AbsolutePosition.Y + 20)
+        picker.BackgroundColor3 = Color3.fromRGB(40,40,40)
+        picker.BorderSizePixel = 0
+        picker.Parent = screenGui
 
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            colorAreaDragging = false
+        -- Простая RGB палитра (3 ползунка)
+        local values = {"R","G","B"}
+        local current = {lastColor.R*255,lastColor.G*255,lastColor.B*255}
+        local sliders = {}
+        for i,v in ipairs(values) do
+            local s = Instance.new("TextLabel")
+            s.Size = UDim2.new(0,30,0,24)
+            s.Position = UDim2.new(0,10,0,(i-1)*60+12)
+            s.Text = v
+            s.TextColor3 = Color3.fromRGB(220,220,220)
+            s.BackgroundTransparency = 1
+            s.Parent = picker
+
+            local slider = Instance.new("TextButton")
+            slider.Size = UDim2.new(0,130,0,22)
+            slider.Position = UDim2.new(0,50,0,(i-1)*60+14)
+            slider.BackgroundColor3 = Color3.fromRGB(50,50,50)
+            slider.Text = tostring(math.floor(current[i]))
+            slider.TextColor3 = Color3.fromRGB(220,220,255)
+            slider.Font = Enum.Font.SourceSans
+            slider.TextSize = 16
+            slider.BorderSizePixel = 0
+            slider.Parent = picker
+
+            slider.MouseButton1Click:Connect(function()
+                local val = tonumber(game:GetService("StarterGui"):PromptInput("Input "..v.." (0-255)",tostring(math.floor(current[i]))))
+                if val and val >= 0 and val <= 255 then
+                    current[i] = val
+                    slider.Text = tostring(val)
+                    local col = Color3.fromRGB(current[1],current[2],current[3])
+                    colorBar.BackgroundColor3 = col
+                    lastColor = col
+                end
+            end)
+            sliders[i] = slider
+        end
+
+        local closeBtn = Instance.new("TextButton")
+        closeBtn.Size = UDim2.new(0,70,0,30)
+        closeBtn.Position = UDim2.new(0,115,0,160)
+        closeBtn.Text = "Close"
+        closeBtn.Parent = picker
+        closeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+        closeBtn.TextColor3 = Color3.fromRGB(220,220,255)
+        closeBtn.Font = Enum.Font.SourceSans
+        closeBtn.TextSize = 18
+        closeBtn.MouseButton1Click:Connect(function()
+            picker:Destroy()
+        end)
+    end
+
+    colorBar.MouseButton1Click:Connect(openColorPicker)
+
+    line.Visible = false -- по умолчанию скрыт
+    return line
+end
+
+-- Создаём один раз
+local boxOption = createBoxOption()
+
+-- Кнопки переключения вкладок
+local labelTexts = {
+    "esp player",
+    "aimbot info here",
+    "avtofarm info here",
+    "misc info here",
+    "protection info here"
+}
+for i, btn in ipairs(buttonRefs) do
+    btn.MouseButton1Click:Connect(function()
+        textLabel.Text = labelTexts[i]
+        -- Только на вкладке ESP показываем чекбокс
+        if i == 1 then
+            boxOption.Visible = true
+        else
+            boxOption.Visible = false
         end
     end)
 end
 
-colorPickerButton.MouseButton1Click:Connect(createColorPicker)
-
--- Game Loop (Example)
-game:GetService("RunService").RenderStepped:Connect(function()
-    for i, v in pairs(game.Workspace:GetDescendants()) do
-        if v:IsA("Humanoid") and v.Parent:IsA("Model") and v.Parent ~= game.Players.LocalPlayer.Character then
-            local character = v.Parent
-            local head = character:FindFirstChild("Head")
-            if head then
-                local boxESP = character:FindFirstChild("BoxESP")
-                if BoxESPSettings.useBoxESP then
-                    if not boxESP then
-                        boxESP = Instance.new("BillboardGui")
-                        boxESP.Name = "BoxESP"
-                        boxESP.ExtentsOffset = Vector3.new(0, 1.5, 0)
-                        boxESP.Size = UDim2.new(0, 50, 0, 50)
-                        boxESP.AlwaysOnTop = true
-                        boxESP.Parent = character
-
-                        local frame = Instance.new("Frame")
-                        frame.Size = UDim2.new(1, 0, 1, 0)
-                        frame.BackgroundTransparency = 0
-                        frame.BackgroundColor3 = BoxESPSettings.useCustomColor and BoxESPSettings.customColor or BoxESPSettings.boxColor
-                        frame.Parent = boxESP
-                    else
-                        boxESP.Frame.BackgroundColor3 = BoxESPSettings.useCustomColor and BoxESPSettings.customColor or BoxESPSettings.boxColor
-                    end
-                else
-                    if boxESP then
-                        boxESP:Destroy()
-                    end
-                end
-            end
-        end
-    end
-end)
+-- При запуске сразу показываем ESP и чекбокс
+textLabel.Text = labelTexts[1]
+boxOption.Visible = true
