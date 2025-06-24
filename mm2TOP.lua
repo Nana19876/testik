@@ -52,7 +52,9 @@ local ESPConnections = {}
 local BoxESPSettings = {
     showAll = true,
     showMurderer = false,
-    showSheriff = false
+    showSheriff = false,
+    customColor = Color3.fromRGB(255, 255, 255), -- Пользовательский цвет
+    useCustomColor = false -- Использовать ли пользовательский цвет
 }
 
 -- Безопасное удаление объектов
@@ -103,21 +105,16 @@ end
 function UpdateBoxESP()
     if not ESPStates.box then return end
     
-    -- Отладочная информация (можно убрать потом)
-    if tick() % 5 < 0.1 then -- Выводим каждые 5 секунд
-        print("ESP Settings:", "All=" .. tostring(BoxESPSettings.showAll), 
-              "Murderer=" .. tostring(BoxESPSettings.showMurderer), 
-              "Sheriff=" .. tostring(BoxESPSettings.showSheriff))
-    end
-    
     for targetPlayer, box in pairs(ESPs) do
         if targetPlayer and targetPlayer.Parent then
             local shouldShow = false
-            local boxColor = Color3.fromRGB(255, 255, 255) -- Белый по умолчанию
+            local boxColor = BoxESPSettings.customColor -- Используем пользовательский цвет по умолчанию
 
             if BoxESPSettings.showAll then
                 shouldShow = true
-                boxColor = Color3.fromRGB(255, 255, 255) -- Белый для всех
+                if not BoxESPSettings.useCustomColor then
+                    boxColor = Color3.fromRGB(255, 255, 255) -- Белый для всех если не используется пользовательский цвет
+                end
             else
                 -- Проверяем конкретные роли только если showAll выключен
                 local isMurd = isMurderer(targetPlayer)
@@ -125,16 +122,22 @@ function UpdateBoxESP()
                 
                 if BoxESPSettings.showMurderer and isMurd then
                     shouldShow = true
-                    boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
+                    if not BoxESPSettings.useCustomColor then
+                        boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
+                    end
                 elseif BoxESPSettings.showSheriff and isSher then
                     shouldShow = true
-                    boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
+                    if not BoxESPSettings.useCustomColor then
+                        boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
+                    end
                 end
                 
-                -- Если игрок одновременно и murderer и sheriff (что маловероятно), приоритет murderer
+                -- Если игрок одновременно и murderer и sheriff
                 if BoxESPSettings.showMurderer and BoxESPSettings.showSheriff and isMurd and isSher then
                     shouldShow = true
-                    boxColor = Color3.fromRGB(255, 0, 0) -- Красный приоритет
+                    if not BoxESPSettings.useCustomColor then
+                        boxColor = Color3.fromRGB(255, 0, 0) -- Красный приоритет
+                    end
                 end
             end
             
@@ -648,7 +651,7 @@ local settings = {
     ESP = {
         title = "ESP",
         options = {
-            {name = "box", enabled = false, hasDropdown = true, callback = function(enabled)
+            {name = "box", enabled = false, hasDropdown = true, hasColorPicker = true, callback = function(enabled)
                 if enabled then EnableESP("box") else DisableESP("box") end
             end},
             {name = "color", enabled = false, callback = function(enabled)
@@ -872,11 +875,149 @@ local function createTab(name, index)
     end)
 end
 
+-- Функция создания color picker
+local function createColorPicker(parent, yPos)
+    local colorFrame = Instance.new("Frame")
+    colorFrame.Size = UDim2.new(0, 20, 0, 15)
+    colorFrame.Position = UDim2.new(1, -25, 0.5, -7.5)
+    colorFrame.BackgroundColor3 = BoxESPSettings.customColor
+    colorFrame.BorderSizePixel = 1
+    colorFrame.BorderColor3 = colors.border
+    colorFrame.ZIndex = 15
+    colorFrame.Parent = parent
+    createCorner(colorFrame, 3)
+    
+    local colorButton = Instance.new("TextButton")
+    colorButton.Size = UDim2.new(1, 0, 1, 0)
+    colorButton.Text = ""
+    colorButton.BackgroundTransparency = 1
+    colorButton.ZIndex = 16
+    colorButton.Parent = colorFrame
+    
+    local colorPalette = Instance.new("Frame")
+    colorPalette.Size = UDim2.new(0, 200, 0, 120)
+    colorPalette.Position = UDim2.new(0, -180, 1, 2)
+    colorPalette.BackgroundColor3 = colors.secondary
+    colorPalette.BorderSizePixel = 1
+    colorPalette.BorderColor3 = colors.border
+    colorPalette.Visible = false
+    colorPalette.ZIndex = 25
+    colorPalette.Parent = colorFrame
+    createCorner(colorPalette, 3)
+    
+    -- Предустановленные цвета
+    local presetColors = {
+        Color3.fromRGB(255, 255, 255), -- Белый
+        Color3.fromRGB(255, 0, 0),     -- Красный
+        Color3.fromRGB(0, 255, 0),     -- Зеленый
+        Color3.fromRGB(0, 0, 255),     -- Синий
+        Color3.fromRGB(255, 255, 0),   -- Желтый
+        Color3.fromRGB(255, 0, 255),   -- Фиолетовый
+        Color3.fromRGB(0, 255, 255),   -- Голубой
+        Color3.fromRGB(255, 165, 0),   -- Оранжевый
+        Color3.fromRGB(128, 0, 128),   -- Пурпурный
+        Color3.fromRGB(255, 192, 203), -- Розовый
+        Color3.fromRGB(0, 128, 0),     -- Темно-зеленый
+        Color3.fromRGB(165, 42, 42),   -- Коричневый
+    }
+    
+    -- Создаем кнопки цветов
+    for i, color in ipairs(presetColors) do
+        local row = math.floor((i-1) / 4)
+        local col = (i-1) % 4
+        
+        local colorSample = Instance.new("TextButton")
+        colorSample.Size = UDim2.new(0, 40, 0, 25)
+        colorSample.Position = UDim2.new(0, 10 + col * 45, 0, 10 + row * 30)
+        colorSample.Text = ""
+        colorSample.BackgroundColor3 = color
+        colorSample.BorderSizePixel = 1
+        colorSample.BorderColor3 = colors.border
+        colorSample.ZIndex = 26
+        colorSample.Parent = colorPalette
+        createCorner(colorSample, 3)
+        
+        colorSample.MouseButton1Click:Connect(function()
+            BoxESPSettings.customColor = color
+            BoxESPSettings.useCustomColor = true
+            colorFrame.BackgroundColor3 = color
+            colorPalette.Visible = false
+            print("Выбран цвет ESP:", color)
+        end)
+        
+        colorSample.MouseEnter:Connect(function()
+            colorSample.BorderColor3 = colors.accent
+        end)
+        
+        colorSample.MouseLeave:Connect(function()
+            colorSample.BorderColor3 = colors.border
+        end)
+    end
+    
+    -- Кнопка "Авто цвет" (отключает пользовательский цвет)
+    local autoColorButton = Instance.new("TextButton")
+    autoColorButton.Size = UDim2.new(0, 180, 0, 20)
+    autoColorButton.Position = UDim2.new(0, 10, 1, -25)
+    autoColorButton.Text = "Auto Color (Role-based)"
+    autoColorButton.TextColor3 = colors.text
+    autoColorButton.Font = Enum.Font.SourceSans
+    autoColorButton.TextSize = 10
+    autoColorButton.BackgroundColor3 = colors.hover
+    autoColorButton.BorderSizePixel = 1
+    autoColorButton.BorderColor3 = colors.border
+    autoColorButton.ZIndex = 26
+    autoColorButton.Parent = colorPalette
+    createCorner(autoColorButton, 3)
+    
+    autoColorButton.MouseButton1Click:Connect(function()
+        BoxESPSettings.useCustomColor = false
+        colorFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100) -- Серый для авто режима
+        colorPalette.Visible = false
+        print("Включен авто цвет ESP (по ролям)")
+    end)
+    
+    local paletteOpen = false
+    
+    colorButton.MouseButton1Click:Connect(function()
+        paletteOpen = not paletteOpen
+        colorPalette.Visible = paletteOpen
+        print("Color picker clicked, visible:", paletteOpen)
+    end)
+    
+    -- Закрываем палитру при клике вне её
+    spawn(function()
+        while colorFrame.Parent do
+            wait(0.1)
+            if paletteOpen then
+                local mouse = UserInputService:GetMouseLocation()
+                local framePos = colorFrame.AbsolutePosition
+                local palettePos = colorPalette.AbsolutePosition
+                local paletteSize = colorPalette.AbsoluteSize
+                
+                if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                    local insidePalette = (mouse.X >= palettePos.X and mouse.X <= palettePos.X + paletteSize.X and
+                                         mouse.Y >= palettePos.Y and mouse.Y <= palettePos.Y + paletteSize.Y)
+                    local insideButton = (mouse.X >= framePos.X and mouse.X <= framePos.X + 20 and
+                                         mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + 15)
+                    
+                    if not insidePalette and not insideButton then
+                        wait(0.1)
+                        paletteOpen = false
+                        colorPalette.Visible = false
+                    end
+                end
+            end
+        end
+    end)
+    
+    return colorFrame
+end
+
 -- Функция создания dropdown меню с множественным выбором
 local function createMultiDropdown(parent, yPos)
     local dropdownFrame = Instance.new("Frame")
     dropdownFrame.Size = UDim2.new(0, 120, 0, 15)
-    dropdownFrame.Position = UDim2.new(1, -125, 0.5, -7.5)
+    dropdownFrame.Position = UDim2.new(1, -150, 0.5, -7.5)
     dropdownFrame.BackgroundColor3 = colors.secondary
     dropdownFrame.BorderSizePixel = 1
     dropdownFrame.BorderColor3 = colors.border
@@ -1127,8 +1268,19 @@ local function createCheckbox(parent, option, yPos)
     checkmark.ZIndex = 4
     checkmark.Parent = checkbox
     
+    local labelWidth = 1
+    if option.hasDropdown and option.hasColorPicker then
+        labelWidth = -175 -- Место для dropdown и color picker
+    elseif option.hasDropdown then
+        labelWidth = -150 -- Место только для dropdown
+    elseif option.hasColorPicker then
+        labelWidth = -50 -- Место только для color picker
+    else
+        labelWidth = -25 -- Стандартное место
+    end
+    
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, option.hasDropdown and -150 or -25, 1, 0)
+    label.Size = UDim2.new(1, labelWidth, 1, 0)
     label.Position = UDim2.new(0, 20, 0, 0)
     label.Text = option.name
     label.TextColor3 = colors.text
@@ -1142,6 +1294,11 @@ local function createCheckbox(parent, option, yPos)
     -- Добавляем dropdown если нужно
     if option.hasDropdown then
         createMultiDropdown(checkFrame, yPos)
+    end
+    
+    -- Добавляем color picker если нужно
+    if option.hasColorPicker then
+        createColorPicker(checkFrame, yPos)
     end
     
     checkbox.MouseButton1Click:Connect(function()
@@ -1238,4 +1395,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("Complete Skeet menu with multi-selection dropdown loaded!")
+print("Complete Skeet menu with color picker loaded!")
