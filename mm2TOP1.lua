@@ -875,7 +875,7 @@ local function createTab(name, index)
     end)
 end
 
--- Функция создания color picker с настоящей палитрой
+-- Функция создания color picker с правильным дизайном
 local function createColorPicker(parent, yPos)
     local colorFrame = Instance.new("Frame")
     colorFrame.Size = UDim2.new(0, 20, 0, 15)
@@ -895,8 +895,8 @@ local function createColorPicker(parent, yPos)
     colorButton.Parent = colorFrame
     
     local colorPalette = Instance.new("Frame")
-    colorPalette.Size = UDim2.new(0, 260, 0, 200)
-    colorPalette.Position = UDim2.new(0, -240, 1, 2)
+    colorPalette.Size = UDim2.new(0, 320, 0, 220)
+    colorPalette.Position = UDim2.new(0, -300, 1, 2)
     colorPalette.BackgroundColor3 = colors.secondary
     colorPalette.BorderSizePixel = 1
     colorPalette.BorderColor3 = colors.border
@@ -917,57 +917,10 @@ local function createColorPicker(parent, yPos)
     paletteTitle.ZIndex = 26
     paletteTitle.Parent = colorPalette
     
-    -- Основная цветовая область (HSV палитра)
-    local colorArea = Instance.new("Frame")
-    colorArea.Size = UDim2.new(0, 200, 0, 120)
-    colorArea.Position = UDim2.new(0, 10, 0, 30)
-    colorArea.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    colorArea.BorderSizePixel = 1
-    colorArea.BorderColor3 = colors.border
-    colorArea.ZIndex = 26
-    colorArea.Parent = colorPalette
-    
-    -- Создаем градиент насыщенности (белый -> прозрачный)
-    local saturationGradient = Instance.new("Frame")
-    saturationGradient.Size = UDim2.new(1, 0, 1, 0)
-    saturationGradient.BackgroundTransparency = 1
-    saturationGradient.ZIndex = 27
-    saturationGradient.Parent = colorArea
-    
-    local satGradient = Instance.new("UIGradient")
-    satGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
-    }
-    satGradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(1, 1)
-    }
-    satGradient.Parent = saturationGradient
-    
-    -- Создаем градиент яркости (прозрачный -> черный)
-    local brightnessGradient = Instance.new("Frame")
-    brightnessGradient.Size = UDim2.new(1, 0, 1, 0)
-    brightnessGradient.BackgroundTransparency = 1
-    brightnessGradient.ZIndex = 28
-    brightnessGradient.Parent = colorArea
-    
-    local brightGradient = Instance.new("UIGradient")
-    brightGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-    }
-    brightGradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(1, 0)
-    }
-    brightGradient.Rotation = 90
-    brightGradient.Parent = brightnessGradient
-    
-    -- Полоса оттенков (Hue bar)
+    -- Вертикальная полоса слева (Hue)
     local hueBar = Instance.new("Frame")
-    hueBar.Size = UDim2.new(0, 20, 0, 120)
-    hueBar.Position = UDim2.new(0, 220, 0, 30)
+    hueBar.Size = UDim2.new(0, 25, 0, 150)
+    hueBar.Position = UDim2.new(0, 10, 0, 30)
     hueBar.BorderSizePixel = 1
     hueBar.BorderColor3 = colors.border
     hueBar.ZIndex = 26
@@ -986,10 +939,81 @@ local function createColorPicker(parent, yPos)
     hueGradient.Rotation = 90
     hueGradient.Parent = hueBar
     
+    -- Основная цветовая область справа (Saturation + Value)
+    local colorArea = Instance.new("Frame")
+    colorArea.Size = UDim2.new(0, 200, 0, 150)
+    colorArea.Position = UDim2.new(0, 45, 0, 30)
+    colorArea.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    colorArea.BorderSizePixel = 1
+    colorArea.BorderColor3 = colors.border
+    colorArea.ZIndex = 26
+    colorArea.Parent = colorPalette
+    
+    -- Создаем горизонтальный градиент насыщенности (белый -> цвет)
+    local saturationGradient = Instance.new("Frame")
+    saturationGradient.Size = UDim2.new(1, 0, 1, 0)
+    saturationGradient.BackgroundTransparency = 1
+    saturationGradient.ZIndex = 27
+    saturationGradient.Parent = colorArea
+    
+    local satGradient = Instance.new("UIGradient")
+    satGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    }
+    satGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    satGradient.Parent = saturationGradient
+    
+    -- Создаем вертикальный градиент яркости (прозрачный -> черный)
+    local brightnessGradient = Instance.new("Frame")
+    brightnessGradient.Size = UDim2.new(1, 0, 1, 0)
+    brightnessGradient.BackgroundTransparency = 1
+    brightnessGradient.ZIndex = 28
+    brightnessGradient.Parent = colorArea
+    
+    local brightGradient = Instance.new("UIGradient")
+    brightGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    }
+    brightGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0)
+    }
+    brightGradient.Rotation = 90
+    brightGradient.Parent = brightnessGradient
+    
+    -- Индикатор на цветовой области (белый кружок)
+    local colorIndicator = Instance.new("Frame")
+    colorIndicator.Size = UDim2.new(0, 8, 0, 8)
+    colorIndicator.Position = UDim2.new(0.8, -4, 0.2, -4)
+    colorIndicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    colorIndicator.BorderSizePixel = 2
+    colorIndicator.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    colorIndicator.ZIndex = 30
+    colorIndicator.Parent = colorArea
+    
+    local indicatorCorner = Instance.new("UICorner")
+    indicatorCorner.CornerRadius = UDim.new(1, 0)
+    indicatorCorner.Parent = colorIndicator
+    
+    -- Индикатор на полосе оттенков
+    local hueIndicator = Instance.new("Frame")
+    hueIndicator.Size = UDim2.new(1, 4, 0, 3)
+    hueIndicator.Position = UDim2.new(0, -2, 0, 0)
+    hueIndicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    hueIndicator.BorderSizePixel = 1
+    hueIndicator.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    hueIndicator.ZIndex = 30
+    hueIndicator.Parent = hueBar
+    
     -- Индикатор выбранного цвета
     local colorPreview = Instance.new("Frame")
     colorPreview.Size = UDim2.new(0, 40, 0, 20)
-    colorPreview.Position = UDim2.new(0, 10, 0, 160)
+    colorPreview.Position = UDim2.new(0, 255, 0, 30)
     colorPreview.BackgroundColor3 = BoxESPSettings.customColor
     colorPreview.BorderSizePixel = 1
     colorPreview.BorderColor3 = colors.border
@@ -1000,7 +1024,7 @@ local function createColorPicker(parent, yPos)
     -- Текстовые поля RGB
     local rgbLabel = Instance.new("TextLabel")
     rgbLabel.Size = UDim2.new(0, 30, 0, 15)
-    rgbLabel.Position = UDim2.new(0, 60, 0, 160)
+    rgbLabel.Position = UDim2.new(0, 255, 0, 55)
     rgbLabel.Text = "RGB:"
     rgbLabel.TextColor3 = colors.text
     rgbLabel.Font = Enum.Font.SourceSans
@@ -1010,8 +1034,8 @@ local function createColorPicker(parent, yPos)
     rgbLabel.Parent = colorPalette
     
     local rgbValue = Instance.new("TextLabel")
-    rgbValue.Size = UDim2.new(0, 100, 0, 15)
-    rgbValue.Position = UDim2.new(0, 90, 0, 160)
+    rgbValue.Size = UDim2.new(0, 60, 0, 15)
+    rgbValue.Position = UDim2.new(0, 255, 0, 70)
     rgbValue.Text = string.format("%d, %d, %d", 
         BoxESPSettings.customColor.R * 255,
         BoxESPSettings.customColor.G * 255,
@@ -1024,8 +1048,10 @@ local function createColorPicker(parent, yPos)
     rgbValue.ZIndex = 26
     rgbValue.Parent = colorPalette
     
-    -- Переменные для отслеживания текущего оттенка
+    -- Переменные для отслеживания текущих значений
     local currentHue = 0
+    local currentSaturation = 0.8
+    local currentValue = 0.8
     
     -- Функция для конвертации HSV в RGB
     local function HSVtoRGB(h, s, v)
@@ -1056,6 +1082,10 @@ local function createColorPicker(parent, yPos)
     
     -- Функция обновления цвета
     local function updateColor(h, s, v)
+        currentHue = h
+        currentSaturation = s
+        currentValue = v
+        
         local newColor = HSVtoRGB(h, s, v)
         BoxESPSettings.customColor = newColor
         BoxESPSettings.useCustomColor = true
@@ -1063,56 +1093,21 @@ local function createColorPicker(parent, yPos)
         colorPreview.BackgroundColor3 = newColor
         rgbValue.Text = string.format("%d, %d, %d", 
             newColor.R * 255, newColor.G * 255, newColor.B * 255)
-        print("Цвет обновлен:", newColor)
+        
+        -- Обновляем позицию индикатора на цветовой области
+        colorIndicator.Position = UDim2.new(s, -4, 1-v, -4)
+        
+        -- Обновляем позицию индикатора на полосе оттенков
+        hueIndicator.Position = UDim2.new(0, -2, h, -1.5)
+        
+        -- Обновляем цвет основной области
+        local hueColor = HSVtoRGB(h, 1, 1)
+        colorArea.BackgroundColor3 = hueColor
+        
+        print("Цвет обновлен:", newColor, "HSV:", h, s, v)
     end
     
-    -- Обработка кликов по цветовой области (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-    local colorAreaButton = Instance.new("TextButton")
-    colorAreaButton.Size = UDim2.new(1, 0, 1, 0)
-    colorAreaButton.Text = ""
-    colorAreaButton.BackgroundTransparency = 1
-    colorAreaButton.ZIndex = 29
-    colorAreaButton.Parent = colorArea
-    
-    local colorAreaDragging = false
-    
-    colorAreaButton.MouseButton1Down:Connect(function()
-        colorAreaDragging = true
-        print("Начало перетаскивания в цветовой области")
-    end)
-    
-    colorAreaButton.MouseButton1Up:Connect(function()
-        colorAreaDragging = false
-        print("Конец перетаскивания в цветовой области")
-    end)
-    
-    colorAreaButton.MouseMoved:Connect(function(x, y)
-        if colorAreaDragging then
-            local relativeX = math.clamp((x - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
-            local relativeY = math.clamp((y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
-            
-            local saturation = relativeX
-            local value = 1 - relativeY
-            
-            print("Цветовая область - X:", relativeX, "Y:", relativeY, "S:", saturation, "V:", value)
-            updateColor(currentHue, saturation, value)
-        end
-    end)
-    
-    -- Простой клик по цветовой области
-    colorAreaButton.MouseButton1Click:Connect(function()
-        local mouse = UserInputService:GetMouseLocation()
-        local relativeX = math.clamp((mouse.X - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
-        local relativeY = math.clamp((mouse.Y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
-        
-        local saturation = relativeX
-        local value = 1 - relativeY
-        
-        print("Клик по цветовой области - X:", relativeX, "Y:", relativeY, "S:", saturation, "V:", value)
-        updateColor(currentHue, saturation, value)
-    end)
-    
-    -- Обработка кликов по полосе оттенков (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+    -- Обработка кликов по полосе оттенков
     local hueBarButton = Instance.new("TextButton")
     hueBarButton.Size = UDim2.new(1, 0, 1, 0)
     hueBarButton.Text = ""
@@ -1124,52 +1119,74 @@ local function createColorPicker(parent, yPos)
     
     hueBarButton.MouseButton1Down:Connect(function()
         hueBarDragging = true
-        print("Начало перетаскивания в полосе оттенков")
     end)
     
     hueBarButton.MouseButton1Up:Connect(function()
         hueBarDragging = false
-        print("Конец перетаскивания в полосе оттенков")
     end)
     
     hueBarButton.MouseMoved:Connect(function(x, y)
         if hueBarDragging then
             local relativeY = math.clamp((y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
-            currentHue = relativeY
-            
-            -- Обновляем цвет основной области
-            local hueColor = HSVtoRGB(currentHue, 1, 1)
-            colorArea.BackgroundColor3 = hueColor
-            
-            print("Полоса оттенков - Y:", relativeY, "Hue:", currentHue)
-            -- Обновляем выбранный цвет (с текущими S и V)
-            updateColor(currentHue, 0.8, 0.8) -- Используем средние значения
+            updateColor(relativeY, currentSaturation, currentValue)
         end
     end)
     
-    -- Простой клик по полосе оттенков
     hueBarButton.MouseButton1Click:Connect(function()
         local mouse = UserInputService:GetMouseLocation()
         local relativeY = math.clamp((mouse.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
-        currentHue = relativeY
-        
-        -- Обновляем цвет основной области
-        local hueColor = HSVtoRGB(currentHue, 1, 1)
-        colorArea.BackgroundColor3 = hueColor
-        
-        print("Клик по полосе оттенков - Y:", relativeY, "Hue:", currentHue)
-        -- Обновляем выбранный цвет (с текущими S и V)
-        updateColor(currentHue, 0.8, 0.8) -- Используем средние значения
+        updateColor(relativeY, currentSaturation, currentValue)
     end)
     
-    -- Кнопка "Авто цвет" (отключает пользовательский цвет)
+    -- Обработка кликов по цветовой области
+    local colorAreaButton = Instance.new("TextButton")
+    colorAreaButton.Size = UDim2.new(1, 0, 1, 0)
+    colorAreaButton.Text = ""
+    colorAreaButton.BackgroundTransparency = 1
+    colorAreaButton.ZIndex = 29
+    colorAreaButton.Parent = colorArea
+    
+    local colorAreaDragging = false
+    
+    colorAreaButton.MouseButton1Down:Connect(function()
+        colorAreaDragging = true
+    end)
+    
+    colorAreaButton.MouseButton1Up:Connect(function()
+        colorAreaDragging = false
+    end)
+    
+    colorAreaButton.MouseMoved:Connect(function(x, y)
+        if colorAreaDragging then
+            local relativeX = math.clamp((x - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
+            local relativeY = math.clamp((y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+            
+            local saturation = relativeX
+            local value = 1 - relativeY
+            
+            updateColor(currentHue, saturation, value)
+        end
+    end)
+    
+    colorAreaButton.MouseButton1Click:Connect(function()
+        local mouse = UserInputService:GetMouseLocation()
+        local relativeX = math.clamp((mouse.X - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
+        local relativeY = math.clamp((mouse.Y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+        
+        local saturation = relativeX
+        local value = 1 - relativeY
+        
+        updateColor(currentHue, saturation, value)
+    end)
+    
+    -- Кнопка "Авто цвет"
     local autoColorButton = Instance.new("TextButton")
-    autoColorButton.Size = UDim2.new(0, 180, 0, 15)
-    autoColorButton.Position = UDim2.new(0, 10, 1, -20)
-    autoColorButton.Text = "Auto Color (Role-based)"
+    autoColorButton.Size = UDim2.new(0, 60, 0, 15)
+    autoColorButton.Position = UDim2.new(0, 255, 0, 95)
+    autoColorButton.Text = "Auto Color"
     autoColorButton.TextColor3 = colors.text
     autoColorButton.Font = Enum.Font.SourceSans
-    autoColorButton.TextSize = 10
+    autoColorButton.TextSize = 9
     autoColorButton.BackgroundColor3 = colors.hover
     autoColorButton.BorderSizePixel = 1
     autoColorButton.BorderColor3 = colors.border
@@ -1179,10 +1196,13 @@ local function createColorPicker(parent, yPos)
     
     autoColorButton.MouseButton1Click:Connect(function()
         BoxESPSettings.useCustomColor = false
-        colorFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100) -- Серый для авто режима
+        colorFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         colorPalette.Visible = false
         print("Включен авто цвет ESP (по ролям)")
     end)
+    
+    -- Инициализация с текущим цветом
+    updateColor(0, 0.8, 0.8)
     
     local paletteOpen = false
     
