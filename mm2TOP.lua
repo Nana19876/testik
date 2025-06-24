@@ -62,6 +62,18 @@ textLabel.TextXAlignment = Enum.TextXAlignment.Left
 textLabel.Text = "esp player"
 textLabel.Parent = mainFrame
 
+-- Палитра цветов (выбери любые)
+local colorPalette = {
+    Color3.fromRGB(92,135,200), -- синий
+    Color3.fromRGB(255,80,80),  -- красный
+    Color3.fromRGB(85,200,90),  -- зелёный
+    Color3.fromRGB(255,205,70), -- жёлтый
+    Color3.fromRGB(140,90,220), -- фиолетовый
+    Color3.fromRGB(240,150,70), -- оранжевый
+    Color3.fromRGB(80,200,180), -- бирюзовый
+    Color3.fromRGB(230,230,230) -- белый/серый
+}
+
 -- Функция создания чекбокса "Box"
 local function createBoxOption()
     local line = Instance.new("Frame")
@@ -107,7 +119,7 @@ local function createBoxOption()
     colorBar.AnchorPoint = Vector2.new(1, 0)
     colorBar.Position = UDim2.new(1, -6, 0.23, 0)
     colorBar.Size = UDim2.new(0, 28, 0, 12)
-    colorBar.BackgroundColor3 = Color3.fromRGB(92, 135, 200)
+    colorBar.BackgroundColor3 = colorPalette[1]
     colorBar.BorderSizePixel = 0
     colorBar.BackgroundTransparency = 0.15
     colorBar.ZIndex = 2
@@ -121,80 +133,60 @@ local function createBoxOption()
         print("Box toggled:", toggled)
     end)
 
-    -- Цвет
-    local lastColor = Color3.fromRGB(92, 135, 200)
-    local userInput = game:GetService("UserInputService")
-
-    local picker = nil
-    local function openColorPicker()
-        if picker and picker.Parent then
-            picker:Destroy()
+    -- Color palette pop-up
+    local paletteFrame = nil
+    colorBar.MouseButton1Click:Connect(function()
+        if paletteFrame and paletteFrame.Parent then
+            paletteFrame:Destroy()
+            paletteFrame = nil
+            return
         end
-        picker = Instance.new("Frame")
-        picker.Size = UDim2.new(0, 200, 0, 200)
-        picker.Position = UDim2.new(0, colorBar.AbsolutePosition.X, 0, colorBar.AbsolutePosition.Y + 20)
-        picker.BackgroundColor3 = Color3.fromRGB(40,40,40)
-        picker.BorderSizePixel = 0
-        picker.Parent = screenGui
 
-        -- Простая RGB палитра (3 ползунка)
-        local values = {"R","G","B"}
-        local current = {lastColor.R*255,lastColor.G*255,lastColor.B*255}
-        local sliders = {}
-        for i,v in ipairs(values) do
-            local s = Instance.new("TextLabel")
-            s.Size = UDim2.new(0,30,0,24)
-            s.Position = UDim2.new(0,10,0,(i-1)*60+12)
-            s.Text = v
-            s.TextColor3 = Color3.fromRGB(220,220,220)
-            s.BackgroundTransparency = 1
-            s.Parent = picker
+        paletteFrame = Instance.new("Frame")
+        paletteFrame.Size = UDim2.new(0, 180, 0, 38)
+        paletteFrame.Position = UDim2.new(0, colorBar.AbsolutePosition.X, 0, colorBar.AbsolutePosition.Y + 18)
+        paletteFrame.BackgroundColor3 = Color3.fromRGB(36,36,36)
+        paletteFrame.BorderSizePixel = 0
+        paletteFrame.ZIndex = 20
+        paletteFrame.Parent = screenGui
 
-            local slider = Instance.new("TextButton")
-            slider.Size = UDim2.new(0,130,0,22)
-            slider.Position = UDim2.new(0,50,0,(i-1)*60+14)
-            slider.BackgroundColor3 = Color3.fromRGB(50,50,50)
-            slider.Text = tostring(math.floor(current[i]))
-            slider.TextColor3 = Color3.fromRGB(220,220,255)
-            slider.Font = Enum.Font.SourceSans
-            slider.TextSize = 16
-            slider.BorderSizePixel = 0
-            slider.Parent = picker
+        -- Показываем все цвета в палитре
+        for i, col in ipairs(colorPalette) do
+            local colorBtn = Instance.new("TextButton")
+            colorBtn.Size = UDim2.new(0, 34, 0, 34)
+            colorBtn.Position = UDim2.new(0, 8 + (i-1)*40, 0, 2)
+            colorBtn.BackgroundColor3 = col
+            colorBtn.BorderSizePixel = 0
+            colorBtn.ZIndex = 21
+            colorBtn.Text = ""
+            colorBtn.Parent = paletteFrame
 
-            slider.MouseButton1Click:Connect(function()
-                local val = tonumber(game:GetService("StarterGui"):PromptInput("Input "..v.." (0-255)",tostring(math.floor(current[i]))))
-                if val and val >= 0 and val <= 255 then
-                    current[i] = val
-                    slider.Text = tostring(val)
-                    local col = Color3.fromRGB(current[1],current[2],current[3])
-                    colorBar.BackgroundColor3 = col
-                    lastColor = col
-                end
+            colorBtn.MouseButton1Click:Connect(function()
+                colorBar.BackgroundColor3 = col
+                paletteFrame:Destroy()
+                paletteFrame = nil
             end)
-            sliders[i] = slider
         end
+    end)
 
-        local closeBtn = Instance.new("TextButton")
-        closeBtn.Size = UDim2.new(0,70,0,30)
-        closeBtn.Position = UDim2.new(0,115,0,160)
-        closeBtn.Text = "Close"
-        closeBtn.Parent = picker
-        closeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-        closeBtn.TextColor3 = Color3.fromRGB(220,220,255)
-        closeBtn.Font = Enum.Font.SourceSans
-        closeBtn.TextSize = 18
-        closeBtn.MouseButton1Click:Connect(function()
-            picker:Destroy()
-        end)
-    end
-
-    colorBar.MouseButton1Click:Connect(openColorPicker)
+    -- Если клик вне палитры — закрываем её
+    game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+        if paletteFrame and input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mouse = game:GetService("UserInputService"):GetMouseLocation()
+            local absPos = paletteFrame.AbsolutePosition
+            local absSize = paletteFrame.AbsoluteSize
+            if not (mouse.X >= absPos.X and mouse.X <= absPos.X + absSize.X and mouse.Y >= absPos.Y and mouse.Y <= absPos.Y + absSize.Y) then
+                paletteFrame:Destroy()
+                paletteFrame = nil
+            end
+        end
+    end)
 
     line.Visible = false -- по умолчанию скрыт
     return line
 end
 
--- Создаём один раз
+-- Создаём чекбокс один раз
 local boxOption = createBoxOption()
 
 -- Кнопки переключения вкладок
@@ -208,7 +200,6 @@ local labelTexts = {
 for i, btn in ipairs(buttonRefs) do
     btn.MouseButton1Click:Connect(function()
         textLabel.Text = labelTexts[i]
-        -- Только на вкладке ESP показываем чекбокс
         if i == 1 then
             boxOption.Visible = true
         else
@@ -217,6 +208,6 @@ for i, btn in ipairs(buttonRefs) do
     end)
 end
 
--- При запуске сразу показываем ESP и чекбокс
+-- По умолчанию показываем чекбокс и вкладку ESP
 textLabel.Text = labelTexts[1]
 boxOption.Visible = true
