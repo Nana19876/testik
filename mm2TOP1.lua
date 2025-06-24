@@ -50,7 +50,7 @@ local ESPConnections = {}
 
 -- Настройки для Box ESP
 local BoxESPSettings = {
-    targetMode = "all" -- "all" или "murderer"
+    targetMode = "all" -- "all", "murderer", "sheriff"
 }
 
 -- Безопасное удаление объектов
@@ -77,13 +77,21 @@ local function isMurderer(targetPlayer)
     return (backpack and backpack:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife"))
 end
 
+-- Проверка на наличие пистолета (sheriff)
+local function isSheriff(targetPlayer)
+    local backpack = targetPlayer:FindFirstChild("Backpack")
+    local character = targetPlayer.Character
+    
+    return (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun"))
+end
+
 -- ========== BOX ESP ==========
 function CreateBoxESP(targetPlayer)
     if targetPlayer == player then return end
 
     local box = Drawing.new("Square")
     box.Thickness = 2
-    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Color = Color3.fromRGB(255, 255, 255)
     box.Filled = false
     box.Visible = false
 
@@ -96,12 +104,18 @@ function UpdateBoxESP()
     for targetPlayer, box in pairs(ESPs) do
         if targetPlayer and targetPlayer.Parent then
             local shouldShow = false
+            local boxColor = Color3.fromRGB(255, 255, 255) -- Белый по умолчанию
             
             -- Определяем, показывать ли ESP для этого игрока
             if BoxESPSettings.targetMode == "all" then
                 shouldShow = true
+                boxColor = Color3.fromRGB(255, 255, 255) -- Белый для всех
             elseif BoxESPSettings.targetMode == "murderer" then
                 shouldShow = isMurderer(targetPlayer)
+                boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
+            elseif BoxESPSettings.targetMode == "sheriff" then
+                shouldShow = isSheriff(targetPlayer)
+                boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
             end
             
             if shouldShow then
@@ -113,13 +127,8 @@ function UpdateBoxESP()
                         local size = Vector2.new(80, 120)
                         box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
                         box.Size = size
+                        box.Color = boxColor
                         box.Visible = true
-                        -- Меняем цвет для murderer
-                        if BoxESPSettings.targetMode == "murderer" then
-                            box.Color = Color3.fromRGB(255, 0, 0) -- Красный для murderer
-                        else
-                            box.Color = Color3.fromRGB(255, 255, 255) -- Белый для всех
-                        end
                     else
                         box.Visible = false
                     end
@@ -619,12 +628,7 @@ local settings = {
     ESP = {
         title = "ESP",
         options = {
-            {name = "box (all players)", enabled = false, callback = function(enabled)
-                BoxESPSettings.targetMode = "all"
-                if enabled then EnableESP("box") else DisableESP("box") end
-            end},
-            {name = "box (murderer only)", enabled = false, callback = function(enabled)
-                BoxESPSettings.targetMode = "murderer"
+            {name = "box", enabled = false, hasDropdown = true, callback = function(enabled)
                 if enabled then EnableESP("box") else DisableESP("box") end
             end},
             {name = "color", enabled = false, callback = function(enabled)
@@ -848,6 +852,88 @@ local function createTab(name, index)
     end)
 end
 
+-- Функция создания dropdown меню
+local function createDropdown(parent, yPos)
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Size = UDim2.new(0, 80, 0, 15)
+    dropdownFrame.Position = UDim2.new(1, -85, 0.5, -7.5)
+    dropdownFrame.BackgroundColor3 = colors.secondary
+    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.Parent = parent
+    createCorner(dropdownFrame, 3)
+    
+    local dropdownButton = Instance.new("TextButton")
+    dropdownButton.Size = UDim2.new(1, 0, 1, 0)
+    dropdownButton.Text = "All Players ▼"
+    dropdownButton.TextColor3 = colors.text
+    dropdownButton.Font = Enum.Font.SourceSans
+    dropdownButton.TextSize = 9
+    dropdownButton.BackgroundTransparency = 1
+    dropdownButton.Parent = dropdownFrame
+    
+    local dropdownList = Instance.new("Frame")
+    dropdownList.Size = UDim2.new(1, 0, 0, 90)
+    dropdownList.Position = UDim2.new(0, 0, 1, 2)
+    dropdownList.BackgroundColor3 = colors.secondary
+    dropdownList.BorderSizePixel = 0
+    dropdownList.Visible = false
+    dropdownList.Parent = dropdownFrame
+    dropdownList.ZIndex = 10
+    createCorner(dropdownList, 3)
+    
+    local options = {
+        {text = "All Players", mode = "all"},
+        {text = "Murderer Only", mode = "murderer"},
+        {text = "Sheriff Only", mode = "sheriff"}
+    }
+    
+    for i, option in ipairs(options) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, 0, 1/3, 0)
+        optionButton.Position = UDim2.new(0, 0, (i-1)/3, 0)
+        optionButton.Text = option.text
+        optionButton.TextColor3 = colors.text
+        optionButton.Font = Enum.Font.SourceSans
+        optionButton.TextSize = 9
+        optionButton.BackgroundColor3 = colors.secondary
+        optionButton.BorderSizePixel = 0
+        optionButton.Parent = dropdownList
+        
+        optionButton.MouseEnter:Connect(function()
+            optionButton.BackgroundColor3 = colors.hover
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            optionButton.BackgroundColor3 = colors.secondary
+        end)
+        
+        optionButton.MouseButton1Click:Connect(function()
+            BoxESPSettings.targetMode = option.mode
+            dropdownButton.Text = option.text .. " ▼"
+            dropdownList.Visible = false
+            print("Box ESP режим изменен на: " .. option.text)
+        end)
+    end
+    
+    dropdownButton.MouseButton1Click:Connect(function()
+        dropdownList.Visible = not dropdownList.Visible
+    end)
+    
+    -- Закрываем dropdown при клике вне его
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mouse = UserInputService:GetMouseLocation()
+            local framePos = dropdownFrame.AbsolutePosition
+            local frameSize = dropdownFrame.AbsoluteSize
+            
+            if not (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
+                   mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + 90) then
+                dropdownList.Visible = false
+            end
+        end
+    end)
+end
+
 -- Функция создания чекбокса
 local function createCheckbox(parent, option, yPos)
     local checkFrame = Instance.new("Frame")
@@ -877,7 +963,7 @@ local function createCheckbox(parent, option, yPos)
     checkmark.Parent = checkbox
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -25, 1, 0)
+    label.Size = UDim2.new(1, option.hasDropdown and -110 or -25, 1, 0)
     label.Position = UDim2.new(0, 20, 0, 0)
     label.Text = option.name
     label.TextColor3 = colors.text
@@ -886,6 +972,11 @@ local function createCheckbox(parent, option, yPos)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.BackgroundTransparency = 1
     label.Parent = checkFrame
+    
+    -- Добавляем dropdown если нужно
+    if option.hasDropdown then
+        createDropdown(checkFrame, yPos)
+    end
     
     checkbox.MouseButton1Click:Connect(function()
         option.enabled = not option.enabled
@@ -897,7 +988,7 @@ local function createCheckbox(parent, option, yPos)
             option.callback(option.enabled)
         end
         
-        print(option.name .. " is now " .. (option.enabled and "disabled"))
+        print(option.name .. " is now " .. (option.enabled and "enabled" or "disabled"))
     end)
 end
 
@@ -980,4 +1071,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("Complete Skeet menu with all ESP features loaded!")
+print("Complete Skeet menu with dropdown loaded!")
