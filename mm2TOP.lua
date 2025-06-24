@@ -1,0 +1,860 @@
+-- LocalScript
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
+
+-- Удаляем старое меню если есть
+if playerGui:FindFirstChild("SkeetMenu") then
+    playerGui.SkeetMenu:Destroy()
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SkeetMenu"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+-- ESP переменные и состояния
+local ESPStates = {
+    box = false,
+    color = false,
+    gradient = false,
+    ["3d box"] = false,
+    nickname = false,
+    ping = false,
+    tracer = false,
+    distance = false,
+    ["radius of visibility"] = false,
+    chams = false
+}
+
+-- Хранилища для ESP объектов
+local ESPs = {}
+local GradientHighlights = {}
+local ColorHighlights = {}
+local Lines3D = {}
+local Quads3D = {}
+local NameTags = {}
+local PingTags = {}
+local PingValues = {}
+local Tracers = {}
+local Circles = {}
+local DistanceLabels = {}
+
+-- Подключения
+local ESPConnections = {}
+
+-- Безопасное удаление объектов
+local function SafeRemove(obj)
+    if obj then
+        pcall(function() obj:Remove() end)
+        pcall(function() obj:Destroy() end)
+        if obj.Visible ~= nil then
+            obj.Visible = false
+        end
+    end
+end
+
+-- Проверка персонажа
+local function HasCharacter(targetPlayer)
+    return targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+end
+
+-- ========== BOX ESP ==========
+function CreateBoxESP(targetPlayer)
+    if targetPlayer == player then return end
+
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Filled = false
+    box.Visible = false
+
+    ESPs[targetPlayer] = box
+end
+
+function UpdateBoxESP()
+    if not ESPStates.box then return end
+    
+    for targetPlayer, box in pairs(ESPs) do
+        if targetPlayer and targetPlayer.Parent then
+            local character = targetPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = character.HumanoidRootPart
+                local pos, onscreen = Camera:WorldToViewportPoint(rootPart.Position)
+                if onscreen then
+                    local size = Vector2.new(80, 120)
+                    box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                    box.Size = size
+                    box.Visible = true
+                else
+                    box.Visible = false
+                end
+            else
+                box.Visible = false
+            end
+        end
+    end
+end
+
+-- ========== COLOR ESP ==========
+local function applyStaticRedHighlight(character)
+    if not character:FindFirstChild("ColorHighlight") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "ColorHighlight"
+        hl.FillColor = Color3.fromRGB(255, 0, 0)
+        hl.FillTransparency = 0.2
+        hl.OutlineTransparency = 1
+        hl.Adornee = character
+        hl.Parent = character
+        ColorHighlights[character] = hl
+    end
+end
+
+-- ========== GRADIENT ESP ==========
+local function createGradientHighlight(char)
+    if not char:FindFirstChild("GradientHighlight") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "GradientHighlight"
+        hl.FillTransparency = 0.3
+        hl.OutlineTransparency = 1
+        hl.Adornee = char
+        hl.Parent = char
+        GradientHighlights[char] = hl
+
+        local t = 0
+        local connection
+        connection = RunService.RenderStepped:Connect(function(dt)
+            if hl and hl.Parent and ESPStates.gradient then
+                t = t + dt * 2
+                local r = math.abs(math.sin(t)) * 255
+                local g = math.abs(math.sin(t + 1)) * 255
+                local b = math.abs(math.sin(t + 2)) * 255
+                hl.FillColor = Color3.fromRGB(r, g, b)
+            else
+                connection:Disconnect()
+            end
+        end)
+    end
+end
+
+-- ========== 3D BOX ESP ==========
+local function GetCorners(cf, size)
+    local half = size / 2
+    local corners = {}
+    for x = -1, 1, 2 do
+        for y = -1, 1, 2 do
+            for z = -1, 1, 2 do
+                table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
+            end
+        end
+    end
+    return corners
+end
+
+local function DrawQuad(PosA, PosB, PosC, PosD)
+    local function screen(pos)
+        local s, vis = Camera:WorldToViewportPoint(pos)
+        return Vector2.new(s.X, s.Y), vis
+    end
+
+    local A, va = screen(PosA)
+    local B, vb = screen(PosB)
+    local C, vc = screen(PosC)
+    local D, vd = screen(PosD)
+
+    if not (va or vb or vc or vd) then return end
+
+    local Quad = Drawing.new("Quad")
+    Quad.Thickness = 1
+    Quad.Color = Color3.fromRGB(255, 0, 0)
+    Quad.Transparency = 0.15
+    Quad.Filled = false
+    Quad.Visible = true
+    Quad.PointA = A
+    Quad.PointB = B
+    Quad.PointC = C
+    Quad.PointD = D
+    table.insert(Quads3D, Quad)
+end
+
+local function DrawLine3D(from, to)
+    local function screen(pos)
+        local s, vis = Camera:WorldToViewportPoint(pos)
+        return Vector2.new(s.X, s.Y), vis
+    end
+
+    local A, va = screen(from)
+    local B, vb = screen(to)
+
+    if not (va or vb) then return end
+
+    local Line = Drawing.new("Line")
+    Line.Thickness = 1
+    Line.Color = Color3.fromRGB(255, 0, 0)
+    Line.From = A
+    Line.To = B
+    Line.Transparency = 1
+    Line.Visible = true
+    table.insert(Lines3D, Line)
+end
+
+local function DrawEsp3D(targetPlayer)
+    local HRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
+
+    local size = Vector3.new(3, 5.5, 3)
+    local offset = CFrame.new(0, -0.5, 0)
+    local CubeVertices = GetCorners(HRP.CFrame * offset, size)
+
+    -- Bottom face
+    DrawLine3D(CubeVertices[1], CubeVertices[2])
+    DrawLine3D(CubeVertices[2], CubeVertices[6])
+    DrawLine3D(CubeVertices[6], CubeVertices[5])
+    DrawLine3D(CubeVertices[5], CubeVertices[1])
+    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[6], CubeVertices[5])
+
+    -- Sides
+    DrawLine3D(CubeVertices[1], CubeVertices[3])
+    DrawLine3D(CubeVertices[2], CubeVertices[4])
+    DrawLine3D(CubeVertices[6], CubeVertices[8])
+    DrawLine3D(CubeVertices[5], CubeVertices[7])
+    DrawQuad(CubeVertices[2], CubeVertices[4], CubeVertices[8], CubeVertices[6])
+    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[4], CubeVertices[3])
+    DrawQuad(CubeVertices[1], CubeVertices[5], CubeVertices[7], CubeVertices[3])
+    DrawQuad(CubeVertices[5], CubeVertices[7], CubeVertices[8], CubeVertices[6])
+
+    -- Top face
+    DrawLine3D(CubeVertices[3], CubeVertices[4])
+    DrawLine3D(CubeVertices[4], CubeVertices[8])
+    DrawLine3D(CubeVertices[8], CubeVertices[7])
+    DrawLine3D(CubeVertices[7], CubeVertices[3])
+    DrawQuad(CubeVertices[3], CubeVertices[4], CubeVertices[8], CubeVertices[7])
+end
+
+-- ========== NICKNAME ESP ==========
+local function DrawName(targetPlayer)
+    local head = targetPlayer.Character:FindFirstChild("Head")
+    if not head then return end
+
+    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
+    if onScreen then
+        local nameTag = Drawing.new("Text")
+        nameTag.Text = targetPlayer.DisplayName or targetPlayer.Name
+        nameTag.Position = Vector2.new(screenPos.X, screenPos.Y)
+        nameTag.Color = Color3.fromRGB(255, 255, 255)
+        nameTag.Size = 16
+        nameTag.Center = true
+        nameTag.Outline = true
+        nameTag.OutlineColor = Color3.new(0, 0, 0)
+        nameTag.Visible = true
+        table.insert(NameTags, nameTag)
+    end
+end
+
+-- ========== PING ESP ==========
+local function GetPing(targetPlayer)
+    return math.random(50, 150) -- fallback
+end
+
+-- ========== TRACER ESP ==========
+local function DrawTracers()
+    for _, line in ipairs(Tracers) do
+        SafeRemove(line)
+    end
+    Tracers = {}
+
+    if not ESPStates.tracer then return end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = targetPlayer.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                local tracer = Drawing.new("Line")
+                tracer.Thickness = 1.5
+                tracer.Color = Color3.fromRGB(255, 0, 0)
+                tracer.Transparency = 1
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+                tracer.Visible = true
+                table.insert(Tracers, tracer)
+            end
+        end
+    end
+end
+
+-- ========== RADIUS ESP ==========
+local function DrawCircle(center)
+    local RADIUS = 5
+    local SEGMENTS = 30
+    local step = math.pi * 2 / SEGMENTS
+    local points = {}
+
+    for i = 0, SEGMENTS do
+        local angle = i * step
+        local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
+        table.insert(points, pos)
+    end
+
+    for i = 1, #points - 1 do
+        local p1 = Camera:WorldToViewportPoint(points[i])
+        local p2 = Camera:WorldToViewportPoint(points[i + 1])
+
+        if p1.Z > 0 and p2.Z > 0 then
+            local line = Drawing.new("Line")
+            line.From = Vector2.new(p1.X, p1.Y)
+            line.To = Vector2.new(p2.X, p2.Y)
+            line.Color = Color3.fromRGB(0, 255, 0)
+            line.Thickness = 1.5
+            line.Transparency = 1
+            line.Visible = true
+            table.insert(Circles, line)
+        end
+    end
+end
+
+-- ========== DISTANCE ESP ==========
+local function DrawDistance()
+    for _, label in ipairs(DistanceLabels) do
+        SafeRemove(label)
+    end
+    DistanceLabels = {}
+
+    if not ESPStates.distance then return end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = targetPlayer.Character.HumanoidRootPart
+            local distance = math.floor((rootPart.Position - Camera.CFrame.Position).Magnitude)
+
+            local screenPos, visible = Camera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
+            if visible then
+                local text = Drawing.new("Text")
+                text.Text = tostring(distance) .. "m"
+                text.Size = 16
+                text.Center = true
+                text.Outline = true
+                text.Color = Color3.fromRGB(255, 255, 0)
+                text.Position = Vector2.new(screenPos.X, screenPos.Y)
+                text.Visible = true
+                table.insert(DistanceLabels, text)
+            end
+        end
+    end
+end
+
+-- ========== ГЛАВНЫЕ ФУНКЦИИ УПРАВЛЕНИЯ ==========
+local function EnableESP(espType)
+    ESPStates[espType] = true
+    
+    if espType == "box" then
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            CreateBoxESP(targetPlayer)
+        end
+        if not ESPConnections.box then
+            ESPConnections.box = RunService.RenderStepped:Connect(UpdateBoxESP)
+        end
+    elseif espType == "color" then
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer ~= player and targetPlayer.Character then
+                applyStaticRedHighlight(targetPlayer.Character)
+            end
+        end
+    elseif espType == "gradient" then
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer ~= player and targetPlayer.Character then
+                createGradientHighlight(targetPlayer.Character)
+            end
+        end
+    elseif espType == "3d box" then
+        if not ESPConnections["3d box"] then
+            ESPConnections["3d box"] = RunService.RenderStepped:Connect(function()
+                if not ESPStates["3d box"] then return end
+                
+                for _, line in ipairs(Lines3D) do SafeRemove(line) end
+                for _, quad in ipairs(Quads3D) do SafeRemove(quad) end
+                Lines3D = {}
+                Quads3D = {}
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and HasCharacter(targetPlayer) then
+                        DrawEsp3D(targetPlayer)
+                    end
+                end
+            end)
+        end
+    elseif espType == "nickname" then
+        if not ESPConnections.nickname then
+            ESPConnections.nickname = RunService.RenderStepped:Connect(function()
+                if not ESPStates.nickname then return end
+                
+                for _, tag in ipairs(NameTags) do SafeRemove(tag) end
+                NameTags = {}
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and HasCharacter(targetPlayer) then
+                        DrawName(targetPlayer)
+                    end
+                end
+            end)
+        end
+    elseif espType == "ping" then
+        if not ESPConnections.ping then
+            local LastPingUpdate = 0
+            ESPConnections.ping = RunService.RenderStepped:Connect(function(dt)
+                if not ESPStates.ping then return end
+                
+                LastPingUpdate = LastPingUpdate + dt
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and HasCharacter(targetPlayer) then
+                        local head = targetPlayer.Character:FindFirstChild("Head")
+                        if head then
+                            if not PingTags[targetPlayer] then
+                                local tag = Drawing.new("Text")
+                                tag.Size = 16
+                                tag.Color = Color3.fromRGB(0, 255, 0)
+                                tag.Center = false
+                                tag.Outline = true
+                                tag.OutlineColor = Color3.new(0, 0, 0)
+                                tag.Visible = true
+                                PingTags[targetPlayer] = tag
+                                PingValues[targetPlayer] = GetPing(targetPlayer)
+                            end
+
+                            if LastPingUpdate >= 0.5 then
+                                PingValues[targetPlayer] = GetPing(targetPlayer)
+                            end
+
+                            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
+                            if onScreen then
+                                PingTags[targetPlayer].Text = tostring(PingValues[targetPlayer]) .. " ms"
+                                PingTags[targetPlayer].Position = Vector2.new(screenPos.X + 30, screenPos.Y)
+                                PingTags[targetPlayer].Visible = true
+                            else
+                                PingTags[targetPlayer].Visible = false
+                            end
+                        end
+                    end
+                end
+                
+                if LastPingUpdate >= 0.5 then
+                    LastPingUpdate = 0
+                end
+            end)
+        end
+    elseif espType == "tracer" then
+        if not ESPConnections.tracer then
+            ESPConnections.tracer = RunService.RenderStepped:Connect(DrawTracers)
+        end
+    elseif espType == "radius of visibility" then
+        if not ESPConnections["radius of visibility"] then
+            ESPConnections["radius of visibility"] = RunService.RenderStepped:Connect(function()
+                if not ESPStates["radius of visibility"] then return end
+                
+                for _, v in ipairs(Circles) do SafeRemove(v) end
+                Circles = {}
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local pos = targetPlayer.Character.HumanoidRootPart.Position - Vector3.new(0, targetPlayer.Character.HumanoidRootPart.Size.Y / 2, 0)
+                        DrawCircle(pos)
+                    end
+                end
+            end)
+        end
+    elseif espType == "distance" then
+        if not ESPConnections.distance then
+            ESPConnections.distance = RunService.RenderStepped:Connect(DrawDistance)
+        end
+    end
+    
+    print(espType .. " ESP включен")
+end
+
+local function DisableESP(espType)
+    ESPStates[espType] = false
+    
+    if espType == "box" then
+        for _, box in pairs(ESPs) do SafeRemove(box) end
+        ESPs = {}
+        if ESPConnections.box then
+            ESPConnections.box:Disconnect()
+            ESPConnections.box = nil
+        end
+    elseif espType == "color" then
+        for _, hl in pairs(ColorHighlights) do SafeRemove(hl) end
+        ColorHighlights = {}
+    elseif espType == "gradient" then
+        for _, hl in pairs(GradientHighlights) do SafeRemove(hl) end
+        GradientHighlights = {}
+    elseif espType == "3d box" then
+        for _, line in ipairs(Lines3D) do SafeRemove(line) end
+        for _, quad in ipairs(Quads3D) do SafeRemove(quad) end
+        Lines3D = {}
+        Quads3D = {}
+        if ESPConnections["3d box"] then
+            ESPConnections["3d box"]:Disconnect()
+            ESPConnections["3d box"] = nil
+        end
+    elseif espType == "nickname" then
+        for _, tag in ipairs(NameTags) do SafeRemove(tag) end
+        NameTags = {}
+        if ESPConnections.nickname then
+            ESPConnections.nickname:Disconnect()
+            ESPConnections.nickname = nil
+        end
+    elseif espType == "ping" then
+        for _, tag in pairs(PingTags) do SafeRemove(tag) end
+        PingTags = {}
+        PingValues = {}
+        if ESPConnections.ping then
+            ESPConnections.ping:Disconnect()
+            ESPConnections.ping = nil
+        end
+    elseif espType == "tracer" then
+        for _, tracer in ipairs(Tracers) do SafeRemove(tracer) end
+        Tracers = {}
+        if ESPConnections.tracer then
+            ESPConnections.tracer:Disconnect()
+            ESPConnections.tracer = nil
+        end
+    elseif espType == "radius of visibility" then
+        for _, v in ipairs(Circles) do SafeRemove(v) end
+        Circles = {}
+        if ESPConnections["radius of visibility"] then
+            ESPConnections["radius of visibility"]:Disconnect()
+            ESPConnections["radius of visibility"] = nil
+        end
+    elseif espType == "distance" then
+        for _, label in ipairs(DistanceLabels) do SafeRemove(label) end
+        DistanceLabels = {}
+        if ESPConnections.distance then
+            ESPConnections.distance:Disconnect()
+            ESPConnections.distance = nil
+        end
+    end
+    
+    print(espType .. " ESP выключен")
+end
+
+-- Цвета skeet
+local colors = {
+    background = Color3.fromRGB(17, 17, 17),
+    secondary = Color3.fromRGB(25, 25, 25),
+    accent = Color3.fromRGB(165, 194, 97),
+    text = Color3.fromRGB(255, 255, 255),
+    textSecondary = Color3.fromRGB(180, 180, 180),
+    border = Color3.fromRGB(60, 60, 60),
+    hover = Color3.fromRGB(35, 35, 35)
+}
+
+-- Настройки с callback функциями
+local settings = {
+    ESP = {
+        title = "ESP",
+        options = {
+            {name = "box", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("box") else DisableESP("box") end
+            end},
+            {name = "color", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("color") else DisableESP("color") end
+            end},
+            {name = "gradient", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("gradient") else DisableESP("gradient") end
+            end},
+            {name = "3d box", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("3d box") else DisableESP("3d box") end
+            end},
+            {name = "nickname", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("nickname") else DisableESP("nickname") end
+            end},
+            {name = "ping", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("ping") else DisableESP("ping") end
+            end},
+            {name = "tracer", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("tracer") else DisableESP("tracer") end
+            end},
+            {name = "distance", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("distance") else DisableESP("distance") end
+            end},
+            {name = "radius of visibility", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("radius of visibility") else DisableESP("radius of visibility") end
+            end},
+            {name = "chams", enabled = false}
+        }
+    },
+    Aimbot = {
+        title = "Aimbot", 
+        options = {
+            {name = "Enable Aimbot", enabled = false},
+            {name = "FOV Circle", enabled = false},
+            {name = "Silent Aim", enabled = false},
+            {name = "Triggerbot", enabled = false}
+        }
+    },
+    Misc = {
+        title = "Misc",
+        options = {
+            {name = "Speed Hack", enabled = false},
+            {name = "Jump Power", enabled = false},
+            {name = "Noclip", enabled = false},
+            {name = "Fly", enabled = false}
+        }
+    }
+}
+
+local currentTab = "ESP"
+
+-- Функция для создания закругленных углов
+local function createCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius or 6)
+    corner.Parent = parent
+    return corner
+end
+
+-- Главный фрейм
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 600, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
+mainFrame.BackgroundColor3 = colors.background
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = gui
+createCorner(mainFrame, 8)
+
+-- Заголовок
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
+titleBar.BackgroundColor3 = colors.secondary
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+createCorner(titleBar, 8)
+
+-- Фикс для закругленных углов только сверху
+local titleBarBottom = Instance.new("Frame")
+titleBarBottom.Size = UDim2.new(1, 0, 0, 8)
+titleBarBottom.Position = UDim2.new(0, 0, 1, -8)
+titleBarBottom.BackgroundColor3 = colors.secondary
+titleBarBottom.BorderSizePixel = 0
+titleBarBottom.Parent = titleBar
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(0, 200, 1, 0)
+titleText.Position = UDim2.new(0, 10, 0, 0)
+titleText.Text = "skeet.cc"
+titleText.TextColor3 = colors.accent
+titleText.Font = Enum.Font.SourceSansBold
+titleText.TextSize = 14
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.BackgroundTransparency = 1
+titleText.Parent = titleBar
+
+-- Кнопка закрытия
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 25, 0, 20)
+closeButton.Position = UDim2.new(1, -30, 0, 5)
+closeButton.Text = "X"
+closeButton.TextColor3 = colors.text
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.TextSize = 12
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.BorderSizePixel = 0
+closeButton.Parent = titleBar
+createCorner(closeButton, 4)
+
+closeButton.MouseButton1Click:Connect(function()
+    -- Выключаем все ESP при закрытии
+    for espType, _ in pairs(ESPStates) do
+        DisableESP(espType)
+    end
+    gui:Destroy()
+end)
+
+-- Контейнер для табов
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, -10, 0, 35)
+tabContainer.Position = UDim2.new(0, 5, 0, 35)
+tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = mainFrame
+
+-- Контейнер для контента
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, -10, 1, -75)
+contentContainer.Position = UDim2.new(0, 5, 0, 70)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = mainFrame
+
+-- Функция создания таба
+local function createTab(name, index)
+    local tabCount = 3 -- ESP, Aimbot, Misc
+    
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = name .. "Tab"
+    tabButton.Size = UDim2.new(1/tabCount, -2, 1, 0)
+    tabButton.Position = UDim2.new((index-1)/tabCount, (index-1)*2, 0, 0)
+    tabButton.Text = name
+    tabButton.TextColor3 = (name == currentTab) and colors.accent or colors.textSecondary
+    tabButton.Font = Enum.Font.SourceSans
+    tabButton.TextSize = 12
+    tabButton.BackgroundColor3 = (name == currentTab) and colors.secondary or colors.background
+    tabButton.BorderSizePixel = 0
+    tabButton.Parent = tabContainer
+    createCorner(tabButton, 6)
+    
+    tabButton.MouseButton1Click:Connect(function()
+        -- Обновляем все табы
+        for _, child in pairs(tabContainer:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.TextColor3 = colors.textSecondary
+                child.BackgroundColor3 = colors.background
+            end
+        end
+        
+        -- Активируем текущий таб
+        tabButton.TextColor3 = colors.accent
+        tabButton.BackgroundColor3 = colors.secondary
+        currentTab = name
+        
+        -- Показываем соответствующий контент
+        for _, page in pairs(contentContainer:GetChildren()) do
+            if page:IsA("ScrollingFrame") then
+                page.Visible = (page.Name == name .. "Page")
+            end
+        end
+    end)
+end
+
+-- Функция создания чекбокса
+local function createCheckbox(parent, option, yPos)
+    local checkFrame = Instance.new("Frame")
+    checkFrame.Size = UDim2.new(1, -10, 0, 25)
+    checkFrame.Position = UDim2.new(0, 5, 0, yPos)
+    checkFrame.BackgroundTransparency = 1
+    checkFrame.Parent = parent
+    
+    local checkbox = Instance.new("TextButton")
+    checkbox.Size = UDim2.new(0, 15, 0, 15)
+    checkbox.Position = UDim2.new(0, 0, 0.5, -7.5)
+    checkbox.Text = ""
+    checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
+    checkbox.BorderColor3 = colors.border
+    checkbox.BorderSizePixel = 1
+    checkbox.Parent = checkFrame
+    createCorner(checkbox, 3)
+    
+    local checkmark = Instance.new("TextLabel")
+    checkmark.Size = UDim2.new(1, 0, 1, 0)
+    checkmark.Text = "✓"
+    checkmark.TextColor3 = colors.background
+    checkmark.Font = Enum.Font.SourceSansBold
+    checkmark.TextSize = 10
+    checkmark.BackgroundTransparency = 1
+    checkmark.Visible = option.enabled
+    checkmark.Parent = checkbox
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -25, 1, 0)
+    label.Position = UDim2.new(0, 20, 0, 0)
+    label.Text = option.name
+    label.TextColor3 = colors.text
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    label.Parent = checkFrame
+    
+    checkbox.MouseButton1Click:Connect(function()
+        option.enabled = not option.enabled
+        checkmark.Visible = option.enabled
+        checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
+        
+        -- Вызываем callback если есть
+        if option.callback then
+            option.callback(option.enabled)
+        end
+        
+        print(option.name .. " is now " .. (option.enabled and "enabled" or "disabled"))
+    end)
+end
+
+-- Функция создания страницы
+local function createPage(name, data)
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundColor3 = colors.secondary
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = colors.accent
+    page.CanvasSize = UDim2.new(0, 0, 0, #data.options * 30 + 20)
+    page.Visible = (name == currentTab)
+    page.Parent = contentContainer
+    createCorner(page, 6)
+    
+    for i, option in ipairs(data.options) do
+        createCheckbox(page, option, (i-1) * 30 + 5)
+    end
+end
+
+-- Создаем табы и страницы
+local tabNames = {"ESP", "Aimbot", "Misc"}
+for i, name in ipairs(tabNames) do
+    createTab(name, i)
+    createPage(name, settings[name])
+end
+
+-- Подключаем создание ESP для новых игроков
+Players.PlayerAdded:Connect(function(newPlayer)
+    if ESPStates.box then CreateBoxESP(newPlayer) end
+    if ESPStates.color and newPlayer.Character then applyStaticRedHighlight(newPlayer.Character) end
+    if ESPStates.gradient and newPlayer.Character then createGradientHighlight(newPlayer.Character) end
+end)
+
+-- Делаем окно перетаскиваемым
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Анимация появления
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local tween = TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 600, 0, 400)})
+tween:Play()
+
+print("Complete Skeet menu with all ESP features loaded!")
