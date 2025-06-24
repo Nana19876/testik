@@ -2,9 +2,11 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
 
 -- Удаляем старое меню если есть
 if playerGui:FindFirstChild("SkeetMenu") then
@@ -15,6 +17,85 @@ local gui = Instance.new("ScreenGui")
 gui.Name = "SkeetMenu"
 gui.ResetOnSpawn = false
 gui.Parent = playerGui
+
+-- ESP переменные
+local ESPs = {}
+local ESPConnection = nil
+local ESPEnabled = false
+
+-- ESP функции
+function CreateESP(targetPlayer)
+    if targetPlayer == player then return end
+
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Filled = false
+    box.Visible = false
+
+    ESPs[targetPlayer] = box
+
+    targetPlayer.CharacterAdded:Connect(function()
+        if ESPs[targetPlayer] then
+            ESPs[targetPlayer] = box
+        end
+    end)
+end
+
+function UpdateESP()
+    if not ESPEnabled then return end
+    
+    for targetPlayer, box in pairs(ESPs) do
+        if targetPlayer and targetPlayer.Parent then
+            local character = targetPlayer.Character
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                local rootPart = character.HumanoidRootPart
+                local pos, onscreen = Camera:WorldToViewportPoint(rootPart.Position)
+                if onscreen then
+                    local size = Vector2.new(80, 120)
+                    box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                    box.Size = size
+                    box.Visible = true
+                else
+                    box.Visible = false
+                end
+            else
+                box.Visible = false
+            end
+        end
+    end
+end
+
+function EnableESP()
+    ESPEnabled = true
+    -- Создаем ESP для всех игроков
+    for _, targetPlayer in pairs(Players:GetPlayers()) do
+        CreateESP(targetPlayer)
+    end
+    -- Подключаем обновление
+    if not ESPConnection then
+        ESPConnection = RunService.RenderStepped:Connect(UpdateESP)
+    end
+    print("ESP включен")
+end
+
+function DisableESP()
+    ESPEnabled = false
+    -- Скрываем все ESP
+    for _, box in pairs(ESPs) do
+        if box then
+            box.Visible = false
+            box:Remove()
+        end
+    end
+    ESPs = {}
+    -- Отключаем обновление
+    if ESPConnection then
+        ESPConnection:Disconnect()
+        ESPConnection = nil
+    end
+    print("ESP выключен")
+end
 
 -- Цвета skeet
 local colors = {
@@ -32,7 +113,13 @@ local settings = {
     ESP = {
         title = "ESP",
         options = {
-            {name = "box", enabled = false},
+            {name = "box", enabled = false, callback = function(enabled)
+                if enabled then
+                    EnableESP()
+                else
+                    DisableESP()
+                end
+            end},
             {name = "color", enabled = false},
             {name = "gradient", enabled = false},
             {name = "3d box", enabled = false},
@@ -127,6 +214,7 @@ closeButton.Parent = titleBar
 createCorner(closeButton, 4)
 
 closeButton.MouseButton1Click:Connect(function()
+    DisableESP() -- Выключаем ESP при закрытии меню
     gui:Destroy()
 end)
 
@@ -228,6 +316,11 @@ local function createCheckbox(parent, option, yPos)
         checkmark.Visible = option.enabled
         checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
         
+        -- Вызываем callback если есть
+        if option.callback then
+            option.callback(option.enabled)
+        end
+        
         print(option.name .. " is now " .. (option.enabled and "enabled" or "disabled"))
     end)
 end
@@ -257,6 +350,13 @@ for i, name in ipairs(tabNames) do
     createTab(name, i)
     createPage(name, settings[name])
 end
+
+-- Подключаем создание ESP для новых игроков
+Players.PlayerAdded:Connect(function(newPlayer)
+    if ESPEnabled then
+        CreateESP(newPlayer)
+    end
+end)
 
 -- Делаем окно перетаскиваемым
 local dragging = false
@@ -295,4 +395,4 @@ local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirectio
 local tween = TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 600, 0, 400)})
 tween:Play()
 
-print("Skeet menu loaded successfully!")
+print("Skeet menu with ESP loaded successfully!")
