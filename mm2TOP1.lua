@@ -859,7 +859,7 @@ local function createDropdown(parent, yPos)
     dropdownFrame.Position = UDim2.new(1, -85, 0.5, -7.5)
     dropdownFrame.BackgroundColor3 = colors.secondary
     dropdownFrame.BorderSizePixel = 0
-    dropdownFrame.ZIndex = 5
+    dropdownFrame.ZIndex = 15
     dropdownFrame.Parent = parent
     createCorner(dropdownFrame, 3)
     
@@ -870,7 +870,7 @@ local function createDropdown(parent, yPos)
     dropdownButton.Font = Enum.Font.SourceSans
     dropdownButton.TextSize = 9
     dropdownButton.BackgroundTransparency = 1
-    dropdownButton.ZIndex = 6
+    dropdownButton.ZIndex = 16
     dropdownButton.Parent = dropdownFrame
     
     local dropdownList = Instance.new("Frame")
@@ -880,7 +880,7 @@ local function createDropdown(parent, yPos)
     dropdownList.BorderSizePixel = 1
     dropdownList.BorderColor3 = colors.border
     dropdownList.Visible = false
-    dropdownList.ZIndex = 10
+    dropdownList.ZIndex = 20
     dropdownList.Parent = dropdownFrame
     createCorner(dropdownList, 3)
     
@@ -900,7 +900,7 @@ local function createDropdown(parent, yPos)
         optionButton.TextSize = 9
         optionButton.BackgroundColor3 = colors.secondary
         optionButton.BorderSizePixel = 0
-        optionButton.ZIndex = 11
+        optionButton.ZIndex = 25
         optionButton.Parent = dropdownList
         
         optionButton.MouseEnter:Connect(function()
@@ -912,9 +912,11 @@ local function createDropdown(parent, yPos)
         end)
         
         optionButton.MouseButton1Click:Connect(function()
+            print("Option clicked:", option.text) -- Отладка
             BoxESPSettings.targetMode = option.mode
             dropdownButton.Text = option.text .. " ▼"
             dropdownList.Visible = false
+            dropdownOpen = false
             print("Box ESP режим изменен на: " .. option.text)
         end)
     end
@@ -927,29 +929,27 @@ local function createDropdown(parent, yPos)
         print("Dropdown clicked, visible:", dropdownOpen)
     end)
     
-    -- Улучшенное закрытие dropdown
-    local function closeDropdown()
-        if dropdownOpen then
-            dropdownOpen = false
-            dropdownList.Visible = false
-        end
-    end
-    
-    -- Закрываем dropdown при клике вне его
-    local connection
-    connection = UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and dropdownOpen then
-            local mouse = UserInputService:GetMouseLocation()
-            local framePos = dropdownFrame.AbsolutePosition
-            local frameSize = dropdownFrame.AbsoluteSize
-            local listSize = dropdownList.AbsoluteSize
-            
-            -- Проверяем, находится ли клик внутри dropdown области
-            local insideDropdown = (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
-                                  mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + listSize.Y)
-            
-            if not insideDropdown then
-                closeDropdown()
+    -- Закрываем dropdown при клике вне его (с задержкой)
+    spawn(function()
+        while dropdownFrame.Parent do
+            wait(0.1)
+            if dropdownOpen then
+                local mouse = UserInputService:GetMouseLocation()
+                local framePos = dropdownFrame.AbsolutePosition
+                local frameSize = dropdownFrame.AbsoluteSize
+                local listSize = dropdownList.AbsoluteSize
+                
+                -- Проверяем клик мыши
+                if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                    local insideDropdown = (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
+                                          mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + listSize.Y)
+                    
+                    if not insideDropdown then
+                        wait(0.1) -- Небольшая задержка
+                        dropdownOpen = false
+                        dropdownList.Visible = false
+                    end
+                end
             end
         end
     end)
