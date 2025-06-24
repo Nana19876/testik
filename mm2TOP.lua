@@ -48,6 +48,11 @@ local DistanceLabels = {}
 -- Подключения
 local ESPConnections = {}
 
+-- Настройки для Box ESP
+local BoxESPSettings = {
+    targetMode = "all" -- "all" или "murderer"
+}
+
 -- Безопасное удаление объектов
 local function SafeRemove(obj)
     if obj then
@@ -62,6 +67,14 @@ end
 -- Проверка персонажа
 local function HasCharacter(targetPlayer)
     return targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+end
+
+-- Проверка на наличие ножа (murderer)
+local function isMurderer(targetPlayer)
+    local backpack = targetPlayer:FindFirstChild("Backpack")
+    local character = targetPlayer.Character
+    
+    return (backpack and backpack:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife"))
 end
 
 -- ========== BOX ESP ==========
@@ -82,15 +95,34 @@ function UpdateBoxESP()
     
     for targetPlayer, box in pairs(ESPs) do
         if targetPlayer and targetPlayer.Parent then
-            local character = targetPlayer.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local rootPart = character.HumanoidRootPart
-                local pos, onscreen = Camera:WorldToViewportPoint(rootPart.Position)
-                if onscreen then
-                    local size = Vector2.new(80, 120)
-                    box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
-                    box.Size = size
-                    box.Visible = true
+            local shouldShow = false
+            
+            -- Определяем, показывать ли ESP для этого игрока
+            if BoxESPSettings.targetMode == "all" then
+                shouldShow = true
+            elseif BoxESPSettings.targetMode == "murderer" then
+                shouldShow = isMurderer(targetPlayer)
+            end
+            
+            if shouldShow then
+                local character = targetPlayer.Character
+                if character and character:FindFirstChild("HumanoidRootPart") then
+                    local rootPart = character.HumanoidRootPart
+                    local pos, onscreen = Camera:WorldToViewportPoint(rootPart.Position)
+                    if onscreen then
+                        local size = Vector2.new(80, 120)
+                        box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                        box.Size = size
+                        box.Visible = true
+                        -- Меняем цвет для murderer
+                        if BoxESPSettings.targetMode == "murderer" then
+                            box.Color = Color3.fromRGB(255, 0, 0) -- Красный для murderer
+                        else
+                            box.Color = Color3.fromRGB(255, 255, 255) -- Белый для всех
+                        end
+                    else
+                        box.Visible = false
+                    end
                 else
                     box.Visible = false
                 end
@@ -587,7 +619,12 @@ local settings = {
     ESP = {
         title = "ESP",
         options = {
-            {name = "box", enabled = false, callback = function(enabled)
+            {name = "box (all players)", enabled = false, callback = function(enabled)
+                BoxESPSettings.targetMode = "all"
+                if enabled then EnableESP("box") else DisableESP("box") end
+            end},
+            {name = "box (murderer only)", enabled = false, callback = function(enabled)
+                BoxESPSettings.targetMode = "murderer"
                 if enabled then EnableESP("box") else DisableESP("box") end
             end},
             {name = "color", enabled = false, callback = function(enabled)
@@ -860,7 +897,7 @@ local function createCheckbox(parent, option, yPos)
             option.callback(option.enabled)
         end
         
-        print(option.name .. " is now " .. (option.enabled and "enabled" or "disabled"))
+        print(option.name .. " is now " .. (option.enabled and "disabled"))
     end)
 end
 
