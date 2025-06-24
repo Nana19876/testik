@@ -482,18 +482,45 @@ local function DisableESP(espType)
     ESPStates[espType] = false
     
     if espType == "box" then
-        for _, box in pairs(ESPs) do SafeRemove(box) end
+        for _, box in pairs(ESPs) do 
+            if box then
+                box.Visible = false
+                SafeRemove(box) 
+            end
+        end
         ESPs = {}
         if ESPConnections.box then
             ESPConnections.box:Disconnect()
             ESPConnections.box = nil
         end
     elseif espType == "color" then
-        for _, hl in pairs(ColorHighlights) do SafeRemove(hl) end
+        for char, hl in pairs(ColorHighlights) do 
+            if hl and hl.Parent then
+                hl:Destroy()
+            end
+        end
         ColorHighlights = {}
+        -- Удаляем из всех персонажей
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer.Character then
+                local highlight = targetPlayer.Character:FindFirstChild("ColorHighlight")
+                if highlight then highlight:Destroy() end
+            end
+        end
     elseif espType == "gradient" then
-        for _, hl in pairs(GradientHighlights) do SafeRemove(hl) end
+        for char, hl in pairs(GradientHighlights) do 
+            if hl and hl.Parent then
+                hl:Destroy()
+            end
+        end
         GradientHighlights = {}
+        -- Удаляем из всех персонажей
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer.Character then
+                local highlight = targetPlayer.Character:FindFirstChild("GradientHighlight")
+                if highlight then highlight:Destroy() end
+            end
+        end
     elseif espType == "3d box" then
         for _, line in ipairs(Lines3D) do SafeRemove(line) end
         for _, quad in ipairs(Quads3D) do SafeRemove(quad) end
@@ -612,6 +639,39 @@ local settings = {
 
 local currentTab = "ESP"
 
+-- Функция для выключения всех ESP
+local function DisableAllESP()
+    for espType, _ in pairs(ESPStates) do
+        if ESPStates[espType] then
+            DisableESP(espType)
+            -- Обновляем состояние в настройках
+            for _, option in ipairs(settings.ESP.options) do
+                if option.name == espType then
+                    option.enabled = false
+                    break
+                end
+            end
+        end
+    end
+    
+    -- Обновляем все чекбоксы в интерфейсе
+    local espPage = contentContainer:FindFirstChild("ESPPage")
+    if espPage then
+        for _, child in pairs(espPage:GetChildren()) do
+            if child:IsA("Frame") then
+                local checkbox = child:FindFirstChild("TextButton")
+                local checkmark = checkbox and checkbox:FindFirstChild("TextLabel")
+                if checkbox and checkmark then
+                    checkbox.BackgroundColor3 = colors.secondary
+                    checkmark.Visible = false
+                end
+            end
+        end
+    end
+    
+    print("Все ESP функции выключены")
+end
+
 -- Функция для создания закругленных углов
 local function createCorner(parent, radius)
     local corner = Instance.new("UICorner")
@@ -658,6 +718,23 @@ titleText.TextSize = 14
 titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.BackgroundTransparency = 1
 titleText.Parent = titleBar
+
+-- Кнопка выключения всех ESP
+local disableAllButton = Instance.new("TextButton")
+disableAllButton.Size = UDim2.new(0, 80, 0, 20)
+disableAllButton.Position = UDim2.new(1, -115, 0, 5)
+disableAllButton.Text = "Disable All"
+disableAllButton.TextColor3 = colors.text
+disableAllButton.Font = Enum.Font.SourceSans
+disableAllButton.TextSize = 10
+disableAllButton.BackgroundColor3 = Color3.fromRGB(50, 50, 150)
+disableAllButton.BorderSizePixel = 0
+disableAllButton.Parent = titleBar
+createCorner(disableAllButton, 4)
+
+disableAllButton.MouseButton1Click:Connect(function()
+    DisableAllESP()
+end)
 
 -- Кнопка закрытия
 local closeButton = Instance.new("TextButton")
@@ -856,5 +933,14 @@ mainFrame.Size = UDim2.new(0, 0, 0, 0)
 local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 local tween = TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 600, 0, 400)})
 tween:Play()
+
+-- Горячая клавиша для выключения всех ESP (клавиша END)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.End then
+        DisableAllESP()
+    end
+end)
 
 print("Complete Skeet menu with all ESP features loaded!")
