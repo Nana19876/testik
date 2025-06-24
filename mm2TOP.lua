@@ -1063,9 +1063,10 @@ local function createColorPicker(parent, yPos)
         colorPreview.BackgroundColor3 = newColor
         rgbValue.Text = string.format("%d, %d, %d", 
             newColor.R * 255, newColor.G * 255, newColor.B * 255)
+        print("Цвет обновлен:", newColor)
     end
     
-    -- Обработка кликов по цветовой области
+    -- Обработка кликов по цветовой области (ИСПРАВЛЕННАЯ ВЕРСИЯ)
     local colorAreaButton = Instance.new("TextButton")
     colorAreaButton.Size = UDim2.new(1, 0, 1, 0)
     colorAreaButton.Text = ""
@@ -1073,28 +1074,45 @@ local function createColorPicker(parent, yPos)
     colorAreaButton.ZIndex = 29
     colorAreaButton.Parent = colorArea
     
-    local function handleColorAreaClick(input)
-        local pos = input.Position
-        local areaPos = colorArea.AbsolutePosition
-        local areaSize = colorArea.AbsoluteSize
-        
-        local x = math.clamp((pos.X - areaPos.X) / areaSize.X, 0, 1)
-        local y = math.clamp((pos.Y - areaPos.Y) / areaSize.Y, 0, 1)
-        
-        local saturation = x
-        local value = 1 - y
-        
-        updateColor(currentHue, saturation, value)
-    end
+    local colorAreaDragging = false
     
-    colorAreaButton.MouseButton1Down:Connect(handleColorAreaClick)
-    colorAreaButton.MouseMoved:Connect(function(input)
-        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-            handleColorAreaClick(input)
+    colorAreaButton.MouseButton1Down:Connect(function()
+        colorAreaDragging = true
+        print("Начало перетаскивания в цветовой области")
+    end)
+    
+    colorAreaButton.MouseButton1Up:Connect(function()
+        colorAreaDragging = false
+        print("Конец перетаскивания в цветовой области")
+    end)
+    
+    colorAreaButton.MouseMoved:Connect(function(x, y)
+        if colorAreaDragging then
+            local relativeX = math.clamp((x - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
+            local relativeY = math.clamp((y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+            
+            local saturation = relativeX
+            local value = 1 - relativeY
+            
+            print("Цветовая область - X:", relativeX, "Y:", relativeY, "S:", saturation, "V:", value)
+            updateColor(currentHue, saturation, value)
         end
     end)
     
-    -- Обработка кликов по полосе оттенков
+    -- Простой клик по цветовой области
+    colorAreaButton.MouseButton1Click:Connect(function()
+        local mouse = UserInputService:GetMouseLocation()
+        local relativeX = math.clamp((mouse.X - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
+        local relativeY = math.clamp((mouse.Y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+        
+        local saturation = relativeX
+        local value = 1 - relativeY
+        
+        print("Клик по цветовой области - X:", relativeX, "Y:", relativeY, "S:", saturation, "V:", value)
+        updateColor(currentHue, saturation, value)
+    end)
+    
+    -- Обработка кликов по полосе оттенков (ИСПРАВЛЕННАЯ ВЕРСИЯ)
     local hueBarButton = Instance.new("TextButton")
     hueBarButton.Size = UDim2.new(1, 0, 1, 0)
     hueBarButton.Text = ""
@@ -1102,27 +1120,46 @@ local function createColorPicker(parent, yPos)
     hueBarButton.ZIndex = 29
     hueBarButton.Parent = hueBar
     
-    local function handleHueBarClick(input)
-        local pos = input.Position
-        local barPos = hueBar.AbsolutePosition
-        local barSize = hueBar.AbsoluteSize
-        
-        local y = math.clamp((pos.Y - barPos.Y) / barSize.Y, 0, 1)
-        currentHue = y
+    local hueBarDragging = false
+    
+    hueBarButton.MouseButton1Down:Connect(function()
+        hueBarDragging = true
+        print("Начало перетаскивания в полосе оттенков")
+    end)
+    
+    hueBarButton.MouseButton1Up:Connect(function()
+        hueBarDragging = false
+        print("Конец перетаскивания в полосе оттенков")
+    end)
+    
+    hueBarButton.MouseMoved:Connect(function(x, y)
+        if hueBarDragging then
+            local relativeY = math.clamp((y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+            currentHue = relativeY
+            
+            -- Обновляем цвет основной области
+            local hueColor = HSVtoRGB(currentHue, 1, 1)
+            colorArea.BackgroundColor3 = hueColor
+            
+            print("Полоса оттенков - Y:", relativeY, "Hue:", currentHue)
+            -- Обновляем выбранный цвет (с текущими S и V)
+            updateColor(currentHue, 0.8, 0.8) -- Используем средние значения
+        end
+    end)
+    
+    -- Простой клик по полосе оттенков
+    hueBarButton.MouseButton1Click:Connect(function()
+        local mouse = UserInputService:GetMouseLocation()
+        local relativeY = math.clamp((mouse.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+        currentHue = relativeY
         
         -- Обновляем цвет основной области
         local hueColor = HSVtoRGB(currentHue, 1, 1)
         colorArea.BackgroundColor3 = hueColor
         
+        print("Клик по полосе оттенков - Y:", relativeY, "Hue:", currentHue)
         -- Обновляем выбранный цвет (с текущими S и V)
         updateColor(currentHue, 0.8, 0.8) -- Используем средние значения
-    end
-    
-    hueBarButton.MouseButton1Down:Connect(handleHueBarClick)
-    hueBarButton.MouseMoved:Connect(function(input)
-        if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-            handleHueBarClick(input)
-        end
     end)
     
     -- Кнопка "Авто цвет" (отключает пользовательский цвет)
