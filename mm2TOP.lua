@@ -48,9 +48,11 @@ local DistanceLabels = {}
 -- Подключения
 local ESPConnections = {}
 
--- Настройки для Box ESP
+-- Настройки для Box ESP (теперь множественный выбор)
 local BoxESPSettings = {
-    targetMode = "all" -- "all", "murderer", "sheriff"
+    showAll = true,
+    showMurderer = false,
+    showSheriff = false
 }
 
 -- Безопасное удаление объектов
@@ -107,15 +109,18 @@ function UpdateBoxESP()
             local boxColor = Color3.fromRGB(255, 255, 255) -- Белый по умолчанию
             
             -- Определяем, показывать ли ESP для этого игрока
-            if BoxESPSettings.targetMode == "all" then
+            if BoxESPSettings.showAll then
                 shouldShow = true
                 boxColor = Color3.fromRGB(255, 255, 255) -- Белый для всех
-            elseif BoxESPSettings.targetMode == "murderer" then
-                shouldShow = isMurderer(targetPlayer)
-                boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
-            elseif BoxESPSettings.targetMode == "sheriff" then
-                shouldShow = isSheriff(targetPlayer)
-                boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
+            else
+                -- Проверяем конкретные роли
+                if BoxESPSettings.showMurderer and isMurderer(targetPlayer) then
+                    shouldShow = true
+                    boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
+                elseif BoxESPSettings.showSheriff and isSheriff(targetPlayer) then
+                    shouldShow = true
+                    boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
+                end
             end
             
             if shouldShow then
@@ -852,13 +857,14 @@ local function createTab(name, index)
     end)
 end
 
--- Функция создания dropdown меню
-local function createDropdown(parent, yPos)
+-- Функция создания dropdown меню с множественным выбором
+local function createMultiDropdown(parent, yPos)
     local dropdownFrame = Instance.new("Frame")
-    dropdownFrame.Size = UDim2.new(0, 80, 0, 15)
-    dropdownFrame.Position = UDim2.new(1, -85, 0.5, -7.5)
+    dropdownFrame.Size = UDim2.new(0, 120, 0, 15)
+    dropdownFrame.Position = UDim2.new(1, -125, 0.5, -7.5)
     dropdownFrame.BackgroundColor3 = colors.secondary
-    dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.BorderSizePixel = 1
+    dropdownFrame.BorderColor3 = colors.border
     dropdownFrame.ZIndex = 15
     dropdownFrame.Parent = parent
     createCorner(dropdownFrame, 3)
@@ -874,7 +880,7 @@ local function createDropdown(parent, yPos)
     dropdownButton.Parent = dropdownFrame
     
     local dropdownList = Instance.new("Frame")
-    dropdownList.Size = UDim2.new(1, 0, 0, 90)
+    dropdownList.Size = UDim2.new(1, 0, 0, 75)
     dropdownList.Position = UDim2.new(0, 0, 1, 2)
     dropdownList.BackgroundColor3 = colors.secondary
     dropdownList.BorderSizePixel = 1
@@ -885,39 +891,111 @@ local function createDropdown(parent, yPos)
     createCorner(dropdownList, 3)
     
     local options = {
-        {text = "All Players", mode = "all"},
-        {text = "Murderer Only", mode = "murderer"},
-        {text = "Sheriff Only", mode = "sheriff"}
+        {text = "All Players", setting = "showAll"},
+        {text = "Murderer", setting = "showMurderer"},
+        {text = "Sheriff", setting = "showSheriff"}
     }
     
+    -- Создаем чекбоксы для каждой опции
     for i, option in ipairs(options) do
-        local optionButton = Instance.new("TextButton")
-        optionButton.Size = UDim2.new(1, -2, 1/3, -1)
-        optionButton.Position = UDim2.new(0, 1, (i-1)/3, (i-1))
-        optionButton.Text = option.text
-        optionButton.TextColor3 = colors.text
-        optionButton.Font = Enum.Font.SourceSans
-        optionButton.TextSize = 9
-        optionButton.BackgroundColor3 = colors.secondary
-        optionButton.BorderSizePixel = 0
-        optionButton.ZIndex = 25
-        optionButton.Parent = dropdownList
+        local optionFrame = Instance.new("Frame")
+        optionFrame.Size = UDim2.new(1, -4, 1/3, -2)
+        optionFrame.Position = UDim2.new(0, 2, (i-1)/3, (i-1))
+        optionFrame.BackgroundTransparency = 1
+        optionFrame.ZIndex = 21
+        optionFrame.Parent = dropdownList
         
-        optionButton.MouseEnter:Connect(function()
-            optionButton.BackgroundColor3 = colors.hover
+        local optionCheckbox = Instance.new("TextButton")
+        optionCheckbox.Size = UDim2.new(0, 12, 0, 12)
+        optionCheckbox.Position = UDim2.new(0, 5, 0.5, -6)
+        optionCheckbox.Text = ""
+        optionCheckbox.BackgroundColor3 = BoxESPSettings[option.setting] and colors.accent or colors.background
+        optionCheckbox.BorderSizePixel = 1
+        optionCheckbox.BorderColor3 = colors.border
+        optionCheckbox.ZIndex = 22
+        optionCheckbox.Parent = optionFrame
+        createCorner(optionCheckbox, 2)
+        
+        local optionCheckmark = Instance.new("TextLabel")
+        optionCheckmark.Size = UDim2.new(1, 0, 1, 0)
+        optionCheckmark.Text = "✓"
+        optionCheckmark.TextColor3 = colors.background
+        optionCheckmark.Font = Enum.Font.SourceSansBold
+        optionCheckmark.TextSize = 8
+        optionCheckmark.BackgroundTransparency = 1
+        optionCheckmark.Visible = BoxESPSettings[option.setting]
+        optionCheckmark.ZIndex = 23
+        optionCheckmark.Parent = optionCheckbox
+        
+        local optionLabel = Instance.new("TextLabel")
+        optionLabel.Size = UDim2.new(1, -25, 1, 0)
+        optionLabel.Position = UDim2.new(0, 20, 0, 0)
+        optionLabel.Text = option.text
+        optionLabel.TextColor3 = colors.text
+        optionLabel.Font = Enum.Font.SourceSans
+        optionLabel.TextSize = 9
+        optionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        optionLabel.BackgroundTransparency = 1
+        optionLabel.ZIndex = 22
+        optionLabel.Parent = optionFrame
+        
+        optionCheckbox.MouseButton1Click:Connect(function()
+            -- Если выбираем "All Players", отключаем остальные
+            if option.setting == "showAll" then
+                BoxESPSettings.showAll = not BoxESPSettings.showAll
+                if BoxESPSettings.showAll then
+                    BoxESPSettings.showMurderer = false
+                    BoxESPSettings.showSheriff = false
+                end
+            else
+                -- Если выбираем конкретную роль, отключаем "All Players"
+                BoxESPSettings[option.setting] = not BoxESPSettings[option.setting]
+                if BoxESPSettings[option.setting] then
+                    BoxESPSettings.showAll = false
+                end
+            end
+            
+            -- Обновляем все чекбоксы
+            for j, opt in ipairs(options) do
+                local frame = dropdownList:GetChildren()[j]
+                if frame and frame:IsA("Frame") then
+                    local checkbox = frame:FindFirstChild("TextButton")
+                    local checkmark = checkbox and checkbox:FindFirstChild("TextLabel")
+                    if checkbox and checkmark then
+                        checkbox.BackgroundColor3 = BoxESPSettings[opt.setting] and colors.accent or colors.background
+                        checkmark.Visible = BoxESPSettings[opt.setting]
+                    end
+                end
+            end
+            
+            -- Обновляем текст кнопки
+            local activeOptions = {}
+            if BoxESPSettings.showAll then
+                table.insert(activeOptions, "All")
+            end
+            if BoxESPSettings.showMurderer then
+                table.insert(activeOptions, "Murderer")
+            end
+            if BoxESPSettings.showSheriff then
+                table.insert(activeOptions, "Sheriff")
+            end
+            
+            if #activeOptions == 0 then
+                dropdownButton.Text = "None ▼"
+            else
+                dropdownButton.Text = table.concat(activeOptions, "+") .. " ▼"
+            end
+            
+            print("Box ESP настройки обновлены:", option.text, "=", BoxESPSettings[option.setting])
         end)
         
-        optionButton.MouseLeave:Connect(function()
-            optionButton.BackgroundColor3 = colors.secondary
+        optionFrame.MouseEnter:Connect(function()
+            optionFrame.BackgroundColor3 = colors.hover
+            optionFrame.BackgroundTransparency = 0.5
         end)
         
-        optionButton.MouseButton1Click:Connect(function()
-            print("Option clicked:", option.text) -- Отладка
-            BoxESPSettings.targetMode = option.mode
-            dropdownButton.Text = option.text .. " ▼"
-            dropdownList.Visible = false
-            dropdownOpen = false
-            print("Box ESP режим изменен на: " .. option.text)
+        optionFrame.MouseLeave:Connect(function()
+            optionFrame.BackgroundTransparency = 1
         end)
     end
     
@@ -926,10 +1004,10 @@ local function createDropdown(parent, yPos)
     dropdownButton.MouseButton1Click:Connect(function()
         dropdownOpen = not dropdownOpen
         dropdownList.Visible = dropdownOpen
-        print("Dropdown clicked, visible:", dropdownOpen)
+        print("Multi-dropdown clicked, visible:", dropdownOpen)
     end)
     
-    -- Закрываем dropdown при клике вне его (с задержкой)
+    -- Закрываем dropdown при клике вне его
     spawn(function()
         while dropdownFrame.Parent do
             wait(0.1)
@@ -939,13 +1017,12 @@ local function createDropdown(parent, yPos)
                 local frameSize = dropdownFrame.AbsoluteSize
                 local listSize = dropdownList.AbsoluteSize
                 
-                -- Проверяем клик мыши
                 if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
                     local insideDropdown = (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
                                           mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + listSize.Y)
                     
                     if not insideDropdown then
-                        wait(0.1) -- Небольшая задержка
+                        wait(0.1)
                         dropdownOpen = false
                         dropdownList.Visible = false
                     end
@@ -989,7 +1066,7 @@ local function createCheckbox(parent, option, yPos)
     checkmark.Parent = checkbox
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, option.hasDropdown and -110 or -25, 1, 0)
+    label.Size = UDim2.new(1, option.hasDropdown and -150 or -25, 1, 0)
     label.Position = UDim2.new(0, 20, 0, 0)
     label.Text = option.name
     label.TextColor3 = colors.text
@@ -1002,7 +1079,7 @@ local function createCheckbox(parent, option, yPos)
     
     -- Добавляем dropdown если нужно
     if option.hasDropdown then
-        createDropdown(checkFrame, yPos)
+        createMultiDropdown(checkFrame, yPos)
     end
     
     checkbox.MouseButton1Click:Connect(function()
@@ -1099,4 +1176,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("Complete Skeet menu with dropdown loaded!")
+print("Complete Skeet menu with multi-selection dropdown loaded!")
