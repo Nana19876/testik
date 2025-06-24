@@ -875,19 +875,35 @@ local function createTab(name, index)
     end)
 end
 
--- Функция создания color picker с ImageLabel-палитрой
-local colorArea = Instance.new("ImageLabel")
-colorArea.Size = UDim2.new(0, 200, 0, 150)
-colorArea.Position = UDim2.new(0, 45, 0, 30)
-colorArea.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Hue по умолчанию
-colorArea.BackgroundTransparency = 0
-colorArea.BorderSizePixel = 1
-colorArea.BorderColor3 = colors.border
-colorArea.ZIndex = 26
-colorArea.Image = "rbxassetid://6020299383" -- Палитра Saturation + Brightness
-colorArea.ScaleType = Enum.ScaleType.Stretch
-colorArea.Parent = colorPalette
-
+-- Функция создания color picker с правильным дизайном
+local function createColorPicker(parent, yPos)
+    local colorFrame = Instance.new("Frame")
+    colorFrame.Size = UDim2.new(0, 20, 0, 15)
+    colorFrame.Position = UDim2.new(1, -25, 0.5, -7.5)
+    colorFrame.BackgroundColor3 = BoxESPSettings.customColor
+    colorFrame.BorderSizePixel = 1
+    colorFrame.BorderColor3 = colors.border
+    colorFrame.ZIndex = 15
+    colorFrame.Parent = parent
+    createCorner(colorFrame, 3)
+    
+    local colorButton = Instance.new("TextButton")
+    colorButton.Size = UDim2.new(1, 0, 1, 0)
+    colorButton.Text = ""
+    colorButton.BackgroundTransparency = 1
+    colorButton.ZIndex = 16
+    colorButton.Parent = colorFrame
+    
+    local colorPalette = Instance.new("Frame")
+    colorPalette.Size = UDim2.new(0, 320, 0, 220)
+    colorPalette.Position = UDim2.new(0, -300, 1, 2)
+    colorPalette.BackgroundColor3 = colors.secondary
+    colorPalette.BorderSizePixel = 1
+    colorPalette.BorderColor3 = colors.border
+    colorPalette.Visible = false
+    colorPalette.ZIndex = 25
+    colorPalette.Parent = colorFrame
+    createCorner(colorPalette, 3)
     
     -- Заголовок палитры
     local paletteTitle = Instance.new("TextLabel")
