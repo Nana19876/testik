@@ -32,12 +32,16 @@ local settings = {
     ESP = {
         title = "ESP",
         options = {
-            {name = "Box ESP", enabled = false},
-            {name = "Name ESP", enabled = false},
-            {name = "Health ESP", enabled = false},
-            {name = "Distance ESP", enabled = false},
-            {name = "Tracers", enabled = false},
-            {name = "Chams", enabled = false}
+            {name = "box", enabled = false},
+            {name = "color", enabled = false},
+            {name = "gradient", enabled = false},
+            {name = "3d box", enabled = false},
+            {name = "nickname", enabled = false},
+            {name = "ping", enabled = false},
+            {name = "tracer", enabled = false},
+            {name = "distance", enabled = false},
+            {name = "radius of visibility", enabled = false},
+            {name = "chams", enabled = false}
         }
     },
     Aimbot = {
@@ -237,7 +241,7 @@ local function createPage(name, data)
     page.BorderSizePixel = 0
     page.ScrollBarThickness = 4
     page.ScrollBarImageColor3 = colors.accent
-    page.CanvasSize = UDim2.new(0, 0, 0, #data.options * 30 + 10)
+    page.CanvasSize = UDim2.new(0, 0, 0, #data.options * 30 + 20)
     page.Visible = (name == currentTab)
     page.Parent = contentContainer
     createCorner(page, 6)
