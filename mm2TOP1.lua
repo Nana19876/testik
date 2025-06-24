@@ -155,6 +155,119 @@ local function EnableESP(espType)
         if not ESPConnections.box then
             ESPConnections.box = RunService.RenderStepped:Connect(UpdateBoxESP)
         end
+    elseif espType == "color" then
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer ~= player and targetPlayer.Character then
+                applyStaticRedHighlight(targetPlayer.Character)
+            end
+        end
+    elseif espType == "gradient" then
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer ~= player and targetPlayer.Character then
+                createGradientHighlight(targetPlayer.Character)
+            end
+        end
+    elseif espType == "3d box" then
+        if not ESPConnections["3d box"] then
+            ESPConnections["3d box"] = RunService.RenderStepped:Connect(function()
+                if not ESPStates["3d box"] then return end
+                
+                for _, line in ipairs(Lines3D) do SafeRemove(line) end
+                for _, quad in ipairs(Quads3D) do SafeRemove(quad) end
+                Lines3D = {}
+                Quads3D = {}
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and HasCharacter(targetPlayer) then
+                        DrawEsp3D(targetPlayer)
+                    end
+                end
+            end)
+        end
+    elseif espType == "nickname" then
+        if not ESPConnections.nickname then
+            ESPConnections.nickname = RunService.RenderStepped:Connect(function()
+                if not ESPStates.nickname then return end
+                
+                for _, tag in ipairs(NameTags) do SafeRemove(tag) end
+                NameTags = {}
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and HasCharacter(targetPlayer) then
+                        DrawName(targetPlayer)
+                    end
+                end
+            end)
+        end
+    elseif espType == "ping" then
+        if not ESPConnections.ping then
+            local LastPingUpdate = 0
+            ESPConnections.ping = RunService.RenderStepped:Connect(function(dt)
+                if not ESPStates.ping then return end
+                
+                LastPingUpdate = LastPingUpdate + dt
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and HasCharacter(targetPlayer) then
+                        local head = targetPlayer.Character:FindFirstChild("Head")
+                        if head then
+                            if not PingTags[targetPlayer] then
+                                local tag = Drawing.new("Text")
+                                tag.Size = 16
+                                tag.Color = Color3.fromRGB(0, 255, 0)
+                                tag.Center = false
+                                tag.Outline = true
+                                tag.OutlineColor = Color3.new(0, 0, 0)
+                                tag.Visible = true
+                                PingTags[targetPlayer] = tag
+                                PingValues[targetPlayer] = GetPing(targetPlayer)
+                            end
+
+                            if LastPingUpdate >= 0.5 then
+                                PingValues[targetPlayer] = GetPing(targetPlayer)
+                            end
+
+                            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
+                            if onScreen then
+                                PingTags[targetPlayer].Text = tostring(PingValues[targetPlayer]) .. " ms"
+                                PingTags[targetPlayer].Position = Vector2.new(screenPos.X + 30, screenPos.Y)
+                                PingTags[targetPlayer].Visible = true
+                            else
+                                PingTags[targetPlayer].Visible = false
+                            end
+                        end
+                    end
+                end
+                
+                if LastPingUpdate >= 0.5 then
+                    LastPingUpdate = 0
+                end
+            end)
+        end
+    elseif espType == "tracer" then
+        if not ESPConnections.tracer then
+            ESPConnections.tracer = RunService.RenderStepped:Connect(DrawTracers)
+        end
+    elseif espType == "radius of visibility" then
+        if not ESPConnections["radius of visibility"] then
+            ESPConnections["radius of visibility"] = RunService.RenderStepped:Connect(function()
+                if not ESPStates["radius of visibility"] then return end
+                
+                for _, v in ipairs(Circles) do SafeRemove(v) end
+                Circles = {}
+                
+                for _, targetPlayer in ipairs(Players:GetPlayers()) do
+                    if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local pos = targetPlayer.Character.HumanoidRootPart.Position - Vector3.new(0, targetPlayer.Character.HumanoidRootPart.Size.Y / 2, 0)
+                        DrawCircle(pos)
+                    end
+                end
+            end)
+        end
+    elseif espType == "distance" then
+        if not ESPConnections.distance then
+            ESPConnections.distance = RunService.RenderStepped:Connect(DrawDistance)
+        end
     end
     
     print(espType .. " ESP включен")
@@ -175,9 +288,346 @@ local function DisableESP(espType)
             ESPConnections.box:Disconnect()
             ESPConnections.box = nil
         end
+    elseif espType == "color" then
+        for char, hl in pairs(ColorHighlights) do 
+            if hl and hl.Parent then
+                hl:Destroy()
+            end
+        end
+        ColorHighlights = {}
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer.Character then
+                local highlight = targetPlayer.Character:FindFirstChild("ColorHighlight")
+                if highlight then highlight:Destroy() end
+            end
+        end
+    elseif espType == "gradient" then
+        for char, hl in pairs(GradientHighlights) do 
+            if hl and hl.Parent then
+                hl:Destroy()
+            end
+        end
+        GradientHighlights = {}
+        for _, targetPlayer in pairs(Players:GetPlayers()) do
+            if targetPlayer.Character then
+                local highlight = targetPlayer.Character:FindFirstChild("GradientHighlight")
+                if highlight then highlight:Destroy() end
+            end
+        end
+    elseif espType == "3d box" then
+        for _, line in ipairs(Lines3D) do SafeRemove(line) end
+        for _, quad in ipairs(Quads3D) do SafeRemove(quad) end
+        Lines3D = {}
+        Quads3D = {}
+        if ESPConnections["3d box"] then
+            ESPConnections["3d box"]:Disconnect()
+            ESPConnections["3d box"] = nil
+        end
+    elseif espType == "nickname" then
+        for _, tag in ipairs(NameTags) do SafeRemove(tag) end
+        NameTags = {}
+        if ESPConnections.nickname then
+            ESPConnections.nickname:Disconnect()
+            ESPConnections.nickname = nil
+        end
+    elseif espType == "ping" then
+        for _, tag in pairs(PingTags) do SafeRemove(tag) end
+        PingTags = {}
+        PingValues = {}
+        if ESPConnections.ping then
+            ESPConnections.ping:Disconnect()
+            ESPConnections.ping = nil
+        end
+    elseif espType == "tracer" then
+        for _, tracer in ipairs(Tracers) do SafeRemove(tracer) end
+        Tracers = {}
+        if ESPConnections.tracer then
+            ESPConnections.tracer:Disconnect()
+            ESPConnections.tracer = nil
+        end
+    elseif espType == "radius of visibility" then
+        for _, v in ipairs(Circles) do SafeRemove(v) end
+        Circles = {}
+        if ESPConnections["radius of visibility"] then
+            ESPConnections["radius of visibility"]:Disconnect()
+            ESPConnections["radius of visibility"] = nil
+        end
+    elseif espType == "distance" then
+        for _, label in ipairs(DistanceLabels) do SafeRemove(label) end
+        DistanceLabels = {}
+        if ESPConnections.distance then
+            ESPConnections.distance:Disconnect()
+            ESPConnections.distance = nil
+        end
     end
     
     print(espType .. " ESP выключен")
+end
+
+-- ========== COLOR ESP ==========
+local ColorHighlights = {}
+
+local function applyStaticRedHighlight(character)
+    if not character:FindFirstChild("ColorHighlight") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "ColorHighlight"
+        hl.FillColor = Color3.fromRGB(255, 0, 0)
+        hl.FillTransparency = 0.2
+        hl.OutlineTransparency = 1
+        hl.Adornee = character
+        hl.Parent = character
+        ColorHighlights[character] = hl
+    end
+end
+
+-- ========== GRADIENT ESP ==========
+local GradientHighlights = {}
+
+local function createGradientHighlight(char)
+    if not char:FindFirstChild("GradientHighlight") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "GradientHighlight"
+        hl.FillTransparency = 0.3
+        hl.OutlineTransparency = 1
+        hl.Adornee = char
+        hl.Parent = char
+        GradientHighlights[char] = hl
+
+        local t = 0
+        local connection
+        connection = RunService.RenderStepped:Connect(function(dt)
+            if hl and hl.Parent and ESPStates.gradient then
+                t = t + dt * 2
+                local r = math.abs(math.sin(t)) * 255
+                local g = math.abs(math.sin(t + 1)) * 255
+                local b = math.abs(math.sin(t + 2)) * 255
+                hl.FillColor = Color3.fromRGB(r, g, b)
+            else
+                connection:Disconnect()
+            end
+        end)
+    end
+end
+
+-- ========== 3D BOX ESP ==========
+local Lines3D = {}
+local Quads3D = {}
+
+local function GetCorners(cf, size)
+    local half = size / 2
+    local corners = {}
+    for x = -1, 1, 2 do
+        for y = -1, 1, 2 do
+            for z = -1, 1, 2 do
+                table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
+            end
+        end
+    end
+    return corners
+end
+
+local function DrawQuad(PosA, PosB, PosC, PosD)
+    local function screen(pos)
+        local s, vis = Camera:WorldToViewportPoint(pos)
+        return Vector2.new(s.X, s.Y), vis
+    end
+
+    local A, va = screen(PosA)
+    local B, vb = screen(PosB)
+    local C, vc = screen(PosC)
+    local D, vd = screen(PosD)
+
+    if not (va or vb or vc or vd) then return end
+
+    local Quad = Drawing.new("Quad")
+    Quad.Thickness = 1
+    Quad.Color = Color3.fromRGB(255, 0, 0)
+    Quad.Transparency = 0.15
+    Quad.Filled = false
+    Quad.Visible = true
+    Quad.PointA = A
+    Quad.PointB = B
+    Quad.PointC = C
+    Quad.PointD = D
+    table.insert(Quads3D, Quad)
+end
+
+local function DrawLine3D(from, to)
+    local function screen(pos)
+        local s, vis = Camera:WorldToViewportPoint(pos)
+        return Vector2.new(s.X, s.Y), vis
+    end
+
+    local A, va = screen(from)
+    local B, vb = screen(to)
+
+    if not (va or vb) then return end
+
+    local Line = Drawing.new("Line")
+    Line.Thickness = 1
+    Line.Color = Color3.fromRGB(255, 0, 0)
+    Line.From = A
+    Line.To = B
+    Line.Transparency = 1
+    Line.Visible = true
+    table.insert(Lines3D, Line)
+end
+
+local function DrawEsp3D(targetPlayer)
+    local HRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
+
+    local size = Vector3.new(3, 5.5, 3)
+    local offset = CFrame.new(0, -0.5, 0)
+    local CubeVertices = GetCorners(HRP.CFrame * offset, size)
+
+    -- Bottom face
+    DrawLine3D(CubeVertices[1], CubeVertices[2])
+    DrawLine3D(CubeVertices[2], CubeVertices[6])
+    DrawLine3D(CubeVertices[6], CubeVertices[5])
+    DrawLine3D(CubeVertices[5], CubeVertices[1])
+    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[6], CubeVertices[5])
+
+    -- Sides
+    DrawLine3D(CubeVertices[1], CubeVertices[3])
+    DrawLine3D(CubeVertices[2], CubeVertices[4])
+    DrawLine3D(CubeVertices[6], CubeVertices[8])
+    DrawLine3D(CubeVertices[5], CubeVertices[7])
+    DrawQuad(CubeVertices[2], CubeVertices[4], CubeVertices[8], CubeVertices[6])
+    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[4], CubeVertices[3])
+    DrawQuad(CubeVertices[1], CubeVertices[5], CubeVertices[7], CubeVertices[3])
+    DrawQuad(CubeVertices[5], CubeVertices[7], CubeVertices[8], CubeVertices[6])
+
+    -- Top face
+    DrawLine3D(CubeVertices[3], CubeVertices[4])
+    DrawLine3D(CubeVertices[4], CubeVertices[8])
+    DrawLine3D(CubeVertices[8], CubeVertices[7])
+    DrawLine3D(CubeVertices[7], CubeVertices[3])
+    DrawQuad(CubeVertices[3], CubeVertices[4], CubeVertices[8], CubeVertices[7])
+end
+
+-- ========== NICKNAME ESP ==========
+local NameTags = {}
+
+local function DrawName(targetPlayer)
+    local head = targetPlayer.Character:FindFirstChild("Head")
+    if not head then return end
+
+    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
+    if onScreen then
+        local nameTag = Drawing.new("Text")
+        nameTag.Text = targetPlayer.DisplayName or targetPlayer.Name
+        nameTag.Position = Vector2.new(screenPos.X, screenPos.Y)
+        nameTag.Color = Color3.fromRGB(255, 255, 255)
+        nameTag.Size = 16
+        nameTag.Center = true
+        nameTag.Outline = true
+        nameTag.OutlineColor = Color3.new(0, 0, 0)
+        nameTag.Visible = true
+        table.insert(NameTags, nameTag)
+    end
+end
+
+-- ========== PING ESP ==========
+local PingTags = {}
+local PingValues = {}
+
+local function GetPing(targetPlayer)
+    return math.random(50, 150) -- fallback
+end
+
+-- ========== TRACER ESP ==========
+local Tracers = {}
+
+local function DrawTracers()
+    for _, line in ipairs(Tracers) do
+        SafeRemove(line)
+    end
+    Tracers = {}
+
+    if not ESPStates.tracer then return end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = targetPlayer.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                local tracer = Drawing.new("Line")
+                tracer.Thickness = 1.5
+                tracer.Color = Color3.fromRGB(255, 0, 0)
+                tracer.Transparency = 1
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+                tracer.Visible = true
+                table.insert(Tracers, tracer)
+            end
+        end
+    end
+end
+
+-- ========== RADIUS ESP ==========
+local Circles = {}
+
+local function DrawCircle(center)
+    local RADIUS = 5
+    local SEGMENTS = 30
+    local step = math.pi * 2 / SEGMENTS
+    local points = {}
+
+    for i = 0, SEGMENTS do
+        local angle = i * step
+        local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
+        table.insert(points, pos)
+    end
+
+    for i = 1, #points - 1 do
+        local p1 = Camera:WorldToViewportPoint(points[i])
+        local p2 = Camera:WorldToViewportPoint(points[i + 1])
+
+        if p1.Z > 0 and p2.Z > 0 then
+            local line = Drawing.new("Line")
+            line.From = Vector2.new(p1.X, p1.Y)
+            line.To = Vector2.new(p2.X, p2.Y)
+            line.Color = Color3.fromRGB(0, 255, 0)
+            line.Thickness = 1.5
+            line.Transparency = 1
+            line.Visible = true
+            table.insert(Circles, line)
+        end
+    end
+end
+
+-- ========== DISTANCE ESP ==========
+local DistanceLabels = {}
+
+local function DrawDistance()
+    for _, label in ipairs(DistanceLabels) do
+        SafeRemove(label)
+    end
+    DistanceLabels = {}
+
+    if not ESPStates.distance then return end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = targetPlayer.Character.HumanoidRootPart
+            local distance = math.floor((rootPart.Position - Camera.CFrame.Position).Magnitude)
+
+            local screenPos, visible = Camera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
+            if visible then
+                local text = Drawing.new("Text")
+                text.Text = tostring(distance) .. "m"
+                text.Size = 16
+                text.Center = true
+                text.Outline = true
+                text.Color = Color3.fromRGB(255, 255, 0)
+                text.Position = Vector2.new(screenPos.X, screenPos.Y)
+                text.Visible = true
+                table.insert(DistanceLabels, text)
+            end
+        end
+    end
 end
 
 -- Цвета skeet
@@ -199,14 +649,30 @@ local settings = {
             {name = "box", enabled = false, hasDropdown = true, hasColorPicker = true, callback = function(enabled)
                 if enabled then EnableESP("box") else DisableESP("box") end
             end},
-            {name = "color", enabled = false},
-            {name = "gradient", enabled = false},
-            {name = "3d box", enabled = false},
-            {name = "nickname", enabled = false},
-            {name = "ping", enabled = false},
-            {name = "tracer", enabled = false},
-            {name = "distance", enabled = false},
-            {name = "radius of visibility", enabled = false},
+            {name = "color", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("color") else DisableESP("color") end
+            end},
+            {name = "gradient", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("gradient") else DisableESP("gradient") end
+            end},
+            {name = "3d box", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("3d box") else DisableESP("3d box") end
+            end},
+            {name = "nickname", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("nickname") else DisableESP("nickname") end
+            end},
+            {name = "ping", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("ping") else DisableESP("ping") end
+            end},
+            {name = "tracer", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("tracer") else DisableESP("tracer") end
+            end},
+            {name = "distance", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("distance") else DisableESP("distance") end
+            end},
+            {name = "radius of visibility", enabled = false, callback = function(enabled)
+                if enabled then EnableESP("radius of visibility") else DisableESP("radius of visibility") end
+            end},
             {name = "chams", enabled = false}
         }
     },
@@ -549,7 +1015,7 @@ local function createColorPicker(parent, yPos)
         return Color3.fromRGB(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255))
     end
     
-    -- Функция обновления цвета
+    -- Функция обновления цвета (исправленная версия)
     local function updateColor(h, s, v)
         currentHue = h
         currentSaturation = s
@@ -566,10 +1032,12 @@ local function createColorPicker(parent, yPos)
             math.floor(newColor.G * 255), 
             math.floor(newColor.B * 255))
         
-        -- Обновляем позицию индикатора на цветовой области
-        -- s = 0 (слева) до s = 1 (справа)
-        -- v = 1 (сверху) до v = 0 (снизу)
-        colorIndicator.Position = UDim2.new(s, -6, 1-v, -6)
+        -- Правильное позиционирование индикатора в пикселях
+        local areaSize = colorArea.AbsoluteSize
+        local indicatorX = s * areaSize.X - 6  -- s от 0 до 1, центрируем индикатор
+        local indicatorY = (1-v) * areaSize.Y - 6  -- v от 1 до 0 (инвертируем), центрируем индикатор
+        
+        colorIndicator.Position = UDim2.new(0, indicatorX, 0, indicatorY)
         
         -- Обновляем позицию индикатора на полосе оттенков
         hueIndicator.Position = UDim2.new(0, -2, h, -2)
@@ -606,32 +1074,64 @@ local function createColorPicker(parent, yPos)
         updateHueFromMouse()
     end)
     
-    -- Обработка цветовой области
+    -- Обработка цветовой области с точным выравниванием курсора
     local colorAreaButton = Instance.new("TextButton")
     colorAreaButton.Size = UDim2.new(1, 0, 1, 0)
     colorAreaButton.Text = ""
     colorAreaButton.BackgroundTransparency = 1
     colorAreaButton.ZIndex = 29
     colorAreaButton.Parent = colorArea
-    
+
     local colorAreaDragging = false
-    
+
     local function updateColorFromMouse()
         local mouse = UserInputService:GetMouseLocation()
-        local relativeX = math.clamp((mouse.X - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
-        local relativeY = math.clamp((mouse.Y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+        
+        -- Получаем точные границы цветовой области
+        local areaPos = colorArea.AbsolutePosition
+        local areaSize = colorArea.AbsoluteSize
+        
+        -- Вычисляем относительные координаты ТОЧНО в пределах области
+        local relativeX = math.clamp((mouse.X - areaPos.X) / areaSize.X, 0, 1)
+        local relativeY = math.clamp((mouse.Y - areaPos.Y) / areaSize.Y, 0, 1)
+        
+        -- Вычисляем точную позицию индикатора (центрируем его на курсоре)
+        local indicatorX = relativeX * areaSize.X - 6  -- -6 это половина размера индикатора (12/2)
+        local indicatorY = relativeY * areaSize.Y - 6  -- -6 это половина размера индикатора (12/2)
+        
+        -- Устанавливаем позицию индикатора в пикселях, а не в относительных координатах
+        colorIndicator.Position = UDim2.new(0, indicatorX, 0, indicatorY)
         
         local saturation = relativeX  -- 0 = слева (белый), 1 = справа (насыщенный)
         local value = 1 - relativeY   -- 0 = снизу (черный), 1 = сверху (яркий)
         
-        updateColor(currentHue, saturation, value)
+        -- Обновляем цвет без изменения позиции индикатора (так как мы уже установили её выше)
+        currentSaturation = saturation
+        currentValue = value
+        
+        local newColor = HSVtoRGB(currentHue, saturation, value)
+        BoxESPSettings.customColor = newColor
+        BoxESPSettings.useCustomColor = true
+        
+        colorFrame.BackgroundColor3 = newColor
+        colorPreview.BackgroundColor3 = newColor
+        rgbLabel.Text = string.format("RGB: %d, %d, %d", 
+            math.floor(newColor.R * 255), 
+            math.floor(newColor.G * 255), 
+            math.floor(newColor.B * 255))
+        
+        -- Обновляем цвет основной области
+        local hueColor = HSVtoRGB(currentHue, 1, 1)
+        colorArea.BackgroundColor3 = hueColor
+        
+        print("Цвет обновлен:", newColor, "Позиция индикатора:", indicatorX, indicatorY)
     end
-    
+
     colorAreaButton.MouseButton1Down:Connect(function()
         colorAreaDragging = true
         updateColorFromMouse()
     end)
-    
+
     colorAreaButton.MouseButton1Click:Connect(function()
         updateColorFromMouse()
     end)
@@ -948,6 +1448,8 @@ end
 -- Подключаем создание ESP для новых игроков
 Players.PlayerAdded:Connect(function(newPlayer)
     if ESPStates.box then CreateBoxESP(newPlayer) end
+    if ESPStates.color and newPlayer.Character then applyStaticRedHighlight(newPlayer.Character) end
+    if ESPStates.gradient and newPlayer.Character then createGradientHighlight(newPlayer.Character) end
 end)
 
 -- Делаем окно перетаскиваемым
