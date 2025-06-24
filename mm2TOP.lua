@@ -859,6 +859,7 @@ local function createDropdown(parent, yPos)
     dropdownFrame.Position = UDim2.new(1, -85, 0.5, -7.5)
     dropdownFrame.BackgroundColor3 = colors.secondary
     dropdownFrame.BorderSizePixel = 0
+    dropdownFrame.ZIndex = 5
     dropdownFrame.Parent = parent
     createCorner(dropdownFrame, 3)
     
@@ -869,16 +870,18 @@ local function createDropdown(parent, yPos)
     dropdownButton.Font = Enum.Font.SourceSans
     dropdownButton.TextSize = 9
     dropdownButton.BackgroundTransparency = 1
+    dropdownButton.ZIndex = 6
     dropdownButton.Parent = dropdownFrame
     
     local dropdownList = Instance.new("Frame")
     dropdownList.Size = UDim2.new(1, 0, 0, 90)
     dropdownList.Position = UDim2.new(0, 0, 1, 2)
     dropdownList.BackgroundColor3 = colors.secondary
-    dropdownList.BorderSizePixel = 0
+    dropdownList.BorderSizePixel = 1
+    dropdownList.BorderColor3 = colors.border
     dropdownList.Visible = false
-    dropdownList.Parent = dropdownFrame
     dropdownList.ZIndex = 10
+    dropdownList.Parent = dropdownFrame
     createCorner(dropdownList, 3)
     
     local options = {
@@ -889,14 +892,15 @@ local function createDropdown(parent, yPos)
     
     for i, option in ipairs(options) do
         local optionButton = Instance.new("TextButton")
-        optionButton.Size = UDim2.new(1, 0, 1/3, 0)
-        optionButton.Position = UDim2.new(0, 0, (i-1)/3, 0)
+        optionButton.Size = UDim2.new(1, -2, 1/3, -1)
+        optionButton.Position = UDim2.new(0, 1, (i-1)/3, (i-1))
         optionButton.Text = option.text
         optionButton.TextColor3 = colors.text
         optionButton.Font = Enum.Font.SourceSans
         optionButton.TextSize = 9
         optionButton.BackgroundColor3 = colors.secondary
         optionButton.BorderSizePixel = 0
+        optionButton.ZIndex = 11
         optionButton.Parent = dropdownList
         
         optionButton.MouseEnter:Connect(function()
@@ -915,23 +919,42 @@ local function createDropdown(parent, yPos)
         end)
     end
     
+    local dropdownOpen = false
+    
     dropdownButton.MouseButton1Click:Connect(function()
-        dropdownList.Visible = not dropdownList.Visible
+        dropdownOpen = not dropdownOpen
+        dropdownList.Visible = dropdownOpen
+        print("Dropdown clicked, visible:", dropdownOpen)
     end)
     
+    -- Улучшенное закрытие dropdown
+    local function closeDropdown()
+        if dropdownOpen then
+            dropdownOpen = false
+            dropdownList.Visible = false
+        end
+    end
+    
     -- Закрываем dropdown при клике вне его
-    UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    local connection
+    connection = UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and dropdownOpen then
             local mouse = UserInputService:GetMouseLocation()
             local framePos = dropdownFrame.AbsolutePosition
             local frameSize = dropdownFrame.AbsoluteSize
+            local listSize = dropdownList.AbsoluteSize
             
-            if not (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
-                   mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + 90) then
-                dropdownList.Visible = false
+            -- Проверяем, находится ли клик внутри dropdown области
+            local insideDropdown = (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
+                                  mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + listSize.Y)
+            
+            if not insideDropdown then
+                closeDropdown()
             end
         end
     end)
+    
+    return dropdownFrame
 end
 
 -- Функция создания чекбокса
@@ -940,6 +963,7 @@ local function createCheckbox(parent, option, yPos)
     checkFrame.Size = UDim2.new(1, -10, 0, 25)
     checkFrame.Position = UDim2.new(0, 5, 0, yPos)
     checkFrame.BackgroundTransparency = 1
+    checkFrame.ZIndex = 2
     checkFrame.Parent = parent
     
     local checkbox = Instance.new("TextButton")
@@ -949,6 +973,7 @@ local function createCheckbox(parent, option, yPos)
     checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
     checkbox.BorderColor3 = colors.border
     checkbox.BorderSizePixel = 1
+    checkbox.ZIndex = 3
     checkbox.Parent = checkFrame
     createCorner(checkbox, 3)
     
@@ -960,6 +985,7 @@ local function createCheckbox(parent, option, yPos)
     checkmark.TextSize = 10
     checkmark.BackgroundTransparency = 1
     checkmark.Visible = option.enabled
+    checkmark.ZIndex = 4
     checkmark.Parent = checkbox
     
     local label = Instance.new("TextLabel")
@@ -971,6 +997,7 @@ local function createCheckbox(parent, option, yPos)
     label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.BackgroundTransparency = 1
+    label.ZIndex = 3
     label.Parent = checkFrame
     
     -- Добавляем dropdown если нужно
@@ -1003,6 +1030,7 @@ local function createPage(name, data)
     page.ScrollBarImageColor3 = colors.accent
     page.CanvasSize = UDim2.new(0, 0, 0, #data.options * 30 + 20)
     page.Visible = (name == currentTab)
+    page.ZIndex = 1
     page.Parent = contentContainer
     createCorner(page, 6)
     
