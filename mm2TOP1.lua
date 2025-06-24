@@ -1,14 +1,26 @@
 -- LocalScript
-local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Удаляем старое меню если есть
+if playerGui:FindFirstChild("SkeetMenu") then
+    playerGui.SkeetMenu:Destroy()
+end
+
+local gui = Instance.new("ScreenGui")
 gui.Name = "SkeetMenu"
 gui.ResetOnSpawn = false
+gui.Parent = playerGui
 
--- Цвета в стиле skeet
+-- Цвета skeet
 local colors = {
     background = Color3.fromRGB(17, 17, 17),
     secondary = Color3.fromRGB(25, 25, 25),
-    accent = Color3.fromRGB(165, 194, 97), -- Зеленый skeet
+    accent = Color3.fromRGB(165, 194, 97),
     text = Color3.fromRGB(255, 255, 255),
     textSecondary = Color3.fromRGB(180, 180, 180),
     border = Color3.fromRGB(60, 60, 60),
@@ -25,13 +37,11 @@ local settings = {
             {name = "Health ESP", enabled = false},
             {name = "Distance ESP", enabled = false},
             {name = "Tracers", enabled = false},
-            {name = "Chams", enabled = false},
-            {name = "Glow ESP", enabled = false},
-            {name = "Skeleton ESP", enabled = false}
+            {name = "Chams", enabled = false}
         }
     },
     Aimbot = {
-        title = "Aimbot",
+        title = "Aimbot", 
         options = {
             {name = "Enable Aimbot", enabled = false},
             {name = "FOV Circle", enabled = false},
@@ -42,10 +52,10 @@ local settings = {
     Misc = {
         title = "Misc",
         options = {
-            {name = "Bunny Hop", enabled = false},
-            {name = "Auto Strafe", enabled = false},
-            {name = "No Recoil", enabled = false},
-            {name = "Infinite Ammo", enabled = false}
+            {name = "Speed Hack", enabled = false},
+            {name = "Jump Power", enabled = false},
+            {name = "Noclip", enabled = false},
+            {name = "Fly", enabled = false}
         }
     }
 }
@@ -60,70 +70,56 @@ local function createCorner(parent, radius)
     return corner
 end
 
--- Функция для создания градиента
-local function createGradient(parent, color1, color2, rotation)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, color1),
-        ColorSequenceKeypoint.new(1, color2)
-    }
-    gradient.Rotation = rotation or 90
-    gradient.Parent = parent
-    return gradient
-end
-
--- Функция для создания тени
-local function createShadow(parent)
-    local shadow = Instance.new("Frame")
-    shadow.Name = "Shadow"
-    shadow.Parent = parent.Parent
-    shadow.Size = parent.Size + UDim2.new(0, 10, 0, 10)
-    shadow.Position = parent.Position + UDim2.new(0, 5, 0, 5)
-    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.BackgroundTransparency = 0.7
-    shadow.ZIndex = parent.ZIndex - 1
-    createCorner(shadow, 8)
-    return shadow
-end
-
 -- Главный фрейм
-local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.new(0, 650, 0, 500)
-mainFrame.Position = UDim2.new(0.5, -325, 0.5, -250)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 600, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
 mainFrame.BackgroundColor3 = colors.background
 mainFrame.BorderSizePixel = 0
-mainFrame.ZIndex = 2
+mainFrame.Parent = gui
 createCorner(mainFrame, 8)
-createShadow(mainFrame)
 
 -- Заголовок
-local titleBar = Instance.new("Frame", mainFrame)
-titleBar.Size = UDim2.new(1, 0, 0, 35)
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 30)
 titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = colors.secondary
 titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
 createCorner(titleBar, 8)
 
-local titleText = Instance.new("TextLabel", titleBar)
+-- Фикс для закругленных углов только сверху
+local titleBarBottom = Instance.new("Frame")
+titleBarBottom.Size = UDim2.new(1, 0, 0, 8)
+titleBarBottom.Position = UDim2.new(0, 0, 1, -8)
+titleBarBottom.BackgroundColor3 = colors.secondary
+titleBarBottom.BorderSizePixel = 0
+titleBarBottom.Parent = titleBar
+
+local titleText = Instance.new("TextLabel")
 titleText.Size = UDim2.new(0, 200, 1, 0)
-titleText.Position = UDim2.new(0, 15, 0, 0)
+titleText.Position = UDim2.new(0, 10, 0, 0)
 titleText.Text = "skeet.cc"
 titleText.TextColor3 = colors.accent
-titleText.Font = Enum.Font.GothamBold
-titleText.TextSize = 16
+titleText.Font = Enum.Font.SourceSansBold
+titleText.TextSize = 14
 titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.BackgroundTransparency = 1
+titleText.Parent = titleBar
 
 -- Кнопка закрытия
-local closeButton = Instance.new("TextButton", titleBar)
-closeButton.Size = UDim2.new(0, 30, 0, 25)
-closeButton.Position = UDim2.new(1, -35, 0, 5)
-closeButton.Text = "×"
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 25, 0, 20)
+closeButton.Position = UDim2.new(1, -30, 0, 5)
+closeButton.Text = "X"
 closeButton.TextColor3 = colors.text
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextSize = 18
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.TextSize = 12
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeButton.BorderSizePixel = 0
+closeButton.Parent = titleBar
 createCorner(closeButton, 4)
 
 closeButton.MouseButton1Click:Connect(function()
@@ -131,45 +127,35 @@ closeButton.MouseButton1Click:Connect(function()
 end)
 
 -- Контейнер для табов
-local tabContainer = Instance.new("Frame", mainFrame)
-tabContainer.Size = UDim2.new(1, -20, 0, 40)
-tabContainer.Position = UDim2.new(0, 10, 0, 45)
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, -10, 0, 35)
+tabContainer.Position = UDim2.new(0, 5, 0, 35)
 tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = mainFrame
 
 -- Контейнер для контента
-local contentContainer = Instance.new("Frame", mainFrame)
-contentContainer.Size = UDim2.new(1, -20, 1, -95)
-contentContainer.Position = UDim2.new(0, 10, 0, 85)
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, -10, 1, -75)
+contentContainer.Position = UDim2.new(0, 5, 0, 70)
 contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = mainFrame
 
 -- Функция создания таба
 local function createTab(name, index)
-    local tabCount = 0
-    for _ in pairs(settings) do tabCount = tabCount + 1 end
+    local tabCount = 3 -- ESP, Aimbot, Misc
     
-    local tabButton = Instance.new("TextButton", tabContainer)
-    tabButton.Size = UDim2.new(1/tabCount, -5, 1, 0)
-    tabButton.Position = UDim2.new((index-1)/tabCount, (index-1)*5, 0, 0)
+    local tabButton = Instance.new("TextButton")
+    tabButton.Name = name .. "Tab"
+    tabButton.Size = UDim2.new(1/tabCount, -2, 1, 0)
+    tabButton.Position = UDim2.new((index-1)/tabCount, (index-1)*2, 0, 0)
     tabButton.Text = name
     tabButton.TextColor3 = (name == currentTab) and colors.accent or colors.textSecondary
-    tabButton.Font = Enum.Font.Gotham
-    tabButton.TextSize = 14
+    tabButton.Font = Enum.Font.SourceSans
+    tabButton.TextSize = 12
     tabButton.BackgroundColor3 = (name == currentTab) and colors.secondary or colors.background
     tabButton.BorderSizePixel = 0
+    tabButton.Parent = tabContainer
     createCorner(tabButton, 6)
-    
-    -- Анимация при наведении
-    tabButton.MouseEnter:Connect(function()
-        if name ~= currentTab then
-            tabButton.BackgroundColor3 = colors.hover
-        end
-    end)
-    
-    tabButton.MouseLeave:Connect(function()
-        if name ~= currentTab then
-            tabButton.BackgroundColor3 = colors.background
-        end
-    end)
     
     tabButton.MouseButton1Click:Connect(function()
         -- Обновляем все табы
@@ -187,7 +173,7 @@ local function createTab(name, index)
         
         -- Показываем соответствующий контент
         for _, page in pairs(contentContainer:GetChildren()) do
-            if page:IsA("Frame") then
+            if page:IsA("ScrollingFrame") then
                 page.Visible = (page.Name == name .. "Page")
             end
         end
@@ -196,73 +182,76 @@ end
 
 -- Функция создания чекбокса
 local function createCheckbox(parent, option, yPos)
-    local checkFrame = Instance.new("Frame", parent)
-    checkFrame.Size = UDim2.new(1, -20, 0, 30)
-    checkFrame.Position = UDim2.new(0, 10, 0, yPos)
+    local checkFrame = Instance.new("Frame")
+    checkFrame.Size = UDim2.new(1, -10, 0, 25)
+    checkFrame.Position = UDim2.new(0, 5, 0, yPos)
     checkFrame.BackgroundTransparency = 1
+    checkFrame.Parent = parent
     
-    local checkbox = Instance.new("TextButton", checkFrame)
-    checkbox.Size = UDim2.new(0, 18, 0, 18)
-    checkbox.Position = UDim2.new(0, 0, 0.5, -9)
+    local checkbox = Instance.new("TextButton")
+    checkbox.Size = UDim2.new(0, 15, 0, 15)
+    checkbox.Position = UDim2.new(0, 0, 0.5, -7.5)
     checkbox.Text = ""
-    checkbox.BackgroundColor3 = colors.secondary
+    checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
     checkbox.BorderColor3 = colors.border
     checkbox.BorderSizePixel = 1
+    checkbox.Parent = checkFrame
     createCorner(checkbox, 3)
     
-    local checkmark = Instance.new("TextLabel", checkbox)
+    local checkmark = Instance.new("TextLabel")
     checkmark.Size = UDim2.new(1, 0, 1, 0)
     checkmark.Text = "✓"
-    checkmark.TextColor3 = colors.accent
-    checkmark.Font = Enum.Font.GothamBold
-    checkmark.TextSize = 12
+    checkmark.TextColor3 = colors.background
+    checkmark.Font = Enum.Font.SourceSansBold
+    checkmark.TextSize = 10
     checkmark.BackgroundTransparency = 1
     checkmark.Visible = option.enabled
+    checkmark.Parent = checkbox
     
-    local label = Instance.new("TextLabel", checkFrame)
-    label.Size = UDim2.new(1, -30, 1, 0)
-    label.Position = UDim2.new(0, 25, 0, 0)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -25, 1, 0)
+    label.Position = UDim2.new(0, 20, 0, 0)
     label.Text = option.name
     label.TextColor3 = colors.text
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
+    label.Font = Enum.Font.SourceSans
+    label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.BackgroundTransparency = 1
+    label.Parent = checkFrame
     
     checkbox.MouseButton1Click:Connect(function()
         option.enabled = not option.enabled
         checkmark.Visible = option.enabled
         checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
         
-        -- Здесь можно добавить логику для включения/выключения функций
         print(option.name .. " is now " .. (option.enabled and "enabled" or "disabled"))
     end)
 end
 
 -- Функция создания страницы
 local function createPage(name, data)
-    local page = Instance.new("ScrollingFrame", contentContainer)
+    local page = Instance.new("ScrollingFrame")
     page.Name = name .. "Page"
     page.Size = UDim2.new(1, 0, 1, 0)
     page.BackgroundColor3 = colors.secondary
     page.BorderSizePixel = 0
-    page.ScrollBarThickness = 6
+    page.ScrollBarThickness = 4
     page.ScrollBarImageColor3 = colors.accent
-    page.CanvasSize = UDim2.new(0, 0, 0, #data.options * 35 + 20)
+    page.CanvasSize = UDim2.new(0, 0, 0, #data.options * 30 + 10)
     page.Visible = (name == currentTab)
+    page.Parent = contentContainer
     createCorner(page, 6)
     
     for i, option in ipairs(data.options) do
-        createCheckbox(page, option, (i-1) * 35 + 10)
+        createCheckbox(page, option, (i-1) * 30 + 5)
     end
 end
 
 -- Создаем табы и страницы
-local tabIndex = 1
-for name, data in pairs(settings) do
-    createTab(name, tabIndex)
-    createPage(name, data)
-    tabIndex = tabIndex + 1
+local tabNames = {"ESP", "Aimbot", "Misc"}
+for i, name in ipairs(tabNames) do
+    createTab(name, i)
+    createPage(name, settings[name])
 end
 
 -- Делаем окно перетаскиваемым
@@ -278,14 +267,19 @@ titleBar.InputBegan:Connect(function(input)
     end
 end)
 
-titleBar.InputChanged:Connect(function(input)
+UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
     end
 end)
 
-titleBar.InputEnded:Connect(function(input)
+UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
@@ -293,6 +287,8 @@ end)
 
 -- Анимация появления
 mainFrame.Size = UDim2.new(0, 0, 0, 0)
-mainFrame:TweenSize(UDim2.new(0, 650, 0, 500), "Out", "Quart", 0.3, true)
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local tween = TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 600, 0, 400)})
+tween:Play()
 
 print("Skeet menu loaded successfully!")
