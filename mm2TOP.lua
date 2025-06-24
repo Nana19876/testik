@@ -34,15 +34,27 @@ local ESPStates = {
 
 -- Хранилища для ESP объектов
 local ESPs = {}
+local GradientHighlights = {}
+local ColorHighlights = {}
+local Lines3D = {}
+local Quads3D = {}
+local NameTags = {}
+local PingTags = {}
+local PingValues = {}
+local Tracers = {}
+local Circles = {}
+local DistanceLabels = {}
+
+-- Подключения
 local ESPConnections = {}
 
--- Настройки для Box ESP
+-- Настройки для Box ESP (теперь множественный выбор)
 local BoxESPSettings = {
     showAll = true,
     showMurderer = false,
     showSheriff = false,
-    customColor = Color3.fromRGB(255, 255, 255),
-    useCustomColor = false
+    customColor = Color3.fromRGB(255, 255, 255), -- Пользовательский цвет
+    useCustomColor = false -- Использовать ли пользовательский цвет
 }
 
 -- Безопасное удаление объектов
@@ -96,26 +108,35 @@ function UpdateBoxESP()
     for targetPlayer, box in pairs(ESPs) do
         if targetPlayer and targetPlayer.Parent then
             local shouldShow = false
-            local boxColor = BoxESPSettings.customColor
+            local boxColor = BoxESPSettings.customColor -- Используем пользовательский цвет по умолчанию
 
             if BoxESPSettings.showAll then
                 shouldShow = true
                 if not BoxESPSettings.useCustomColor then
-                    boxColor = Color3.fromRGB(255, 255, 255)
+                    boxColor = Color3.fromRGB(255, 255, 255) -- Белый для всех если не используется пользовательский цвет
                 end
             else
+                -- Проверяем конкретные роли только если showAll выключен
                 local isMurd = isMurderer(targetPlayer)
                 local isSher = isSheriff(targetPlayer)
                 
                 if BoxESPSettings.showMurderer and isMurd then
                     shouldShow = true
                     if not BoxESPSettings.useCustomColor then
-                        boxColor = Color3.fromRGB(255, 0, 0)
+                        boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
                     end
                 elseif BoxESPSettings.showSheriff and isSher then
                     shouldShow = true
                     if not BoxESPSettings.useCustomColor then
-                        boxColor = Color3.fromRGB(0, 150, 255)
+                        boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
+                    end
+                end
+                
+                -- Если игрок одновременно и murderer и sheriff
+                if BoxESPSettings.showMurderer and BoxESPSettings.showSheriff and isMurd and isSher then
+                    shouldShow = true
+                    if not BoxESPSettings.useCustomColor then
+                        boxColor = Color3.fromRGB(255, 0, 0) -- Красный приоритет
                     end
                 end
             end
@@ -139,6 +160,254 @@ function UpdateBoxESP()
                 end
             else
                 box.Visible = false
+            end
+        end
+    end
+end
+
+-- ========== COLOR ESP ==========
+local function applyStaticRedHighlight(character)
+    if not character:FindFirstChild("ColorHighlight") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "ColorHighlight"
+        hl.FillColor = Color3.fromRGB(255, 0, 0)
+        hl.FillTransparency = 0.2
+        hl.OutlineTransparency = 1
+        hl.Adornee = character
+        hl.Parent = character
+        ColorHighlights[character] = hl
+    end
+end
+
+-- ========== GRADIENT ESP ==========
+local function createGradientHighlight(char)
+    if not char:FindFirstChild("GradientHighlight") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "GradientHighlight"
+        hl.FillTransparency = 0.3
+        hl.OutlineTransparency = 1
+        hl.Adornee = char
+        hl.Parent = char
+        GradientHighlights[char] = hl
+
+        local t = 0
+        local connection
+        connection = RunService.RenderStepped:Connect(function(dt)
+            if hl and hl.Parent and ESPStates.gradient then
+                t = t + dt * 2
+                local r = math.abs(math.sin(t)) * 255
+                local g = math.abs(math.sin(t + 1)) * 255
+                local b = math.abs(math.sin(t + 2)) * 255
+                hl.FillColor = Color3.fromRGB(r, g, b)
+            else
+                connection:Disconnect()
+            end
+        end)
+    end
+end
+
+-- ========== 3D BOX ESP ==========
+local function GetCorners(cf, size)
+    local half = size / 2
+    local corners = {}
+    for x = -1, 1, 2 do
+        for y = -1, 1, 2 do
+            for z = -1, 1, 2 do
+                table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
+            end
+        end
+    end
+    return corners
+end
+
+local function DrawQuad(PosA, PosB, PosC, PosD)
+    local function screen(pos)
+        local s, vis = Camera:WorldToViewportPoint(pos)
+        return Vector2.new(s.X, s.Y), vis
+    end
+
+    local A, va = screen(PosA)
+    local B, vb = screen(PosB)
+    local C, vc = screen(PosC)
+    local D, vd = screen(PosD)
+
+    if not (va or vb or vc or vd) then return end
+
+    local Quad = Drawing.new("Quad")
+    Quad.Thickness = 1
+    Quad.Color = Color3.fromRGB(255, 0, 0)
+    Quad.Transparency = 0.15
+    Quad.Filled = false
+    Quad.Visible = true
+    Quad.PointA = A
+    Quad.PointB = B
+    Quad.PointC = C
+    Quad.PointD = D
+    table.insert(Quads3D, Quad)
+end
+
+local function DrawLine3D(from, to)
+    local function screen(pos)
+        local s, vis = Camera:WorldToViewportPoint(pos)
+        return Vector2.new(s.X, s.Y), vis
+    end
+
+    local A, va = screen(from)
+    local B, vb = screen(to)
+
+    if not (va or vb) then return end
+
+    local Line = Drawing.new("Line")
+    Line.Thickness = 1
+    Line.Color = Color3.fromRGB(255, 0, 0)
+    Line.From = A
+    Line.To = B
+    Line.Transparency = 1
+    Line.Visible = true
+    table.insert(Lines3D, Line)
+end
+
+local function DrawEsp3D(targetPlayer)
+    local HRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not HRP then return end
+
+    local size = Vector3.new(3, 5.5, 3)
+    local offset = CFrame.new(0, -0.5, 0)
+    local CubeVertices = GetCorners(HRP.CFrame * offset, size)
+
+    -- Bottom face
+    DrawLine3D(CubeVertices[1], CubeVertices[2])
+    DrawLine3D(CubeVertices[2], CubeVertices[6])
+    DrawLine3D(CubeVertices[6], CubeVertices[5])
+    DrawLine3D(CubeVertices[5], CubeVertices[1])
+    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[6], CubeVertices[5])
+
+    -- Sides
+    DrawLine3D(CubeVertices[1], CubeVertices[3])
+    DrawLine3D(CubeVertices[2], CubeVertices[4])
+    DrawLine3D(CubeVertices[6], CubeVertices[8])
+    DrawLine3D(CubeVertices[5], CubeVertices[7])
+    DrawQuad(CubeVertices[2], CubeVertices[4], CubeVertices[8], CubeVertices[6])
+    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[4], CubeVertices[3])
+    DrawQuad(CubeVertices[1], CubeVertices[5], CubeVertices[7], CubeVertices[3])
+    DrawQuad(CubeVertices[5], CubeVertices[7], CubeVertices[8], CubeVertices[6])
+
+    -- Top face
+    DrawLine3D(CubeVertices[3], CubeVertices[4])
+    DrawLine3D(CubeVertices[4], CubeVertices[8])
+    DrawLine3D(CubeVertices[8], CubeVertices[7])
+    DrawLine3D(CubeVertices[7], CubeVertices[3])
+    DrawQuad(CubeVertices[3], CubeVertices[4], CubeVertices[8], CubeVertices[7])
+end
+
+-- ========== NICKNAME ESP ==========
+local function DrawName(targetPlayer)
+    local head = targetPlayer.Character:FindFirstChild("Head")
+    if not head then return end
+
+    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
+    if onScreen then
+        local nameTag = Drawing.new("Text")
+        nameTag.Text = targetPlayer.DisplayName or targetPlayer.Name
+        nameTag.Position = Vector2.new(screenPos.X, screenPos.Y)
+        nameTag.Color = Color3.fromRGB(255, 255, 255)
+        nameTag.Size = 16
+        nameTag.Center = true
+        nameTag.Outline = true
+        nameTag.OutlineColor = Color3.new(0, 0, 0)
+        nameTag.Visible = true
+        table.insert(NameTags, nameTag)
+    end
+end
+
+-- ========== PING ESP ==========
+local function GetPing(targetPlayer)
+    return math.random(50, 150) -- fallback
+end
+
+-- ========== TRACER ESP ==========
+local function DrawTracers()
+    for _, line in ipairs(Tracers) do
+        SafeRemove(line)
+    end
+    Tracers = {}
+
+    if not ESPStates.tracer then return end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = targetPlayer.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                local tracer = Drawing.new("Line")
+                tracer.Thickness = 1.5
+                tracer.Color = Color3.fromRGB(255, 0, 0)
+                tracer.Transparency = 1
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
+                tracer.Visible = true
+                table.insert(Tracers, tracer)
+            end
+        end
+    end
+end
+
+-- ========== RADIUS ESP ==========
+local function DrawCircle(center)
+    local RADIUS = 5
+    local SEGMENTS = 30
+    local step = math.pi * 2 / SEGMENTS
+    local points = {}
+
+    for i = 0, SEGMENTS do
+        local angle = i * step
+        local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
+        table.insert(points, pos)
+    end
+
+    for i = 1, #points - 1 do
+        local p1 = Camera:WorldToViewportPoint(points[i])
+        local p2 = Camera:WorldToViewportPoint(points[i + 1])
+
+        if p1.Z > 0 and p2.Z > 0 then
+            local line = Drawing.new("Line")
+            line.From = Vector2.new(p1.X, p1.Y)
+            line.To = Vector2.new(p2.X, p2.Y)
+            line.Color = Color3.fromRGB(0, 255, 0)
+            line.Thickness = 1.5
+            line.Transparency = 1
+            line.Visible = true
+            table.insert(Circles, line)
+        end
+    end
+end
+
+-- ========== DISTANCE ESP ==========
+local function DrawDistance()
+    for _, label in ipairs(DistanceLabels) do
+        SafeRemove(label)
+    end
+    DistanceLabels = {}
+
+    if not ESPStates.distance then return end
+
+    for _, targetPlayer in ipairs(Players:GetPlayers()) do
+        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = targetPlayer.Character.HumanoidRootPart
+            local distance = math.floor((rootPart.Position - Camera.CFrame.Position).Magnitude)
+
+            local screenPos, visible = Camera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
+            if visible then
+                local text = Drawing.new("Text")
+                text.Text = tostring(distance) .. "m"
+                text.Size = 16
+                text.Center = true
+                text.Outline = true
+                text.Color = Color3.fromRGB(255, 255, 0)
+                text.Position = Vector2.new(screenPos.X, screenPos.Y)
+                text.Visible = true
+                table.insert(DistanceLabels, text)
             end
         end
     end
@@ -295,6 +564,7 @@ local function DisableESP(espType)
             end
         end
         ColorHighlights = {}
+        -- Удаляем из всех персонажей
         for _, targetPlayer in pairs(Players:GetPlayers()) do
             if targetPlayer.Character then
                 local highlight = targetPlayer.Character:FindFirstChild("ColorHighlight")
@@ -308,6 +578,7 @@ local function DisableESP(espType)
             end
         end
         GradientHighlights = {}
+        -- Удаляем из всех персонажей
         for _, targetPlayer in pairs(Players:GetPlayers()) do
             if targetPlayer.Character then
                 local highlight = targetPlayer.Character:FindFirstChild("GradientHighlight")
@@ -362,272 +633,6 @@ local function DisableESP(espType)
     end
     
     print(espType .. " ESP выключен")
-end
-
--- ========== COLOR ESP ==========
-local ColorHighlights = {}
-
-local function applyStaticRedHighlight(character)
-    if not character:FindFirstChild("ColorHighlight") then
-        local hl = Instance.new("Highlight")
-        hl.Name = "ColorHighlight"
-        hl.FillColor = Color3.fromRGB(255, 0, 0)
-        hl.FillTransparency = 0.2
-        hl.OutlineTransparency = 1
-        hl.Adornee = character
-        hl.Parent = character
-        ColorHighlights[character] = hl
-    end
-end
-
--- ========== GRADIENT ESP ==========
-local GradientHighlights = {}
-
-local function createGradientHighlight(char)
-    if not char:FindFirstChild("GradientHighlight") then
-        local hl = Instance.new("Highlight")
-        hl.Name = "GradientHighlight"
-        hl.FillTransparency = 0.3
-        hl.OutlineTransparency = 1
-        hl.Adornee = char
-        hl.Parent = char
-        GradientHighlights[char] = hl
-
-        local t = 0
-        local connection
-        connection = RunService.RenderStepped:Connect(function(dt)
-            if hl and hl.Parent and ESPStates.gradient then
-                t = t + dt * 2
-                local r = math.abs(math.sin(t)) * 255
-                local g = math.abs(math.sin(t + 1)) * 255
-                local b = math.abs(math.sin(t + 2)) * 255
-                hl.FillColor = Color3.fromRGB(r, g, b)
-            else
-                connection:Disconnect()
-            end
-        end)
-    end
-end
-
--- ========== 3D BOX ESP ==========
-local Lines3D = {}
-local Quads3D = {}
-
-local function GetCorners(cf, size)
-    local half = size / 2
-    local corners = {}
-    for x = -1, 1, 2 do
-        for y = -1, 1, 2 do
-            for z = -1, 1, 2 do
-                table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
-            end
-        end
-    end
-    return corners
-end
-
-local function DrawQuad(PosA, PosB, PosC, PosD)
-    local function screen(pos)
-        local s, vis = Camera:WorldToViewportPoint(pos)
-        return Vector2.new(s.X, s.Y), vis
-    end
-
-    local A, va = screen(PosA)
-    local B, vb = screen(PosB)
-    local C, vc = screen(PosC)
-    local D, vd = screen(PosD)
-
-    if not (va or vb or vc or vd) then return end
-
-    local Quad = Drawing.new("Quad")
-    Quad.Thickness = 1
-    Quad.Color = Color3.fromRGB(255, 0, 0)
-    Quad.Transparency = 0.15
-    Quad.Filled = false
-    Quad.Visible = true
-    Quad.PointA = A
-    Quad.PointB = B
-    Quad.PointC = C
-    Quad.PointD = D
-    table.insert(Quads3D, Quad)
-end
-
-local function DrawLine3D(from, to)
-    local function screen(pos)
-        local s, vis = Camera:WorldToViewportPoint(pos)
-        return Vector2.new(s.X, s.Y), vis
-    end
-
-    local A, va = screen(from)
-    local B, vb = screen(to)
-
-    if not (va or vb) then return end
-
-    local Line = Drawing.new("Line")
-    Line.Thickness = 1
-    Line.Color = Color3.fromRGB(255, 0, 0)
-    Line.From = A
-    Line.To = B
-    Line.Transparency = 1
-    Line.Visible = true
-    table.insert(Lines3D, Line)
-end
-
-local function DrawEsp3D(targetPlayer)
-    local HRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not HRP then return end
-
-    local size = Vector3.new(3, 5.5, 3)
-    local offset = CFrame.new(0, -0.5, 0)
-    local CubeVertices = GetCorners(HRP.CFrame * offset, size)
-
-    -- Bottom face
-    DrawLine3D(CubeVertices[1], CubeVertices[2])
-    DrawLine3D(CubeVertices[2], CubeVertices[6])
-    DrawLine3D(CubeVertices[6], CubeVertices[5])
-    DrawLine3D(CubeVertices[5], CubeVertices[1])
-    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[6], CubeVertices[5])
-
-    -- Sides
-    DrawLine3D(CubeVertices[1], CubeVertices[3])
-    DrawLine3D(CubeVertices[2], CubeVertices[4])
-    DrawLine3D(CubeVertices[6], CubeVertices[8])
-    DrawLine3D(CubeVertices[5], CubeVertices[7])
-    DrawQuad(CubeVertices[2], CubeVertices[4], CubeVertices[8], CubeVertices[6])
-    DrawQuad(CubeVertices[1], CubeVertices[2], CubeVertices[4], CubeVertices[3])
-    DrawQuad(CubeVertices[1], CubeVertices[5], CubeVertices[7], CubeVertices[3])
-    DrawQuad(CubeVertices[5], CubeVertices[7], CubeVertices[8], CubeVertices[6])
-
-    -- Top face
-    DrawLine3D(CubeVertices[3], CubeVertices[4])
-    DrawLine3D(CubeVertices[4], CubeVertices[8])
-    DrawLine3D(CubeVertices[8], CubeVertices[7])
-    DrawLine3D(CubeVertices[7], CubeVertices[3])
-    DrawQuad(CubeVertices[3], CubeVertices[4], CubeVertices[8], CubeVertices[7])
-end
-
--- ========== NICKNAME ESP ==========
-local NameTags = {}
-
-local function DrawName(targetPlayer)
-    local head = targetPlayer.Character:FindFirstChild("Head")
-    if not head then return end
-
-    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 2.5, 0))
-    if onScreen then
-        local nameTag = Drawing.new("Text")
-        nameTag.Text = targetPlayer.DisplayName or targetPlayer.Name
-        nameTag.Position = Vector2.new(screenPos.X, screenPos.Y)
-        nameTag.Color = Color3.fromRGB(255, 255, 255)
-        nameTag.Size = 16
-        nameTag.Center = true
-        nameTag.Outline = true
-        nameTag.OutlineColor = Color3.new(0, 0, 0)
-        nameTag.Visible = true
-        table.insert(NameTags, nameTag)
-    end
-end
-
--- ========== PING ESP ==========
-local PingTags = {}
-local PingValues = {}
-
-local function GetPing(targetPlayer)
-    return math.random(50, 150) -- fallback
-end
-
--- ========== TRACER ESP ==========
-local Tracers = {}
-
-local function DrawTracers()
-    for _, line in ipairs(Tracers) do
-        SafeRemove(line)
-    end
-    Tracers = {}
-
-    if not ESPStates.tracer then return end
-
-    for _, targetPlayer in ipairs(Players:GetPlayers()) do
-        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = targetPlayer.Character.HumanoidRootPart
-            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-
-            if onScreen then
-                local tracer = Drawing.new("Line")
-                tracer.Thickness = 1.5
-                tracer.Color = Color3.fromRGB(255, 0, 0)
-                tracer.Transparency = 1
-                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                tracer.To = Vector2.new(screenPos.X, screenPos.Y)
-                tracer.Visible = true
-                table.insert(Tracers, tracer)
-            end
-        end
-    end
-end
-
--- ========== RADIUS ESP ==========
-local Circles = {}
-
-local function DrawCircle(center)
-    local RADIUS = 5
-    local SEGMENTS = 30
-    local step = math.pi * 2 / SEGMENTS
-    local points = {}
-
-    for i = 0, SEGMENTS do
-        local angle = i * step
-        local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
-        table.insert(points, pos)
-    end
-
-    for i = 1, #points - 1 do
-        local p1 = Camera:WorldToViewportPoint(points[i])
-        local p2 = Camera:WorldToViewportPoint(points[i + 1])
-
-        if p1.Z > 0 and p2.Z > 0 then
-            local line = Drawing.new("Line")
-            line.From = Vector2.new(p1.X, p1.Y)
-            line.To = Vector2.new(p2.X, p2.Y)
-            line.Color = Color3.fromRGB(0, 255, 0)
-            line.Thickness = 1.5
-            line.Transparency = 1
-            line.Visible = true
-            table.insert(Circles, line)
-        end
-    end
-end
-
--- ========== DISTANCE ESP ==========
-local DistanceLabels = {}
-
-local function DrawDistance()
-    for _, label in ipairs(DistanceLabels) do
-        SafeRemove(label)
-    end
-    DistanceLabels = {}
-
-    if not ESPStates.distance then return end
-
-    for _, targetPlayer in ipairs(Players:GetPlayers()) do
-        if targetPlayer ~= player and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = targetPlayer.Character.HumanoidRootPart
-            local distance = math.floor((rootPart.Position - Camera.CFrame.Position).Magnitude)
-
-            local screenPos, visible = Camera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
-            if visible then
-                local text = Drawing.new("Text")
-                text.Text = tostring(distance) .. "m"
-                text.Size = 16
-                text.Center = true
-                text.Outline = true
-                text.Color = Color3.fromRGB(255, 255, 0)
-                text.Position = Vector2.new(screenPos.X, screenPos.Y)
-                text.Visible = true
-                table.insert(DistanceLabels, text)
-            end
-        end
-    end
 end
 
 -- Цвета skeet
@@ -698,6 +703,39 @@ local settings = {
 
 local currentTab = "ESP"
 
+-- Функция для выключения всех ESP
+local function DisableAllESP()
+    for espType, _ in pairs(ESPStates) do
+        if ESPStates[espType] then
+            DisableESP(espType)
+            -- Обновляем состояние в настройках
+            for _, option in ipairs(settings.ESP.options) do
+                if option.name == espType then
+                    option.enabled = false
+                    break
+                end
+            end
+        end
+    end
+    
+    -- Обновляем все чекбоксы в интерфейсе
+    local espPage = contentContainer:FindFirstChild("ESPPage")
+    if espPage then
+        for _, child in pairs(espPage:GetChildren()) do
+            if child:IsA("Frame") then
+                local checkbox = child:FindFirstChild("TextButton")
+                local checkmark = checkbox and checkbox:FindFirstChild("TextLabel")
+                if checkbox and checkmark then
+                    checkbox.BackgroundColor3 = colors.secondary
+                    checkmark.Visible = false
+                end
+            end
+        end
+    end
+    
+    print("Все ESP функции выключены")
+end
+
 -- Функция для создания закругленных углов
 local function createCorner(parent, radius)
     local corner = Instance.new("UICorner")
@@ -745,6 +783,23 @@ titleText.TextXAlignment = Enum.TextXAlignment.Left
 titleText.BackgroundTransparency = 1
 titleText.Parent = titleBar
 
+-- Кнопка выключения всех ESP
+local disableAllButton = Instance.new("TextButton")
+disableAllButton.Size = UDim2.new(0, 80, 0, 20)
+disableAllButton.Position = UDim2.new(1, -115, 0, 5)
+disableAllButton.Text = "Disable All"
+disableAllButton.TextColor3 = colors.text
+disableAllButton.Font = Enum.Font.SourceSans
+disableAllButton.TextSize = 10
+disableAllButton.BackgroundColor3 = Color3.fromRGB(50, 50, 150)
+disableAllButton.BorderSizePixel = 0
+disableAllButton.Parent = titleBar
+createCorner(disableAllButton, 4)
+
+disableAllButton.MouseButton1Click:Connect(function()
+    DisableAllESP()
+end)
+
 -- Кнопка закрытия
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 25, 0, 20)
@@ -759,6 +814,7 @@ closeButton.Parent = titleBar
 createCorner(closeButton, 4)
 
 closeButton.MouseButton1Click:Connect(function()
+    -- Выключаем все ESP при закрытии
     for espType, _ in pairs(ESPStates) do
         DisableESP(espType)
     end
@@ -781,7 +837,7 @@ contentContainer.Parent = mainFrame
 
 -- Функция создания таба
 local function createTab(name, index)
-    local tabCount = 3
+    local tabCount = 3 -- ESP, Aimbot, Misc
     
     local tabButton = Instance.new("TextButton")
     tabButton.Name = name .. "Tab"
@@ -797,6 +853,7 @@ local function createTab(name, index)
     createCorner(tabButton, 6)
     
     tabButton.MouseButton1Click:Connect(function()
+        -- Обновляем все табы
         for _, child in pairs(tabContainer:GetChildren()) do
             if child:IsA("TextButton") then
                 child.TextColor3 = colors.textSecondary
@@ -804,10 +861,12 @@ local function createTab(name, index)
             end
         end
         
+        -- Активируем текущий таб
         tabButton.TextColor3 = colors.accent
         tabButton.BackgroundColor3 = colors.secondary
         currentTab = name
         
+        -- Показываем соответствующий контент
         for _, page in pairs(contentContainer:GetChildren()) do
             if page:IsA("ScrollingFrame") then
                 page.Visible = (page.Name == name .. "Page")
@@ -816,7 +875,7 @@ local function createTab(name, index)
     end)
 end
 
--- ПРАВИЛЬНАЯ ЦВЕТОВАЯ ПАЛИТРА
+-- Функция создания color picker с правильным дизайном
 local function createColorPicker(parent, yPos)
     local colorFrame = Instance.new("Frame")
     colorFrame.Size = UDim2.new(0, 20, 0, 15)
@@ -836,8 +895,8 @@ local function createColorPicker(parent, yPos)
     colorButton.Parent = colorFrame
     
     local colorPalette = Instance.new("Frame")
-    colorPalette.Size = UDim2.new(0, 300, 0, 220)
-    colorPalette.Position = UDim2.new(0, -280, 1, 2)
+    colorPalette.Size = UDim2.new(0, 320, 0, 220)
+    colorPalette.Position = UDim2.new(0, -300, 1, 2)
     colorPalette.BackgroundColor3 = colors.secondary
     colorPalette.BorderSizePixel = 1
     colorPalette.BorderColor3 = colors.border
@@ -846,10 +905,10 @@ local function createColorPicker(parent, yPos)
     colorPalette.Parent = colorFrame
     createCorner(colorPalette, 3)
     
-    -- Заголовок
+    -- Заголовок палитры
     local paletteTitle = Instance.new("TextLabel")
-    paletteTitle.Size = UDim2.new(1, 0, 0, 25)
-    paletteTitle.Position = UDim2.new(0, 0, 0, 0)
+    paletteTitle.Size = UDim2.new(1, 0, 0, 20)
+    paletteTitle.Position = UDim2.new(0, 0, 0, 5)
     paletteTitle.Text = "Color Picker"
     paletteTitle.TextColor3 = colors.text
     paletteTitle.Font = Enum.Font.SourceSansBold
@@ -858,9 +917,9 @@ local function createColorPicker(parent, yPos)
     paletteTitle.ZIndex = 26
     paletteTitle.Parent = colorPalette
     
-    -- Вертикальная полоса оттенков (слева)
+    -- Вертикальная полоса слева (Hue)
     local hueBar = Instance.new("Frame")
-    hueBar.Size = UDim2.new(0, 20, 0, 140)
+    hueBar.Size = UDim2.new(0, 25, 0, 150)
     hueBar.Position = UDim2.new(0, 10, 0, 30)
     hueBar.BorderSizePixel = 1
     hueBar.BorderColor3 = colors.border
@@ -869,61 +928,68 @@ local function createColorPicker(parent, yPos)
     
     local hueGradient = Instance.new("UIGradient")
     hueGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),    -- Красный
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)), -- Желтый
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),   -- Зеленый
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),  -- Голубой
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),   -- Синий
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)), -- Фиолетовый
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))       -- Красный
     }
     hueGradient.Rotation = 90
     hueGradient.Parent = hueBar
     
-    -- Основная цветовая область (справа)
+    -- Основная цветовая область справа (Saturation + Value)
     local colorArea = Instance.new("Frame")
-    colorArea.Size = UDim2.new(0, 200, 0, 140)
-    colorArea.Position = UDim2.new(0, 40, 0, 30)
+    colorArea.Size = UDim2.new(0, 200, 0, 150)
+    colorArea.Position = UDim2.new(0, 45, 0, 30)
     colorArea.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     colorArea.BorderSizePixel = 1
     colorArea.BorderColor3 = colors.border
     colorArea.ZIndex = 26
     colorArea.Parent = colorPalette
     
-    -- Градиент насыщенности (горизонтальный: белый слева -> прозрачный справа)
-    local saturationOverlay = Instance.new("Frame")
-    saturationOverlay.Size = UDim2.new(1, 0, 1, 0)
-    saturationOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    saturationOverlay.ZIndex = 27
-    saturationOverlay.Parent = colorArea
+    -- Создаем горизонтальный градиент насыщенности (белый -> цвет)
+    local saturationGradient = Instance.new("Frame")
+    saturationGradient.Size = UDim2.new(1, 0, 1, 0)
+    saturationGradient.BackgroundTransparency = 1
+    saturationGradient.ZIndex = 27
+    saturationGradient.Parent = colorArea
     
     local satGradient = Instance.new("UIGradient")
-    satGradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 0),    -- Белый слева (полная непрозрачность)
-        NumberSequenceKeypoint.new(1, 1)     -- Прозрачный справа
+    satGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
     }
-    satGradient.Rotation = 0
-    satGradient.Parent = saturationOverlay
+    satGradient.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    satGradient.Parent = saturationGradient
     
-    -- Градиент яркости (вертикальный: прозрачный сверху -> черный снизу)
-    local brightnessOverlay = Instance.new("Frame")
-    brightnessOverlay.Size = UDim2.new(1, 0, 1, 0)
-    brightnessOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    brightnessOverlay.ZIndex = 28
-    brightnessOverlay.Parent = colorArea
+    -- Создаем вертикальный градиент яркости (прозрачный -> черный)
+    local brightnessGradient = Instance.new("Frame")
+    brightnessGradient.Size = UDim2.new(1, 0, 1, 0)
+    brightnessGradient.BackgroundTransparency = 1
+    brightnessGradient.ZIndex = 28
+    brightnessGradient.Parent = colorArea
     
     local brightGradient = Instance.new("UIGradient")
+    brightGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    }
     brightGradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, 1),    -- Прозрачный сверху
-        NumberSequenceKeypoint.new(1, 0)     -- Черный снизу (полная непрозрачность)
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0)
     }
     brightGradient.Rotation = 90
-    brightGradient.Parent = brightnessOverlay
+    brightGradient.Parent = brightnessGradient
     
-    -- Индикатор на цветовой области (белый кружок с черной обводкой)
+    -- Индикатор на цветовой области (белый кружок)
     local colorIndicator = Instance.new("Frame")
-    colorIndicator.Size = UDim2.new(0, 12, 0, 12)
-    colorIndicator.Position = UDim2.new(1, -6, 0, -6) -- Начальная позиция: правый верхний угол
+    colorIndicator.Size = UDim2.new(0, 8, 0, 8)
+    colorIndicator.Position = UDim2.new(0.8, -4, 0.2, -4)
     colorIndicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     colorIndicator.BorderSizePixel = 2
     colorIndicator.BorderColor3 = Color3.fromRGB(0, 0, 0)
@@ -934,20 +1000,20 @@ local function createColorPicker(parent, yPos)
     indicatorCorner.CornerRadius = UDim.new(1, 0)
     indicatorCorner.Parent = colorIndicator
     
-    -- Индикатор на полосе оттенков (белый прямоугольник)
+    -- Индикатор на полосе оттенков
     local hueIndicator = Instance.new("Frame")
-    hueIndicator.Size = UDim2.new(1, 4, 0, 4)
-    hueIndicator.Position = UDim2.new(0, -2, 0, -2)
+    hueIndicator.Size = UDim2.new(1, 4, 0, 3)
+    hueIndicator.Position = UDim2.new(0, -2, 0, 0)
     hueIndicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     hueIndicator.BorderSizePixel = 1
     hueIndicator.BorderColor3 = Color3.fromRGB(0, 0, 0)
     hueIndicator.ZIndex = 30
     hueIndicator.Parent = hueBar
     
-    -- Предпросмотр цвета
+    -- Индикатор выбранного цвета
     local colorPreview = Instance.new("Frame")
-    colorPreview.Size = UDim2.new(0, 50, 0, 25)
-    colorPreview.Position = UDim2.new(0, 10, 1, -35)
+    colorPreview.Size = UDim2.new(0, 40, 0, 20)
+    colorPreview.Position = UDim2.new(0, 255, 0, 30)
     colorPreview.BackgroundColor3 = BoxESPSettings.customColor
     colorPreview.BorderSizePixel = 1
     colorPreview.BorderColor3 = colors.border
@@ -955,40 +1021,39 @@ local function createColorPicker(parent, yPos)
     colorPreview.Parent = colorPalette
     createCorner(colorPreview, 3)
     
-    -- RGB значения
+    -- Текстовые поля RGB
     local rgbLabel = Instance.new("TextLabel")
-    rgbLabel.Size = UDim2.new(0, 120, 0, 25)
-    rgbLabel.Position = UDim2.new(0, 70, 1, -35)
-    rgbLabel.Text = "RGB: 255, 255, 255"
+    rgbLabel.Size = UDim2.new(0, 30, 0, 15)
+    rgbLabel.Position = UDim2.new(0, 255, 0, 55)
+    rgbLabel.Text = "RGB:"
     rgbLabel.TextColor3 = colors.text
     rgbLabel.Font = Enum.Font.SourceSans
     rgbLabel.TextSize = 10
-    rgbLabel.TextXAlignment = Enum.TextXAlignment.Left
     rgbLabel.BackgroundTransparency = 1
     rgbLabel.ZIndex = 26
     rgbLabel.Parent = colorPalette
     
-    -- Кнопка "Auto Color"
-    local autoColorButton = Instance.new("TextButton")
-    autoColorButton.Size = UDim2.new(0, 70, 0, 25)
-    autoColorButton.Position = UDim2.new(1, -80, 1, -35)
-    autoColorButton.Text = "Auto Color"
-    autoColorButton.TextColor3 = colors.text
-    autoColorButton.Font = Enum.Font.SourceSans
-    autoColorButton.TextSize = 9
-    autoColorButton.BackgroundColor3 = colors.hover
-    autoColorButton.BorderSizePixel = 1
-    autoColorButton.BorderColor3 = colors.border
-    autoColorButton.ZIndex = 26
-    autoColorButton.Parent = colorPalette
-    createCorner(autoColorButton, 3)
+    local rgbValue = Instance.new("TextLabel")
+    rgbValue.Size = UDim2.new(0, 60, 0, 15)
+    rgbValue.Position = UDim2.new(0, 255, 0, 70)
+    rgbValue.Text = string.format("%d, %d, %d", 
+        BoxESPSettings.customColor.R * 255,
+        BoxESPSettings.customColor.G * 255,
+        BoxESPSettings.customColor.B * 255)
+    rgbValue.TextColor3 = colors.textSecondary
+    rgbValue.Font = Enum.Font.SourceSans
+    rgbValue.TextSize = 9
+    rgbValue.TextXAlignment = Enum.TextXAlignment.Left
+    rgbValue.BackgroundTransparency = 1
+    rgbValue.ZIndex = 26
+    rgbValue.Parent = colorPalette
     
-    -- Переменные для HSV
+    -- Переменные для отслеживания текущих значений
     local currentHue = 0
-    local currentSaturation = 1
-    local currentValue = 1
+    local currentSaturation = 0.8
+    local currentValue = 0.8
     
-    -- Функция конвертации HSV в RGB
+    -- Функция для конвертации HSV в RGB
     local function HSVtoRGB(h, s, v)
         local r, g, b
         local i = math.floor(h * 6)
@@ -1012,10 +1077,10 @@ local function createColorPicker(parent, yPos)
             r, g, b = v, p, q
         end
         
-        return Color3.fromRGB(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255))
+        return Color3.fromRGB(r * 255, g * 255, b * 255)
     end
     
-    -- Функция обновления цвета (исправленная версия)
+    -- Функция обновления цвета
     local function updateColor(h, s, v)
         currentHue = h
         currentSaturation = s
@@ -1024,23 +1089,16 @@ local function createColorPicker(parent, yPos)
         local newColor = HSVtoRGB(h, s, v)
         BoxESPSettings.customColor = newColor
         BoxESPSettings.useCustomColor = true
-        
         colorFrame.BackgroundColor3 = newColor
         colorPreview.BackgroundColor3 = newColor
-        rgbLabel.Text = string.format("RGB: %d, %d, %d", 
-            math.floor(newColor.R * 255), 
-            math.floor(newColor.G * 255), 
-            math.floor(newColor.B * 255))
+        rgbValue.Text = string.format("%d, %d, %d", 
+            newColor.R * 255, newColor.G * 255, newColor.B * 255)
         
-        -- Правильное позиционирование индикатора в пикселях
-        local areaSize = colorArea.AbsoluteSize
-        local indicatorX = s * areaSize.X - 6  -- s от 0 до 1, центрируем индикатор
-        local indicatorY = (1-v) * areaSize.Y - 6  -- v от 1 до 0 (инвертируем), центрируем индикатор
-        
-        colorIndicator.Position = UDim2.new(0, indicatorX, 0, indicatorY)
+        -- Обновляем позицию индикатора на цветовой области
+        colorIndicator.Position = UDim2.new(s, -4, 1-v, -4)
         
         -- Обновляем позицию индикатора на полосе оттенков
-        hueIndicator.Position = UDim2.new(0, -2, h, -2)
+        hueIndicator.Position = UDim2.new(0, -2, h, -1.5)
         
         -- Обновляем цвет основной области
         local hueColor = HSVtoRGB(h, 1, 1)
@@ -1049,139 +1107,120 @@ local function createColorPicker(parent, yPos)
         print("Цвет обновлен:", newColor, "HSV:", h, s, v)
     end
     
-    -- Обработка полосы оттенков
-    local hueButton = Instance.new("TextButton")
-    hueButton.Size = UDim2.new(1, 0, 1, 0)
-    hueButton.Text = ""
-    hueButton.BackgroundTransparency = 1
-    hueButton.ZIndex = 29
-    hueButton.Parent = hueBar
+    -- Обработка кликов по полосе оттенков
+    local hueBarButton = Instance.new("TextButton")
+    hueBarButton.Size = UDim2.new(1, 0, 1, 0)
+    hueBarButton.Text = ""
+    hueBarButton.BackgroundTransparency = 1
+    hueBarButton.ZIndex = 29
+    hueBarButton.Parent = hueBar
     
-    local hueDragging = false
+    local hueBarDragging = false
     
-    local function updateHueFromMouse()
+    hueBarButton.MouseButton1Down:Connect(function()
+        hueBarDragging = true
+    end)
+    
+    hueBarButton.MouseButton1Up:Connect(function()
+        hueBarDragging = false
+    end)
+    
+    hueBarButton.MouseMoved:Connect(function(x, y)
+        if hueBarDragging then
+            local relativeY = math.clamp((y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
+            updateColor(relativeY, currentSaturation, currentValue)
+        end
+    end)
+    
+    hueBarButton.MouseButton1Click:Connect(function()
         local mouse = UserInputService:GetMouseLocation()
         local relativeY = math.clamp((mouse.Y - hueBar.AbsolutePosition.Y) / hueBar.AbsoluteSize.Y, 0, 1)
         updateColor(relativeY, currentSaturation, currentValue)
-    end
-    
-    hueButton.MouseButton1Down:Connect(function()
-        hueDragging = true
-        updateHueFromMouse()
     end)
     
-    hueButton.MouseButton1Click:Connect(function()
-        updateHueFromMouse()
-    end)
-    
-    -- Обработка цветовой области с точным выравниванием курсора
+    -- Обработка кликов по цветовой области
     local colorAreaButton = Instance.new("TextButton")
     colorAreaButton.Size = UDim2.new(1, 0, 1, 0)
     colorAreaButton.Text = ""
     colorAreaButton.BackgroundTransparency = 1
     colorAreaButton.ZIndex = 29
     colorAreaButton.Parent = colorArea
-
+    
     local colorAreaDragging = false
-
-    local function updateColorFromMouse()
-        local mouse = UserInputService:GetMouseLocation()
-        
-        -- Получаем точные границы цветовой области
-        local areaPos = colorArea.AbsolutePosition
-        local areaSize = colorArea.AbsoluteSize
-        
-        -- Вычисляем относительные координаты ТОЧНО в пределах области
-        local relativeX = math.clamp((mouse.X - areaPos.X) / areaSize.X, 0, 1)
-        local relativeY = math.clamp((mouse.Y - areaPos.Y) / areaSize.Y, 0, 1)
-        
-        -- Вычисляем точную позицию индикатора (центрируем его на курсоре)
-        local indicatorX = relativeX * areaSize.X - 6  -- -6 это половина размера индикатора (12/2)
-        local indicatorY = relativeY * areaSize.Y - 6  -- -6 это половина размера индикатора (12/2)
-        
-        -- Устанавливаем позицию индикатора в пикселях, а не в относительных координатах
-        colorIndicator.Position = UDim2.new(0, indicatorX, 0, indicatorY)
-        
-        local saturation = relativeX  -- 0 = слева (белый), 1 = справа (насыщенный)
-        local value = 1 - relativeY   -- 0 = снизу (черный), 1 = сверху (яркий)
-        
-        -- Обновляем цвет без изменения позиции индикатора (так как мы уже установили её выше)
-        currentSaturation = saturation
-        currentValue = value
-        
-        local newColor = HSVtoRGB(currentHue, saturation, value)
-        BoxESPSettings.customColor = newColor
-        BoxESPSettings.useCustomColor = true
-        
-        colorFrame.BackgroundColor3 = newColor
-        colorPreview.BackgroundColor3 = newColor
-        rgbLabel.Text = string.format("RGB: %d, %d, %d", 
-            math.floor(newColor.R * 255), 
-            math.floor(newColor.G * 255), 
-            math.floor(newColor.B * 255))
-        
-        -- Обновляем цвет основной области
-        local hueColor = HSVtoRGB(currentHue, 1, 1)
-        colorArea.BackgroundColor3 = hueColor
-        
-        print("Цвет обновлен:", newColor, "Позиция индикатора:", indicatorX, indicatorY)
-    end
-
+    
     colorAreaButton.MouseButton1Down:Connect(function()
         colorAreaDragging = true
-        updateColorFromMouse()
     end)
-
+    
+    colorAreaButton.MouseButton1Up:Connect(function()
+        colorAreaDragging = false
+    end)
+    
+    colorAreaButton.MouseMoved:Connect(function(x, y)
+        if colorAreaDragging then
+            local relativeX = math.clamp((x - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
+            local relativeY = math.clamp((y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+            
+            local saturation = relativeX
+            local value = 1 - relativeY
+            
+            updateColor(currentHue, saturation, value)
+        end
+    end)
+    
     colorAreaButton.MouseButton1Click:Connect(function()
-        updateColorFromMouse()
+        local mouse = UserInputService:GetMouseLocation()
+        local relativeX = math.clamp((mouse.X - colorArea.AbsolutePosition.X) / colorArea.AbsoluteSize.X, 0, 1)
+        local relativeY = math.clamp((mouse.Y - colorArea.AbsolutePosition.Y) / colorArea.AbsoluteSize.Y, 0, 1)
+        
+        local saturation = relativeX
+        local value = 1 - relativeY
+        
+        updateColor(currentHue, saturation, value)
     end)
     
-    -- Глобальная обработка перетаскивания
-    UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            if hueDragging then
-                updateHueFromMouse()
-            elseif colorAreaDragging then
-                updateColorFromMouse()
-            end
-        end
-    end)
+    -- Кнопка "Авто цвет"
+    local autoColorButton = Instance.new("TextButton")
+    autoColorButton.Size = UDim2.new(0, 60, 0, 15)
+    autoColorButton.Position = UDim2.new(0, 255, 0, 95)
+    autoColorButton.Text = "Auto Color"
+    autoColorButton.TextColor3 = colors.text
+    autoColorButton.Font = Enum.Font.SourceSans
+    autoColorButton.TextSize = 9
+    autoColorButton.BackgroundColor3 = colors.hover
+    autoColorButton.BorderSizePixel = 1
+    autoColorButton.BorderColor3 = colors.border
+    autoColorButton.ZIndex = 26
+    autoColorButton.Parent = colorPalette
+    createCorner(autoColorButton, 3)
     
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            hueDragging = false
-            colorAreaDragging = false
-        end
-    end)
-    
-    -- Кнопка Auto Color
     autoColorButton.MouseButton1Click:Connect(function()
         BoxESPSettings.useCustomColor = false
         colorFrame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
         colorPalette.Visible = false
-        print("Включен авто цвет ESP")
+        print("Включен авто цвет ESP (по ролям)")
     end)
     
-    -- Инициализация с красным цветом
-    updateColor(0, 1, 1)
+    -- Инициализация с текущим цветом
+    updateColor(0, 0.8, 0.8)
     
     local paletteOpen = false
     
     colorButton.MouseButton1Click:Connect(function()
         paletteOpen = not paletteOpen
         colorPalette.Visible = paletteOpen
-        print("Color picker открыт:", paletteOpen)
+        print("Color picker clicked, visible:", paletteOpen)
     end)
     
-    -- Закрытие при клике вне палитры
+    -- Закрываем палитру при клике вне её
     spawn(function()
         while colorFrame.Parent do
             wait(0.1)
             if paletteOpen then
                 local mouse = UserInputService:GetMouseLocation()
+                local framePos = colorFrame.AbsolutePosition
                 local palettePos = colorPalette.AbsolutePosition
                 local paletteSize = colorPalette.AbsoluteSize
-                local framePos = colorFrame.AbsolutePosition
                 
                 if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
                     local insidePalette = (mouse.X >= palettePos.X and mouse.X <= palettePos.X + paletteSize.X and
@@ -1189,7 +1228,7 @@ local function createColorPicker(parent, yPos)
                     local insideButton = (mouse.X >= framePos.X and mouse.X <= framePos.X + 20 and
                                          mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + 15)
                     
-                    if not insidePalette and not insideButton and not hueDragging and not colorAreaDragging then
+                    if not insidePalette and not insideButton then
                         wait(0.1)
                         paletteOpen = false
                         colorPalette.Visible = false
@@ -1202,7 +1241,7 @@ local function createColorPicker(parent, yPos)
     return colorFrame
 end
 
--- Функция создания dropdown
+-- Функция создания dropdown меню с множественным выбором
 local function createMultiDropdown(parent, yPos)
     local dropdownFrame = Instance.new("Frame")
     dropdownFrame.Size = UDim2.new(0, 120, 0, 15)
@@ -1241,6 +1280,7 @@ local function createMultiDropdown(parent, yPos)
         {text = "Sheriff", setting = "showSheriff"}
     }
     
+    -- Создаем чекбоксы для каждой опции
     for i, option in ipairs(options) do
         local optionFrame = Instance.new("Frame")
         optionFrame.Size = UDim2.new(1, -4, 1/3, -2)
@@ -1284,6 +1324,7 @@ local function createMultiDropdown(parent, yPos)
         optionLabel.Parent = optionFrame
         
         optionCheckbox.MouseButton1Click:Connect(function()
+            -- Если выбираем "All Players", отключаем остальные
             if option.setting == "showAll" then
                 BoxESPSettings.showAll = not BoxESPSettings.showAll
                 if BoxESPSettings.showAll then
@@ -1291,13 +1332,14 @@ local function createMultiDropdown(parent, yPos)
                     BoxESPSettings.showSheriff = false
                 end
             else
+                -- Если выбираем конкретную роль, отключаем "All Players"
                 BoxESPSettings[option.setting] = not BoxESPSettings[option.setting]
                 if BoxESPSettings[option.setting] then
                     BoxESPSettings.showAll = false
                 end
             end
             
-            -- Обновляем все чекбоксы
+            -- Обновляем ВСЕ чекбоксы в dropdown (исправленная логика)
             for j, opt in ipairs(options) do
                 local frame = dropdownList:GetChildren()[j]
                 if frame and frame:IsA("Frame") then
@@ -1311,7 +1353,7 @@ local function createMultiDropdown(parent, yPos)
                 end
             end
             
-            -- Обновляем текст кнопки
+            -- Обновляем текст кнопки (исправленная логика)
             local activeOptions = {}
             if BoxESPSettings.showAll then
                 table.insert(activeOptions, "All Players")
@@ -1330,14 +1372,94 @@ local function createMultiDropdown(parent, yPos)
             else
                 dropdownButton.Text = table.concat(activeOptions, "+") .. " ▼"
             end
+            
+            print("Box ESP настройки обновлены:")
+            print("  All Players:", BoxESPSettings.showAll)
+            print("  Murderer:", BoxESPSettings.showMurderer) 
+            print("  Sheriff:", BoxESPSettings.showSheriff)
+            print("  Dropdown показывает:", dropdownButton.Text)
+        end)
+        
+        optionFrame.MouseEnter:Connect(function()
+            optionFrame.BackgroundColor3 = colors.hover
+            optionFrame.BackgroundTransparency = 0.5
+        end)
+        
+        optionFrame.MouseLeave:Connect(function()
+            optionFrame.BackgroundTransparency = 1
         end)
     end
+    
+    -- Правильная инициализация dropdown (добавить после создания всех опций)
+    local function updateDropdownDisplay()
+        -- Обновляем все чекбоксы
+        for j, opt in ipairs(options) do
+            local frame = dropdownList:GetChildren()[j]
+            if frame and frame:IsA("Frame") then
+                local checkbox = frame:FindFirstChild("TextButton")
+                local checkmark = checkbox and checkbox:FindFirstChild("TextLabel")
+                if checkbox and checkmark then
+                    local isActive = BoxESPSettings[opt.setting]
+                    checkbox.BackgroundColor3 = isActive and colors.accent or colors.background
+                    checkmark.Visible = isActive
+                end
+            end
+        end
+        
+        -- Обновляем текст кнопки
+        local activeOptions = {}
+        if BoxESPSettings.showAll then
+            table.insert(activeOptions, "All Players")
+        end
+        if BoxESPSettings.showMurderer then
+            table.insert(activeOptions, "Murderer")
+        end
+        if BoxESPSettings.showSheriff then
+            table.insert(activeOptions, "Sheriff")
+        end
+        
+        if #activeOptions == 0 then
+            dropdownButton.Text = "None ▼"
+        elseif #activeOptions == 1 then
+            dropdownButton.Text = activeOptions[1] .. " ▼"
+        else
+            dropdownButton.Text = table.concat(activeOptions, "+") .. " ▼"
+        end
+    end
+
+    -- Вызываем инициализацию
+    updateDropdownDisplay()
     
     local dropdownOpen = false
     
     dropdownButton.MouseButton1Click:Connect(function()
         dropdownOpen = not dropdownOpen
         dropdownList.Visible = dropdownOpen
+        print("Multi-dropdown clicked, visible:", dropdownOpen)
+    end)
+    
+    -- Закрываем dropdown при клике вне его
+    spawn(function()
+        while dropdownFrame.Parent do
+            wait(0.1)
+            if dropdownOpen then
+                local mouse = UserInputService:GetMouseLocation()
+                local framePos = dropdownFrame.AbsolutePosition
+                local frameSize = dropdownFrame.AbsoluteSize
+                local listSize = dropdownList.AbsoluteSize
+                
+                if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                    local insideDropdown = (mouse.X >= framePos.X and mouse.X <= framePos.X + frameSize.X and
+                                          mouse.Y >= framePos.Y and mouse.Y <= framePos.Y + frameSize.Y + listSize.Y)
+                    
+                    if not insideDropdown then
+                        wait(0.1)
+                        dropdownOpen = false
+                        dropdownList.Visible = false
+                    end
+                end
+            end
+        end
     end)
     
     return dropdownFrame
@@ -1376,13 +1498,13 @@ local function createCheckbox(parent, option, yPos)
     
     local labelWidth = 1
     if option.hasDropdown and option.hasColorPicker then
-        labelWidth = -175
+        labelWidth = -175 -- Место для dropdown и color picker
     elseif option.hasDropdown then
-        labelWidth = -150
+        labelWidth = -150 -- Место только для dropdown
     elseif option.hasColorPicker then
-        labelWidth = -50
+        labelWidth = -50 -- Место только для color picker
     else
-        labelWidth = -25
+        labelWidth = -25 -- Стандартное место
     end
     
     local label = Instance.new("TextLabel")
@@ -1397,10 +1519,12 @@ local function createCheckbox(parent, option, yPos)
     label.ZIndex = 3
     label.Parent = checkFrame
     
+    -- Добавляем dropdown если нужно
     if option.hasDropdown then
         createMultiDropdown(checkFrame, yPos)
     end
     
+    -- Добавляем color picker если нужно
     if option.hasColorPicker then
         createColorPicker(checkFrame, yPos)
     end
@@ -1410,6 +1534,7 @@ local function createCheckbox(parent, option, yPos)
         checkmark.Visible = option.enabled
         checkbox.BackgroundColor3 = option.enabled and colors.accent or colors.secondary
         
+        -- Вызываем callback если есть
         if option.callback then
             option.callback(option.enabled)
         end
@@ -1489,4 +1614,13 @@ local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirectio
 local tween = TweenService:Create(mainFrame, tweenInfo, {Size = UDim2.new(0, 600, 0, 400)})
 tween:Play()
 
-print("Skeet menu с правильной цветовой палитрой загружен!")
+-- Горячая клавиша для выключения всех ESP (клавиша END)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.End then
+        DisableAllESP()
+    end
+end)
+
+print("Complete Skeet menu with color picker loaded!")
