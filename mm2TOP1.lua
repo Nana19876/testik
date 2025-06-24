@@ -103,23 +103,38 @@ end
 function UpdateBoxESP()
     if not ESPStates.box then return end
     
+    -- Отладочная информация (можно убрать потом)
+    if tick() % 5 < 0.1 then -- Выводим каждые 5 секунд
+        print("ESP Settings:", "All=" .. tostring(BoxESPSettings.showAll), 
+              "Murderer=" .. tostring(BoxESPSettings.showMurderer), 
+              "Sheriff=" .. tostring(BoxESPSettings.showSheriff))
+    end
+    
     for targetPlayer, box in pairs(ESPs) do
         if targetPlayer and targetPlayer.Parent then
             local shouldShow = false
             local boxColor = Color3.fromRGB(255, 255, 255) -- Белый по умолчанию
-            
-            -- Определяем, показывать ли ESP для этого игрока
+
             if BoxESPSettings.showAll then
                 shouldShow = true
                 boxColor = Color3.fromRGB(255, 255, 255) -- Белый для всех
             else
-                -- Проверяем конкретные роли
-                if BoxESPSettings.showMurderer and isMurderer(targetPlayer) then
+                -- Проверяем конкретные роли только если showAll выключен
+                local isMurd = isMurderer(targetPlayer)
+                local isSher = isSheriff(targetPlayer)
+                
+                if BoxESPSettings.showMurderer and isMurd then
                     shouldShow = true
                     boxColor = Color3.fromRGB(255, 0, 0) -- Красный для murderer
-                elseif BoxESPSettings.showSheriff and isSheriff(targetPlayer) then
+                elseif BoxESPSettings.showSheriff and isSher then
                     shouldShow = true
                     boxColor = Color3.fromRGB(0, 150, 255) -- Синий для sheriff
+                end
+                
+                -- Если игрок одновременно и murderer и sheriff (что маловероятно), приоритет murderer
+                if BoxESPSettings.showMurderer and BoxESPSettings.showSheriff and isMurd and isSher then
+                    shouldShow = true
+                    boxColor = Color3.fromRGB(255, 0, 0) -- Красный приоритет
                 end
             end
             
@@ -955,23 +970,24 @@ local function createMultiDropdown(parent, yPos)
                 end
             end
             
-            -- Обновляем все чекбоксы
+            -- Обновляем ВСЕ чекбоксы в dropdown (исправленная логика)
             for j, opt in ipairs(options) do
                 local frame = dropdownList:GetChildren()[j]
                 if frame and frame:IsA("Frame") then
                     local checkbox = frame:FindFirstChild("TextButton")
                     local checkmark = checkbox and checkbox:FindFirstChild("TextLabel")
                     if checkbox and checkmark then
-                        checkbox.BackgroundColor3 = BoxESPSettings[opt.setting] and colors.accent or colors.background
-                        checkmark.Visible = BoxESPSettings[opt.setting]
+                        local isActive = BoxESPSettings[opt.setting]
+                        checkbox.BackgroundColor3 = isActive and colors.accent or colors.background
+                        checkmark.Visible = isActive
                     end
                 end
             end
             
-            -- Обновляем текст кнопки
+            -- Обновляем текст кнопки (исправленная логика)
             local activeOptions = {}
             if BoxESPSettings.showAll then
-                table.insert(activeOptions, "All")
+                table.insert(activeOptions, "All Players")
             end
             if BoxESPSettings.showMurderer then
                 table.insert(activeOptions, "Murderer")
@@ -982,11 +998,17 @@ local function createMultiDropdown(parent, yPos)
             
             if #activeOptions == 0 then
                 dropdownButton.Text = "None ▼"
+            elseif #activeOptions == 1 then
+                dropdownButton.Text = activeOptions[1] .. " ▼"
             else
                 dropdownButton.Text = table.concat(activeOptions, "+") .. " ▼"
             end
             
-            print("Box ESP настройки обновлены:", option.text, "=", BoxESPSettings[option.setting])
+            print("Box ESP настройки обновлены:")
+            print("  All Players:", BoxESPSettings.showAll)
+            print("  Murderer:", BoxESPSettings.showMurderer) 
+            print("  Sheriff:", BoxESPSettings.showSheriff)
+            print("  Dropdown показывает:", dropdownButton.Text)
         end)
         
         optionFrame.MouseEnter:Connect(function()
@@ -998,6 +1020,46 @@ local function createMultiDropdown(parent, yPos)
             optionFrame.BackgroundTransparency = 1
         end)
     end
+    
+    -- Правильная инициализация dropdown (добавить после создания всех опций)
+    local function updateDropdownDisplay()
+        -- Обновляем все чекбоксы
+        for j, opt in ipairs(options) do
+            local frame = dropdownList:GetChildren()[j]
+            if frame and frame:IsA("Frame") then
+                local checkbox = frame:FindFirstChild("TextButton")
+                local checkmark = checkbox and checkbox:FindFirstChild("TextLabel")
+                if checkbox and checkmark then
+                    local isActive = BoxESPSettings[opt.setting]
+                    checkbox.BackgroundColor3 = isActive and colors.accent or colors.background
+                    checkmark.Visible = isActive
+                end
+            end
+        end
+        
+        -- Обновляем текст кнопки
+        local activeOptions = {}
+        if BoxESPSettings.showAll then
+            table.insert(activeOptions, "All Players")
+        end
+        if BoxESPSettings.showMurderer then
+            table.insert(activeOptions, "Murderer")
+        end
+        if BoxESPSettings.showSheriff then
+            table.insert(activeOptions, "Sheriff")
+        end
+        
+        if #activeOptions == 0 then
+            dropdownButton.Text = "None ▼"
+        elseif #activeOptions == 1 then
+            dropdownButton.Text = activeOptions[1] .. " ▼"
+        else
+            dropdownButton.Text = table.concat(activeOptions, "+") .. " ▼"
+        end
+    end
+
+    -- Вызываем инициализацию
+    updateDropdownDisplay()
     
     local dropdownOpen = false
     
