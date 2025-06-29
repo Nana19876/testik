@@ -71,13 +71,15 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Dropdown меню появляется слева от чекбокса и текста
+-- Dropdown-меню (Появляется ниже чекбокса)
 local dropdownWidth = 120
 local dropdownHeight = 85
+local dropdownX = 76              -- по левому краю чекбокса
+local dropdownY = 16 + 24         -- на 24px ниже чекбокса (или под строкой)
 
 local dropdownFrame = Instance.new("Frame")
 dropdownFrame.Size = UDim2.new(0, dropdownWidth, 0, dropdownHeight)
-dropdownFrame.Position = UDim2.new(0, 76 - dropdownWidth - 10, 0, 16) -- слева от чекбокса
+dropdownFrame.Position = UDim2.new(0, dropdownX, 0, dropdownY)
 dropdownFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
 dropdownFrame.BorderSizePixel = 2
 dropdownFrame.BorderColor3 = Color3.fromRGB(64, 64, 70)
