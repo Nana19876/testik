@@ -37,12 +37,13 @@ miscIcon.TextSize = 32
 miscIcon.TextColor3 = Color3.fromRGB(160, 200, 160)
 miscIcon.Parent = sidebar
 
--- Чекбокс в стиле, как на скрине (тёмно-серый, без рамки, "стеклянный" эффект)
+-- Чекбокс с чёткой рамкой
 local checkbox = Instance.new("TextButton")
 checkbox.Size = UDim2.new(0, 18, 0, 18)
 checkbox.Position = UDim2.new(0, 76, 0, 16)
 checkbox.BackgroundColor3 = Color3.fromRGB(34, 34, 36)
-checkbox.BorderSizePixel = 0
+checkbox.BorderSizePixel = 2
+checkbox.BorderColor3 = Color3.fromRGB(220, 220, 220) -- Яркая, хорошо видимая рамка
 checkbox.Text = ""
 checkbox.AutoButtonColor = true
 checkbox.Parent = mainFrame
@@ -52,18 +53,18 @@ local shadow = Instance.new("ImageLabel")
 shadow.Size = UDim2.new(1, 0, 1, 0)
 shadow.Position = UDim2.new(0, 0, 0, 0)
 shadow.BackgroundTransparency = 1
-shadow.Image = "rbxassetid://3570695787" -- Круглая тень, подходит для мягких эффектов
+shadow.Image = "rbxassetid://3570695787"
 shadow.ImageColor3 = Color3.fromRGB(0,0,0)
-shadow.ImageTransparency = 0.85
+shadow.ImageTransparency = 0.82
 shadow.Parent = checkbox
 
 local isEnabled = false
 
--- Мягкий зелёный индикатор, появляется внутри при активации
+-- Мягкий зелёный индикатор внутри при активации
 local boxIndicator = Instance.new("Frame")
 boxIndicator.Size = UDim2.new(1, -6, 1, -6)
 boxIndicator.Position = UDim2.new(0, 3, 0, 3)
-boxIndicator.BackgroundColor3 = Color3.fromRGB(85, 210, 120) -- мягкий пастельный зелёный
+boxIndicator.BackgroundColor3 = Color3.fromRGB(85, 210, 120)
 boxIndicator.BackgroundTransparency = 0.15
 boxIndicator.Visible = false
 boxIndicator.BorderSizePixel = 0
@@ -72,7 +73,6 @@ boxIndicator.Parent = checkbox
 checkbox.MouseButton1Click:Connect(function()
     isEnabled = not isEnabled
     boxIndicator.Visible = isEnabled
-    -- Сюда можно добавить код активации фарма
 end)
 
 -- Текст справа от чекбокса
