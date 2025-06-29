@@ -353,4 +353,173 @@ sliderKnob2.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging2 = false end
 end)
 sliderBarBg2.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setSlider2(input.Position.X) dragging2 = true
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging2 and input.UserInputType == Enum.UserInputType.MouseMovement then setSlider2(input.Position.X) end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging2 = false end
+end)
+
+updateSliderVisual2(0)
+
+-- Третий слайдер "скорость в вправа"
+local sliderLabel3 = Instance.new("TextLabel")
+sliderLabel3.Size = UDim2.new(0, 180, 0, 22)
+sliderLabel3.Position = UDim2.new(0, 76, 0, SLIDER3_LABEL_Y_UP)
+sliderLabel3.BackgroundTransparency = 1
+sliderLabel3.Text = "скорость в вправа"
+sliderLabel3.Font = Enum.Font.SourceSansBold
+sliderLabel3.TextSize = 18
+sliderLabel3.TextColor3 = Color3.fromRGB(220,220,220)
+sliderLabel3.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel3.Parent = mainFrame
+
+local sliderBackground3 = Instance.new("Frame")
+sliderBackground3.Size = UDim2.new(0, 210, 0, 32)
+sliderBackground3.Position = UDim2.new(0, 72, 0, SLIDER3_BG_Y_UP)
+sliderBackground3.BackgroundColor3 = Color3.fromRGB(19, 20, 22)
+sliderBackground3.BackgroundTransparency = 0.18
+sliderBackground3.BorderSizePixel = 0
+sliderBackground3.Parent = mainFrame
+
+local sliderFrame3 = Instance.new("Frame")
+sliderFrame3.Size = UDim2.new(1, 0, 1, 0)
+sliderFrame3.Position = UDim2.new(0, 0, 0, 0)
+sliderFrame3.BackgroundTransparency = 1
+sliderFrame3.Parent = sliderBackground3
+
+local sliderBarBg3 = Instance.new("Frame")
+sliderBarBg3.Size = UDim2.new(0, 180, 0, 6)
+sliderBarBg3.Position = UDim2.new(0, 15, 0.5, -3)
+sliderBarBg3.BackgroundColor3 = Color3.fromRGB(44, 44, 44)
+sliderBarBg3.BorderSizePixel = 0
+sliderBarBg3.Parent = sliderFrame3
+
+local sliderBarFill3 = Instance.new("Frame")
+sliderBarFill3.Size = UDim2.new(0, 0, 1, 0)
+sliderBarFill3.Position = UDim2.new(0, 0, 0, 0)
+sliderBarFill3.BackgroundColor3 = Color3.fromRGB(240, 190, 120)
+sliderBarFill3.BorderSizePixel = 0
+sliderBarFill3.Parent = sliderBarBg3
+
+local sliderKnob3 = Instance.new("Frame")
+sliderKnob3.Size = UDim2.new(0, 14, 0, 14)
+sliderKnob3.Position = UDim2.new(0, -7, 0.5, -7)
+sliderKnob3.BackgroundColor3 = Color3.fromRGB(250, 210, 120)
+sliderKnob3.BorderSizePixel = 0
+sliderKnob3.BackgroundTransparency = 0.15
+sliderKnob3.Parent = sliderBarBg3
+sliderKnob3.ZIndex = 2
+sliderKnob3.AnchorPoint = Vector2.new(0.5, 0.5)
+sliderKnob3.ClipsDescendants = false
+sliderKnob3.Name = "SliderKnob3"
+
+local sliderValue3 = Instance.new("TextLabel")
+sliderValue3.Size = UDim2.new(0, 60, 1, 0)
+sliderValue3.Position = UDim2.new(0.5, -30, 0, -8)
+sliderValue3.BackgroundTransparency = 1
+sliderValue3.Text = "1 %"
+sliderValue3.Font = Enum.Font.SourceSansBold
+sliderValue3.TextSize = 15
+sliderValue3.TextColor3 = Color3.fromRGB(255,235,200)
+sliderValue3.TextStrokeTransparency = 0.35
+sliderValue3.TextXAlignment = Enum.TextXAlignment.Center
+sliderValue3.TextYAlignment = Enum.TextYAlignment.Center
+sliderValue3.Parent = sliderBarBg3
+sliderValue3.ZIndex = 3
+
+-- Логика третьего слайдера
+local minValue3, maxValue3 = 1, 32
+local value3 = minValue3
+local dragging3 = false
+
+local function updateSliderVisual3(rel)
+    local width = sliderBarBg3.AbsoluteSize.X
+    sliderBarFill3.Size = UDim2.new(0, rel * width, 1, 0)
+    sliderKnob3.Position = UDim2.new(0, rel * width, 0.5, 0)
+    value3 = math.floor(minValue3 + (maxValue3 - minValue3) * rel + 0.5)
+    sliderValue3.Text = tostring(value3) .. " %"
+end
+
+local function setSlider3(posX)
+    local barAbsPos = sliderBarBg3.AbsolutePosition.X
+    local barWidth = sliderBarBg3.AbsoluteSize.X
+    local rel = math.clamp((posX - barAbsPos) / barWidth, 0, 1)
+    updateSliderVisual3(rel)
+end
+
+sliderKnob3.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging3 = true end
+end)
+sliderKnob3.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging3 = false end
+end)
+sliderBarBg3.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setSlider3(input.Position.X) dragging3 = true
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging3 and input.UserInputType == Enum.UserInputType.MouseMovement then setSlider3(input.Position.X) end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging3 = false end
+end)
+
+updateSliderVisual3(0)
+
+-- === АНИМАЦИЯ СДВИГА ТРЁХ СЛАЙДЕРОВ ===
+function moveSliders(down)
+    -- Первый слайдер
+    local newLabelY1 = down and SLIDER1_LABEL_Y_DOWN or SLIDER1_LABEL_Y_UP
+    local newBgY1    = down and SLIDER1_BG_Y_DOWN or SLIDER1_BG_Y_UP
+    TweenService:Create(sliderLabel1, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY1)}):Play()
+    TweenService:Create(sliderBackground1, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY1)}):Play()
+
+    -- Второй слайдер
+    local newLabelY2 = down and SLIDER2_LABEL_Y_DOWN or SLIDER2_LABEL_Y_UP
+    local newBgY2    = down and SLIDER2_BG_Y_DOWN or SLIDER2_BG_Y_UP
+    TweenService:Create(sliderLabel2, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY2)}):Play()
+    TweenService:Create(sliderBackground2, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY2)}):Play()
+
+    -- Третий слайдер
+    local newLabelY3 = down and SLIDER3_LABEL_Y_DOWN or SLIDER3_LABEL_Y_UP
+    local newBgY3    = down and SLIDER3_BG_Y_DOWN or SLIDER3_BG_Y_UP
+    TweenService:Create(sliderLabel3, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY3)}):Play()
+    TweenService:Create(sliderBackground3, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY3)}):Play()
+end
+
+-- ВЫПАДАШКА ОТКРЫТИЕ/ЗАКРЫТИЕ
+local function toggleDropdown()
+    local willOpen = not dropdownFrame.Visible
+    dropdownFrame.Visible = willOpen
+    moveSliders(willOpen)
+end
+
+label.MouseButton1Click:Connect(toggleDropdown)
+
+checkbox.MouseButton1Click:Connect(function()
+    isEnabled = not isEnabled
+    boxIndicator.Visible = isEnabled
+    if isEnabled then
+        dropdownFrame.Visible = true
+        moveSliders(true)
+    else
+        dropdownFrame.Visible = false
+        moveSliders(false)
+    end
+end)
+
+-- Открытие/скрытие меню по клавише M
+local UIS = game:GetService("UserInputService")
+local open = true
+UIS.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.M then
+        open = not open
+        skeetGui.Enabled = open
+    end
+end)
