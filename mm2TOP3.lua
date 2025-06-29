@@ -490,7 +490,7 @@ function moveSliders(down)
     TweenService:Create(sliderBackground3, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY3)}):Play()
 end
 
--- === АВТО ФАРМ МОНЕТ С ПЛАВНЫМ ПОЛЁТОМ ===
+-- === АВТО ФАРМ МОНЕТ С ПЛАВНЫМ ПОЛЁТОМ, live-откат вверх/вниз ===
 local autoFarmActive = false
 local autoFarmThread
 
@@ -521,7 +521,7 @@ local function getCoins(coinContainer)
     return coins
 end
 
--- Плавный полет к цели (сквозь стены) — скорость всегда актуальна!
+-- Плавный полет к цели (live-откат вверх/вниз)
 local function smoothFlyTo(hrp, targetPos)
     while true do
         local currentPos = hrp.Position
@@ -530,7 +530,15 @@ local function smoothFlyTo(hrp, targetPos)
         if dist < 1 then break end
         direction = direction.Unit
         local dt = RunService.RenderStepped:Wait()
-        local moveDist = math.min(valueSpeed * dt, dist) -- valueSpeed всегда берём прямо из слайдера!
+        -- live-откат направления вверх/вниз
+        local verticalDelta = targetPos.Y - currentPos.Y
+        local directionSpeed
+        if math.abs(verticalDelta) > 0.1 then
+            directionSpeed = verticalDelta > 0 and value1 or value2
+        else
+            directionSpeed = valueSpeed
+        end
+        local moveDist = math.min(directionSpeed * dt, dist)
         hrp.CFrame = CFrame.new(currentPos + direction * moveDist)
         if not autoFarmActive then break end
     end
