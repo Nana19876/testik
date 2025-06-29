@@ -71,15 +71,30 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Дропдаун-меню (изначально скрыто)
+-- Dropdown меню появляется слева от чекбокса и текста
+local dropdownWidth = 120
+local dropdownHeight = 85
+
 local dropdownFrame = Instance.new("Frame")
-dropdownFrame.Size = UDim2.new(0, 100, 0, 60)
-dropdownFrame.Position = UDim2.new(0, 104, 0, 40)
+dropdownFrame.Size = UDim2.new(0, dropdownWidth, 0, dropdownHeight)
+dropdownFrame.Position = UDim2.new(0, 76 - dropdownWidth - 10, 0, 16) -- слева от чекбокса
 dropdownFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
 dropdownFrame.BorderSizePixel = 2
 dropdownFrame.BorderColor3 = Color3.fromRGB(64, 64, 70)
 dropdownFrame.Visible = false
 dropdownFrame.Parent = mainFrame
+
+-- Надпись "metod" сверху
+local metodLabel = Instance.new("TextLabel")
+metodLabel.Size = UDim2.new(1, 0, 0, 22)
+metodLabel.Position = UDim2.new(0, 0, 0, 0)
+metodLabel.BackgroundTransparency = 1
+metodLabel.Text = "metod"
+metodLabel.Font = Enum.Font.SourceSansBold
+metodLabel.TextSize = 18
+metodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+metodLabel.TextXAlignment = Enum.TextXAlignment.Left
+metodLabel.Parent = dropdownFrame
 
 -- Варианты дропдауна
 local dropdownOptions = {"deloft", "random"}
@@ -88,16 +103,18 @@ local selectedOption = 1
 local function updateDropdown()
     for i, child in ipairs(dropdownFrame:GetChildren()) do
         if child:IsA("TextButton") then
-            child.BackgroundColor3 = (i == selectedOption) and Color3.fromRGB(85, 210, 120) or Color3.fromRGB(36, 36, 38)
-            child.TextColor3 = (i == selectedOption) and Color3.fromRGB(28, 28, 32) or Color3.fromRGB(220,220,220)
+            local idx = tonumber(child.Name)
+            child.BackgroundColor3 = (idx == selectedOption) and Color3.fromRGB(85, 210, 120) or Color3.fromRGB(36, 36, 38)
+            child.TextColor3 = (idx == selectedOption) and Color3.fromRGB(28, 28, 32) or Color3.fromRGB(220,220,220)
         end
     end
 end
 
 for i, option in ipairs(dropdownOptions) do
     local btn = Instance.new("TextButton")
+    btn.Name = tostring(i)
     btn.Size = UDim2.new(1, 0, 0, 28)
-    btn.Position = UDim2.new(0, 0, 0, (i-1)*30)
+    btn.Position = UDim2.new(0, 0, 0, 22 + (i-1)*31)
     btn.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
     btn.BorderSizePixel = 0
     btn.Text = option
@@ -109,8 +126,7 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
-        -- Если нужно обработать выбор:
-        print("Выбран режим автофарма: "..option)
+        print("Выбран метод фарма: "..option)
     end)
 end
 updateDropdown()
