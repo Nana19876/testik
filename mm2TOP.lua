@@ -13,7 +13,7 @@ skeetGui.Name = "SkeetMenu"
 skeetGui.Parent = playerGui
 skeetGui.ResetOnSpawn = false
 
--- Большое меню
+-- Главное окно
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 900, 0, 550)
 mainFrame.Position = UDim2.new(0, 60, 0, 40)
@@ -37,30 +37,19 @@ miscIcon.TextSize = 32
 miscIcon.TextColor3 = Color3.fromRGB(160, 200, 160)
 miscIcon.Parent = sidebar
 
--- Чекбокс с чёткой рамкой
+-- Чекбокс и текст "avto farm"
 local checkbox = Instance.new("TextButton")
 checkbox.Size = UDim2.new(0, 18, 0, 18)
 checkbox.Position = UDim2.new(0, 76, 0, 16)
 checkbox.BackgroundColor3 = Color3.fromRGB(34, 34, 36)
 checkbox.BorderSizePixel = 2
-checkbox.BorderColor3 = Color3.fromRGB(220, 220, 220) -- Яркая, хорошо видимая рамка
+checkbox.BorderColor3 = Color3.fromRGB(220, 220, 220)
 checkbox.Text = ""
 checkbox.AutoButtonColor = true
 checkbox.Parent = mainFrame
 
--- Лёгкая внутренняя тень (визуальный эффект)
-local shadow = Instance.new("ImageLabel")
-shadow.Size = UDim2.new(1, 0, 1, 0)
-shadow.Position = UDim2.new(0, 0, 0, 0)
-shadow.BackgroundTransparency = 1
-shadow.Image = "rbxassetid://3570695787"
-shadow.ImageColor3 = Color3.fromRGB(0,0,0)
-shadow.ImageTransparency = 0.82
-shadow.Parent = checkbox
-
 local isEnabled = false
 
--- Мягкий зелёный индикатор внутри при активации
 local boxIndicator = Instance.new("Frame")
 boxIndicator.Size = UDim2.new(1, -6, 1, -6)
 boxIndicator.Position = UDim2.new(0, 3, 0, 3)
@@ -70,13 +59,7 @@ boxIndicator.Visible = false
 boxIndicator.BorderSizePixel = 0
 boxIndicator.Parent = checkbox
 
-checkbox.MouseButton1Click:Connect(function()
-    isEnabled = not isEnabled
-    boxIndicator.Visible = isEnabled
-end)
-
--- Текст справа от чекбокса
-local label = Instance.new("TextLabel")
+local label = Instance.new("TextButton")
 label.Size = UDim2.new(0, 200, 0, 18)
 label.Position = UDim2.new(0, 104, 0, 16)
 label.BackgroundTransparency = 1
@@ -85,7 +68,69 @@ label.Font = Enum.Font.SourceSans
 label.TextSize = 19
 label.TextColor3 = Color3.fromRGB(220,220,220)
 label.TextXAlignment = Enum.TextXAlignment.Left
+label.AutoButtonColor = false
 label.Parent = mainFrame
+
+-- Дропдаун-меню (изначально скрыто)
+local dropdownFrame = Instance.new("Frame")
+dropdownFrame.Size = UDim2.new(0, 100, 0, 60)
+dropdownFrame.Position = UDim2.new(0, 104, 0, 40)
+dropdownFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
+dropdownFrame.BorderSizePixel = 2
+dropdownFrame.BorderColor3 = Color3.fromRGB(64, 64, 70)
+dropdownFrame.Visible = false
+dropdownFrame.Parent = mainFrame
+
+-- Варианты дропдауна
+local dropdownOptions = {"deloft", "random"}
+local selectedOption = 1
+
+local function updateDropdown()
+    for i, child in ipairs(dropdownFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child.BackgroundColor3 = (i == selectedOption) and Color3.fromRGB(85, 210, 120) or Color3.fromRGB(36, 36, 38)
+            child.TextColor3 = (i == selectedOption) and Color3.fromRGB(28, 28, 32) or Color3.fromRGB(220,220,220)
+        end
+    end
+end
+
+for i, option in ipairs(dropdownOptions) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.Position = UDim2.new(0, 0, 0, (i-1)*30)
+    btn.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
+    btn.BorderSizePixel = 0
+    btn.Text = option
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 19
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Parent = dropdownFrame
+    btn.MouseButton1Click:Connect(function()
+        selectedOption = i
+        updateDropdown()
+        dropdownFrame.Visible = false
+        -- Если нужно обработать выбор:
+        print("Выбран режим автофарма: "..option)
+    end)
+end
+updateDropdown()
+
+-- Открытие/закрытие дропдауна по клику на чекбокс или текст
+local function toggleDropdown()
+    dropdownFrame.Visible = not dropdownFrame.Visible
+end
+
+checkbox.MouseButton1Click:Connect(function()
+    isEnabled = not isEnabled
+    boxIndicator.Visible = isEnabled
+    if isEnabled then
+        dropdownFrame.Visible = true
+    else
+        dropdownFrame.Visible = false
+    end
+end)
+
+label.MouseButton1Click:Connect(toggleDropdown)
 
 -- Открытие/скрытие меню по клавише M
 local UIS = game:GetService("UserInputService")
