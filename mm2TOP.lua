@@ -13,9 +13,9 @@ skeetGui.Name = "SkeetMenu"
 skeetGui.Parent = playerGui
 skeetGui.ResetOnSpawn = false
 
--- Расширенное главное окно (ширина = 900, высота = 90)
+-- Главное окно: еще шире и ВЫШЕ (ширина = 900, высота = 550)
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 900, 0, 90)
+mainFrame.Size = UDim2.new(0, 900, 0, 550)
 mainFrame.Position = UDim2.new(0, 60, 0, 40)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BorderSizePixel = 0
@@ -67,7 +67,7 @@ end)
 -- Текст справа от чекбокса
 local label = Instance.new("TextLabel")
 label.Size = UDim2.new(0, 200, 0, 20)
-label.Position = UDim2.new(0, 104, 0, 15) -- (чекбокс + 8px)
+label.Position = UDim2.new(0, 104, 0, 15)
 label.BackgroundTransparency = 1
 label.Text = "avto farm"
 label.Font = Enum.Font.SourceSans
