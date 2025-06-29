@@ -1,5 +1,6 @@
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -138,7 +139,6 @@ end
 updateDropdown()
 
 -- === СЛАЙДЕРЫ ===
--- Y-позиции для четырёх слайдеров
 local SLIDER1_LABEL_Y_UP = 42
 local SLIDER1_BG_Y_UP    = 66
 local SLIDER1_LABEL_Y_DOWN = 106
@@ -225,7 +225,6 @@ sliderValue1.TextYAlignment = Enum.TextYAlignment.Center
 sliderValue1.Parent = sliderBarBg1
 sliderValue1.ZIndex = 3
 
--- Логика первого слайдера
 local minValue1, maxValue1 = 1, 32
 local value1 = minValue1
 local dragging1 = false
@@ -331,7 +330,6 @@ sliderValue2.TextYAlignment = Enum.TextYAlignment.Center
 sliderValue2.Parent = sliderBarBg2
 sliderValue2.ZIndex = 3
 
--- Логика второго слайдера
 local minValue2, maxValue2 = 1, 32
 local value2 = minValue2
 local dragging2 = false
@@ -437,7 +435,6 @@ sliderValue3.TextYAlignment = Enum.TextYAlignment.Center
 sliderValue3.Parent = sliderBarBg3
 sliderValue3.ZIndex = 3
 
--- Логика третьего слайдера
 local minValue3, maxValue3 = 1, 32
 local value3 = minValue3
 local dragging3 = false
@@ -543,7 +540,6 @@ sliderValue4.TextYAlignment = Enum.TextYAlignment.Center
 sliderValue4.Parent = sliderBarBg4
 sliderValue4.ZIndex = 3
 
--- Логика четвёртого слайдера
 local minValue4, maxValue4 = 1, 32
 local value4 = minValue4
 local dragging4 = false
@@ -610,6 +606,80 @@ function moveSliders(down)
     TweenService:Create(sliderBackground4, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY4)}):Play()
 end
 
+-- === АВТО ФАРМ МОНЕТ С ПЛАВНЫМ ПОЛЁТОМ ===
+local autoFarmActive = false
+local autoFarmThread
+
+-- Получить HumanoidRootPart
+local function getHRP()
+    local character = player.Character or player.CharacterAdded:Wait()
+    return character:FindFirstChild("HumanoidRootPart")
+end
+
+-- Ищем любой CoinContainer в Workspace
+local function findCoinContainer()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if (obj:IsA("Folder") or obj:IsA("Model")) and obj.Name:lower():find("coincontainer") then
+            return obj
+        end
+    end
+    return nil
+end
+
+-- Получаем все монеты (ищем и Part, и наличие CoinVisual)
+local function getCoins(coinContainer)
+    local coins = {}
+    for _, coin in ipairs(coinContainer:GetChildren()) do
+        if coin:IsA("BasePart") or coin:FindFirstChild("CoinVisual") then
+            table.insert(coins, coin)
+        end
+    end
+    return coins
+end
+
+-- Плавный полет к цели (сквозь стены)
+local function smoothFlyTo(hrp, targetPos, speed)
+    speed = speed or 50
+    while true do
+        local currentPos = hrp.Position
+        local direction = (targetPos - currentPos)
+        local dist = direction.Magnitude
+        if dist < 1 then break end
+        direction = direction.Unit
+        local dt = RunService.RenderStepped:Wait()
+        local moveDist = math.min(speed * dt, dist)
+        hrp.CFrame = CFrame.new(currentPos + direction * moveDist)
+        if not autoFarmActive then break end
+    end
+end
+
+local function startAutoFarm()
+    autoFarmActive = true
+    autoFarmThread = coroutine.create(function()
+        while autoFarmActive do
+            local coinContainer = findCoinContainer()
+            if coinContainer then
+                local coins = getCoins(coinContainer)
+                for _, coin in ipairs(coins) do
+                    if not autoFarmActive then break end
+                    local hrp = getHRP()
+                    local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+                    if hrp and pos and coin and coin.Parent then
+                        smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0), value1 or 60)
+                        wait(0.12)
+                    end
+                end
+            end
+            wait(0.5)
+        end
+    end)
+    coroutine.resume(autoFarmThread)
+end
+
+local function stopAutoFarm()
+    autoFarmActive = false
+end
+
 -- ВЫПАДАШКА ОТКРЫТИЕ/ЗАКРЫТИЕ
 local function toggleDropdown()
     local willOpen = not dropdownFrame.Visible
@@ -625,9 +695,11 @@ checkbox.MouseButton1Click:Connect(function()
     if isEnabled then
         dropdownFrame.Visible = true
         moveSliders(true)
+        startAutoFarm()
     else
         dropdownFrame.Visible = false
         moveSliders(false)
+        stopAutoFarm()
     end
 end)
 
