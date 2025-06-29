@@ -86,6 +86,18 @@ sliderLabel.TextColor3 = Color3.fromRGB(220,220,220)
 sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
 sliderLabel.Parent = mainFrame
 
+-- Текст "скорость в высоту" над полосой
+local sliderLabel = Instance.new("TextLabel")
+sliderLabel.Size = UDim2.new(0, 180, 0, 22)
+sliderLabel.Position = UDim2.new(0, 76, 0, 42)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.Text = "скорость в высоту"
+sliderLabel.Font = Enum.Font.SourceSansBold
+sliderLabel.TextSize = 18
+sliderLabel.TextColor3 = Color3.fromRGB(220,220,220)
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel.Parent = mainFrame
+
 -- Контейнер для полосы и значения
 local sliderFrame = Instance.new("Frame")
 sliderFrame.Size = UDim2.new(0, 200, 0, 22)
