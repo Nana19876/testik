@@ -14,7 +14,7 @@ skeetGui.ResetOnSpawn = false
 
 -- Главное окно
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 370)
+mainFrame.Size = UDim2.new(0, 500, 0, 440)
 mainFrame.Position = UDim2.new(0, 60, 0, 80)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BackgroundTransparency = 0.25
@@ -138,7 +138,7 @@ end
 updateDropdown()
 
 -- === СЛАЙДЕРЫ ===
--- Y-позиции для двух слайдеров
+-- Y-позиции для трёх слайдеров
 local SLIDER1_LABEL_Y_UP = 42
 local SLIDER1_BG_Y_UP    = 66
 local SLIDER1_LABEL_Y_DOWN = 106
@@ -148,6 +148,11 @@ local SLIDER2_LABEL_Y_UP = 104
 local SLIDER2_BG_Y_UP    = 128
 local SLIDER2_LABEL_Y_DOWN = 168
 local SLIDER2_BG_Y_DOWN   = 192
+
+local SLIDER3_LABEL_Y_UP = 166
+local SLIDER3_BG_Y_UP    = 190
+local SLIDER3_LABEL_Y_DOWN = 230
+local SLIDER3_BG_Y_DOWN   = 254
 
 -- Первый слайдер "скорость в высоту"
 local sliderLabel1 = Instance.new("TextLabel")
@@ -348,61 +353,4 @@ sliderKnob2.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging2 = false end
 end)
 sliderBarBg2.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        setSlider2(input.Position.X) dragging2 = true
-    end
-end)
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging2 and input.UserInputType == Enum.UserInputType.MouseMovement then setSlider2(input.Position.X) end
-end)
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging2 = false end
-end)
-
-updateSliderVisual2(0)
-
--- === АНИМАЦИЯ СДВИГА ДВУХ СЛАЙДЕРОВ ===
-function moveSliders(down)
-    -- Первый слайдер
-    local newLabelY1 = down and SLIDER1_LABEL_Y_DOWN or SLIDER1_LABEL_Y_UP
-    local newBgY1    = down and SLIDER1_BG_Y_DOWN or SLIDER1_BG_Y_UP
-    TweenService:Create(sliderLabel1, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY1)}):Play()
-    TweenService:Create(sliderBackground1, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY1)}):Play()
-
-    -- Второй слайдер
-    local newLabelY2 = down and SLIDER2_LABEL_Y_DOWN or SLIDER2_LABEL_Y_UP
-    local newBgY2    = down and SLIDER2_BG_Y_DOWN or SLIDER2_BG_Y_UP
-    TweenService:Create(sliderLabel2, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY2)}):Play()
-    TweenService:Create(sliderBackground2, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY2)}):Play()
-end
-
--- ВЫПАДАШКА ОТКРЫТИЕ/ЗАКРЫТИЕ
-local function toggleDropdown()
-    local willOpen = not dropdownFrame.Visible
-    dropdownFrame.Visible = willOpen
-    moveSliders(willOpen)
-end
-
-label.MouseButton1Click:Connect(toggleDropdown)
-
-checkbox.MouseButton1Click:Connect(function()
-    isEnabled = not isEnabled
-    boxIndicator.Visible = isEnabled
-    if isEnabled then
-        dropdownFrame.Visible = true
-        moveSliders(true)
-    else
-        dropdownFrame.Visible = false
-        moveSliders(false)
-    end
-end)
-
--- Открытие/скрытие меню по клавише M
-local UIS = game:GetService("UserInputService")
-local open = true
-UIS.InputBegan:Connect(function(input, processed)
-    if not processed and input.KeyCode == Enum.KeyCode.M then
-        open = not open
-        skeetGui.Enabled = open
-    end
-end)
+    if input.UserInputType == Enum.UserInputType.MouseButton
