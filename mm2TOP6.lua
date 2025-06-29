@@ -74,10 +74,21 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Текст "скорость в высоту" над полосой
+local TweenService = game:GetService("TweenService")
+-- ... остальной код меню выше не меняй ...
+
+-- === ЭТОТ БЛОК идёт после label.Parent = mainFrame ===
+
+-- Базовые позиции (две позиции для текст/ползунок)
+local SLIDER_Y_UP = 42
+local SLIDER_Y_DOWN = 106  -- на сколько ниже опускать при открытом dropdown
+local SLIDER_BG_UP = 66
+local SLIDER_BG_DOWN = 130
+
+-- Текст "скорость в высоту"
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
-sliderLabel.Position = UDim2.new(0, 76, 0, 42)
+sliderLabel.Position = UDim2.new(0, 76, 0, SLIDER_Y_UP)
 sliderLabel.BackgroundTransparency = 1
 sliderLabel.Text = "скорость в высоту"
 sliderLabel.Font = Enum.Font.SourceSansBold
@@ -86,34 +97,29 @@ sliderLabel.TextColor3 = Color3.fromRGB(220,220,220)
 sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
 sliderLabel.Parent = mainFrame
 
--- Текст "скорость в высоту" над полосой
-local sliderLabel = Instance.new("TextLabel")
-sliderLabel.Size = UDim2.new(0, 180, 0, 22)
-sliderLabel.Position = UDim2.new(0, 76, 0, 42)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.Text = "скорость в высоту"
-sliderLabel.Font = Enum.Font.SourceSansBold
-sliderLabel.TextSize = 18
-sliderLabel.TextColor3 = Color3.fromRGB(220,220,220)
-sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-sliderLabel.Parent = mainFrame
+-- Фон под полоской
+local sliderBackground = Instance.new("Frame")
+sliderBackground.Size = UDim2.new(0, 210, 0, 32)
+sliderBackground.Position = UDim2.new(0, 72, 0, SLIDER_BG_UP)
+sliderBackground.BackgroundColor3 = Color3.fromRGB(19, 20, 22)
+sliderBackground.BackgroundTransparency = 0.18
+sliderBackground.BorderSizePixel = 0
+sliderBackground.Parent = mainFrame
 
--- Контейнер для полосы и значения
+-- Полоса и значение — как было выше, но родитель теперь sliderBackground
 local sliderFrame = Instance.new("Frame")
-sliderFrame.Size = UDim2.new(0, 200, 0, 22)
-sliderFrame.Position = UDim2.new(0, 76, 0, 68)
+sliderFrame.Size = UDim2.new(1, 0, 1, 0)
+sliderFrame.Position = UDim2.new(0, 0, 0, 0)
 sliderFrame.BackgroundTransparency = 1
-sliderFrame.Parent = mainFrame
+sliderFrame.Parent = sliderBackground
 
--- Фоновая полоса (тёмно-серая)
 local sliderBarBg = Instance.new("Frame")
-sliderBarBg.Size = UDim2.new(1, 0, 0, 6)
-sliderBarBg.Position = UDim2.new(0, 0, 0.5, -3)
+sliderBarBg.Size = UDim2.new(0, 180, 0, 6)
+sliderBarBg.Position = UDim2.new(0, 15, 0.5, -3)
 sliderBarBg.BackgroundColor3 = Color3.fromRGB(44, 44, 44)
 sliderBarBg.BorderSizePixel = 0
 sliderBarBg.Parent = sliderFrame
 
--- Заполненная (зелёная) часть
 local sliderBarFill = Instance.new("Frame")
 sliderBarFill.Size = UDim2.new(0, 0, 1, 0)
 sliderBarFill.Position = UDim2.new(0, 0, 0, 0)
@@ -121,7 +127,6 @@ sliderBarFill.BackgroundColor3 = Color3.fromRGB(85, 210, 120)
 sliderBarFill.BorderSizePixel = 0
 sliderBarFill.Parent = sliderBarBg
 
--- Круглый "knob"
 local sliderKnob = Instance.new("Frame")
 sliderKnob.Size = UDim2.new(0, 14, 0, 14)
 sliderKnob.Position = UDim2.new(0, -7, 0.5, -7)
@@ -134,7 +139,6 @@ sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
 sliderKnob.ClipsDescendants = false
 sliderKnob.Name = "SliderKnob"
 
--- Текст в центре полосы
 local sliderValue = Instance.new("TextLabel")
 sliderValue.Size = UDim2.new(0, 60, 1, 0)
 sliderValue.Position = UDim2.new(0.5, -30, 0, -8)
@@ -149,7 +153,8 @@ sliderValue.TextYAlignment = Enum.TextYAlignment.Center
 sliderValue.Parent = sliderBarBg
 sliderValue.ZIndex = 3
 
--- Логика ползунка (от 1 до 32)
+-- Ползунок логика (от 1 до 32) — как раньше
+
 local minValue, maxValue = 1, 32
 local value = minValue
 local dragging = false
@@ -167,42 +172,67 @@ local function setSlider(posX)
     local barWidth = sliderBarBg.AbsoluteSize.X
     local rel = math.clamp((posX - barAbsPos) / barWidth, 0, 1)
     updateSliderVisual(rel)
-    -- Теперь переменная "value" содержит актуальное значение (1-32)
 end
 
 sliderKnob.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
 end)
-
 sliderKnob.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
-
 sliderBarBg.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        setSlider(input.Position.X)
-        dragging = true
+        setSlider(input.Position.X) dragging = true
     end
 end)
-
 game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        setSlider(input.Position.X)
-    end
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then setSlider(input.Position.X) end
 end)
-
 game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
+
+updateSliderVisual(0)
+
+-- === СДВИГАТЬ ПОЛЗУНОК ПРИ ОТКРЫТИИ ДРОПДАУНА ===
+
+local function moveSlider(down)
+    local newLabelY = down and SLIDER_Y_DOWN or SLIDER_Y_UP
+    local newBgY    = down and SLIDER_BG_DOWN or SLIDER_BG_UP
+    TweenService:Create(sliderLabel, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY)}):Play()
+    TweenService:Create(sliderBackground, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY)}):Play()
+end
+
+-- Теперь просто вызывай moveSlider(true) при открытии выпадающего меню,
+-- moveSlider(false) при его закрытии.
+
+-- Например:
+-- dropdownFrame.Visible = true; moveSlider(true)
+-- dropdownFrame.Visible = false; moveSlider(false)
+
+-- В функции toggleDropdown или где у тебя раскрывается/закрывается dropdown:
+-- (пример для твоей функции)
+
+local function toggleDropdown()
+    local willOpen = not dropdownFrame.Visible
+    dropdownFrame.Visible = willOpen
+    moveSlider(willOpen)
+end
+
+label.MouseButton1Click:Connect(toggleDropdown)
+
+checkbox.MouseButton1Click:Connect(function()
+    isEnabled = not isEnabled
+    boxIndicator.Visible = isEnabled
+    if isEnabled then
+        dropdownFrame.Visible = true
+        moveSlider(true)
+    else
+        dropdownFrame.Visible = false
+        moveSlider(false)
     end
 end)
 
--- начальное положение (1%)
-updateSliderVisual(0)
 
 -- Dropdown-меню, чуть ниже чекбокса
 local dropdownWidth = 110
