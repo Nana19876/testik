@@ -13,7 +13,7 @@ skeetGui.Name = "SkeetMenu"
 skeetGui.Parent = playerGui
 skeetGui.ResetOnSpawn = false
 
--- Главное окно: еще шире и ВЫШЕ (ширина = 900, высота = 550)
+-- Большое меню
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 900, 0, 550)
 mainFrame.Position = UDim2.new(0, 60, 0, 40)
@@ -37,23 +37,34 @@ miscIcon.TextSize = 32
 miscIcon.TextColor3 = Color3.fromRGB(160, 200, 160)
 miscIcon.Parent = sidebar
 
--- Маленький чекбокс с синей рамкой и текстом "avto farm"
+-- Чекбокс в стиле, как на скрине (тёмно-серый, без рамки, "стеклянный" эффект)
 local checkbox = Instance.new("TextButton")
-checkbox.Size = UDim2.new(0, 20, 0, 20)
-checkbox.Position = UDim2.new(0, 76, 0, 15)
-checkbox.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
-checkbox.BorderColor3 = Color3.fromRGB(38, 95, 255) -- синяя рамка
-checkbox.BorderSizePixel = 2
+checkbox.Size = UDim2.new(0, 18, 0, 18)
+checkbox.Position = UDim2.new(0, 76, 0, 16)
+checkbox.BackgroundColor3 = Color3.fromRGB(34, 34, 36)
+checkbox.BorderSizePixel = 0
 checkbox.Text = ""
 checkbox.AutoButtonColor = true
 checkbox.Parent = mainFrame
 
+-- Лёгкая внутренняя тень (визуальный эффект)
+local shadow = Instance.new("ImageLabel")
+shadow.Size = UDim2.new(1, 0, 1, 0)
+shadow.Position = UDim2.new(0, 0, 0, 0)
+shadow.BackgroundTransparency = 1
+shadow.Image = "rbxassetid://3570695787" -- Круглая тень, подходит для мягких эффектов
+shadow.ImageColor3 = Color3.fromRGB(0,0,0)
+shadow.ImageTransparency = 0.85
+shadow.Parent = checkbox
+
 local isEnabled = false
 
+-- Мягкий зелёный индикатор, появляется внутри при активации
 local boxIndicator = Instance.new("Frame")
-boxIndicator.Size = UDim2.new(1, -8, 1, -8)
-boxIndicator.Position = UDim2.new(0, 4, 0, 4)
-boxIndicator.BackgroundColor3 = Color3.fromRGB(36, 200, 72) -- bright green
+boxIndicator.Size = UDim2.new(1, -6, 1, -6)
+boxIndicator.Position = UDim2.new(0, 3, 0, 3)
+boxIndicator.BackgroundColor3 = Color3.fromRGB(85, 210, 120) -- мягкий пастельный зелёный
+boxIndicator.BackgroundTransparency = 0.15
 boxIndicator.Visible = false
 boxIndicator.BorderSizePixel = 0
 boxIndicator.Parent = checkbox
@@ -61,13 +72,13 @@ boxIndicator.Parent = checkbox
 checkbox.MouseButton1Click:Connect(function()
     isEnabled = not isEnabled
     boxIndicator.Visible = isEnabled
-    -- Здесь твой код автофарма, если нужно
+    -- Сюда можно добавить код активации фарма
 end)
 
 -- Текст справа от чекбокса
 local label = Instance.new("TextLabel")
-label.Size = UDim2.new(0, 200, 0, 20)
-label.Position = UDim2.new(0, 104, 0, 15)
+label.Size = UDim2.new(0, 200, 0, 18)
+label.Position = UDim2.new(0, 104, 0, 16)
 label.BackgroundTransparency = 1
 label.Text = "avto farm"
 label.Font = Enum.Font.SourceSans
