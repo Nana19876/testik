@@ -68,28 +68,7 @@ aboutText.TextSize = 22
 aboutText.TextColor3 = Color3.fromRGB(220,220,220)
 aboutText.Text = [[
 Пример GUI для Roblox Studio.
-Автор: твой никнейм или ссылка.
-Дата: 2025.
-Специально для тестирования и обучения созданию стильных меню Skeet UI.
-
-По вопросам и сотрудничеству — пиши!
-]]
-aboutText.Parent = aboutPage
-
--- (необязательно) ссылка-Button
-local linkButton = Instance.new("TextButton")
-linkButton.Size = UDim2.new(0, 180, 0, 28)
-linkButton.Position = UDim2.new(0, 8, 0, 180)
-linkButton.BackgroundColor3 = Color3.fromRGB(50,80,50)
-linkButton.TextColor3 = Color3.fromRGB(200,255,200)
-linkButton.Font = Enum.Font.SourceSans
-linkButton.TextSize = 18
-linkButton.Text = "Связаться в Telegram"
-linkButton.Parent = aboutPage
-
-linkButton.MouseButton1Click:Connect(function()
-    setclipboard("https://t.me/твоя_ссылка") -- (или просто показывай сообщение)
-end)
+creator: 1.
 
 -- (опционально) картинка или иконка
 -- local logo = Instance.new("ImageLabel")
