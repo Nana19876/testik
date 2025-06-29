@@ -1,10 +1,9 @@
--- LocalScript, вставь в StarterPlayerScripts или StarterGui
+-- LocalScript для StarterPlayerScripts или StarterGui
 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Удаляем прошлое меню если что
 if playerGui:FindFirstChild("SkeetMenu") then
     playerGui.SkeetMenu:Destroy()
 end
@@ -16,75 +15,46 @@ skeetGui.ResetOnSpawn = false
 
 -- Главное окно
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 720, 0, 480)
+mainFrame.Size = UDim2.new(0, 500, 0, 400)
 mainFrame.Position = UDim2.new(0, 100, 0, 80)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = skeetGui
 
--- Левое меню с иконками
+-- Боковая панель с одной иконкой (Настройки)
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 60, 1, 0)
 sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 24)
 sidebar.Parent = mainFrame
 
-local iconLabels = {}
-local iconList = {
-    {Name="Aimbot", Icon="🎯"},
-    {Name="Visuals", Icon="👁️"},
-    {Name="Misc", Icon="⚙️"},
-    {Name="Configs", Icon="🗂️"},
-}
+local miscIcon = Instance.new("TextButton")
+miscIcon.Size = UDim2.new(1, 0, 0, 48)
+miscIcon.Position = UDim2.new(0, 0, 0, 8)
+miscIcon.BackgroundTransparency = 1
+miscIcon.Text = "⚙️"
+miscIcon.Font = Enum.Font.SourceSansBold
+miscIcon.TextSize = 32
+miscIcon.TextColor3 = Color3.fromRGB(160, 200, 160)
+miscIcon.Parent = sidebar
 
-for i, iconData in ipairs(iconList) do
-    local icon = Instance.new("TextButton")
-    icon.Size = UDim2.new(1, 0, 0, 48)
-    icon.Position = UDim2.new(0, 0, 0, 8 + (i-1)*56)
-    icon.BackgroundTransparency = 1
-    icon.Text = iconData.Icon
-    icon.Font = Enum.Font.SourceSansBold
-    icon.TextSize = 32
-    icon.TextColor3 = Color3.fromRGB(160, 200, 160)
-    icon.Parent = sidebar
-    iconLabels[#iconLabels+1] = icon
-end
+-- Окно настроек
+local settingsPage = Instance.new("Frame")
+settingsPage.Size = UDim2.new(1, -68, 1, -20)
+settingsPage.Position = UDim2.new(0, 68, 0, 10)
+settingsPage.BackgroundTransparency = 1
+settingsPage.Parent = mainFrame
 
--- Панели (разделы) меню
-local pages = {}
-
-for i, nameData in ipairs(iconList) do
-    local page = Instance.new("Frame")
-    page.Size = UDim2.new(1, -68, 1, -20)
-    page.Position = UDim2.new(0, 68, 0, 10)
-    page.BackgroundTransparency = 1
-    page.Visible = i == 1
-    page.Parent = mainFrame
-    pages[#pages+1] = page
-end
-
--- Переключение страниц
-for i, icon in ipairs(iconLabels) do
-    icon.MouseButton1Click:Connect(function()
-        for j, page in ipairs(pages) do
-            page.Visible = (j == i)
-        end
-    end)
-end
-
----------------------------------------------------------
--- Пример наполнения для страницы "Aimbot"
-local aimbotPage = pages[1]
-
+-- Заголовок
 local sectionTitle = Instance.new("TextLabel")
 sectionTitle.Size = UDim2.new(1, 0, 0, 30)
 sectionTitle.Position = UDim2.new(0, 10, 0, 0)
 sectionTitle.BackgroundTransparency = 1
-sectionTitle.Text = "Aimbot"
+sectionTitle.Text = "Settings"
 sectionTitle.Font = Enum.Font.SourceSansBold
 sectionTitle.TextSize = 28
 sectionTitle.TextColor3 = Color3.fromRGB(170, 255, 170)
 sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-sectionTitle.Parent = aimbotPage
+sectionTitle.Parent = settingsPage
 
 -- Чекбокс
 local function makeCheckbox(parent, label, y, default)
@@ -112,11 +82,13 @@ local function makeCheckbox(parent, label, y, default)
     return function() return state end
 end
 
-makeCheckbox(aimbotPage, "Enabled", 50, true)
-makeCheckbox(aimbotPage, "Silent Aim", 80, false)
-makeCheckbox(aimbotPage, "Aim Through Walls", 110, false)
+makeCheckbox(settingsPage, "Accuracy boost", 50, true)
+makeCheckbox(settingsPage, "Automatic fire", 80, false)
+makeCheckbox(settingsPage, "Silent aim", 110, false)
+makeCheckbox(settingsPage, "Remove recoil", 140, false)
+makeCheckbox(settingsPage, "Quick peek assist", 170, false)
 
--- Дропдаун (Head/Body/Legs)
+-- Дропдаун (для выбора режима)
 local function makeDropdown(parent, label, y, options, default)
     local lab = Instance.new("TextLabel")
     lab.Size = UDim2.new(0, 120, 0, 22)
@@ -147,7 +119,8 @@ local function makeDropdown(parent, label, y, options, default)
     return function() return options[cur] end
 end
 
-makeDropdown(aimbotPage, "Hit Point:", 150, {"Head","Body","Legs"}, 1)
+makeDropdown(settingsPage, "Accuracy boost:", 220, {"Minimum", "Medium", "Maximum"}, 1)
+makeDropdown(settingsPage, "FOV:", 260, {"Low", "Medium", "High"}, 2)
 
 -- Ползунок
 local function makeSlider(parent, label, y, min, max, default)
@@ -197,13 +170,9 @@ local function makeSlider(parent, label, y, min, max, default)
     return function() return val end
 end
 
-makeSlider(aimbotPage, "Minimum hit chance:", 200, 0, 100, 85)
+makeSlider(settingsPage, "Maximum FOV:", 300, 0, 180, 90)
 
----------------------------------------------------------
-
--- Страницу Visuals/ESP/Color Picker, Misc и Configs делай аналогично — могу расписать детали под любые функции!
-
--- Открытие/скрытие меню по клавише (например, M)
+-- Открытие/скрытие меню по клавише M
 local UIS = game:GetService("UserInputService")
 local open = true
 UIS.InputBegan:Connect(function(input, processed)
@@ -213,12 +182,4 @@ UIS.InputBegan:Connect(function(input, processed)
     end
 end)
 
----------------------------------------------------------
-
--- Всё готово! Меню поддерживает:
--- - Иконки слева (разделы)
--- - Несколько страниц
--- - Группы настроек: чекбокс, дропдаун, слайдер
--- - Современный стиль
-
--- Остальное (цветовую палитру, ESP, визуал и т.д.) добавим по аналогии.
+-- Готово! Остальное (color picker и т.д.) можно добавить аналогично!
