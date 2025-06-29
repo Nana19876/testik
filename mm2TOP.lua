@@ -138,7 +138,7 @@ for i, option in ipairs(dropdownOptions) do
 end
 updateDropdown()
 
--- СЛАЙДЕРЫ: Y-позиции для 2х слайдеров и скорости перемещения
+-- СЛАЙДЕРЫ
 local SLIDER1_LABEL_Y_UP = 42
 local SLIDER1_BG_Y_UP    = 66
 local SLIDER1_LABEL_Y_DOWN = 106
@@ -521,9 +521,8 @@ local function getCoins(coinContainer)
     return coins
 end
 
--- Плавный полет к цели (сквозь стены)
-local function smoothFlyTo(hrp, targetPos, speed)
-    speed = speed or 50
+-- Плавный полет к цели (сквозь стены) — скорость всегда актуальна!
+local function smoothFlyTo(hrp, targetPos)
     while true do
         local currentPos = hrp.Position
         local direction = (targetPos - currentPos)
@@ -531,7 +530,7 @@ local function smoothFlyTo(hrp, targetPos, speed)
         if dist < 1 then break end
         direction = direction.Unit
         local dt = RunService.RenderStepped:Wait()
-        local moveDist = math.min(speed * dt, dist)
+        local moveDist = math.min(valueSpeed * dt, dist) -- valueSpeed всегда берём прямо из слайдера!
         hrp.CFrame = CFrame.new(currentPos + direction * moveDist)
         if not autoFarmActive then break end
     end
@@ -549,7 +548,7 @@ local function startAutoFarm()
                     local hrp = getHRP()
                     local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
                     if hrp and pos and coin and coin.Parent then
-                        smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0), valueSpeed or 50)
+                        smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0))
                         wait(0.12)
                     end
                 end
