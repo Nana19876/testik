@@ -70,6 +70,11 @@ aboutText.Text = [[
 Пример GUI для Roblox Studio.
 creator: 1.
 
+aboutText.Text = [[
+Пример GUI для Roblox Studio.
+creator: 1.
+]]
+
 -- (опционально) картинка или иконка
 -- local logo = Instance.new("ImageLabel")
 -- logo.Size = UDim2.new(0,40,0,40)
@@ -87,3 +92,4 @@ UIS.InputBegan:Connect(function(input, processed)
         skeetGui.Enabled = open
     end
 end)
+
