@@ -13,11 +13,12 @@ skeetGui.Name = "SkeetMenu"
 skeetGui.Parent = playerGui
 skeetGui.ResetOnSpawn = false
 
--- Главное окно
+-- Компактное и полупрозрачное главное окно
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 900, 0, 550)
-mainFrame.Position = UDim2.new(0, 60, 0, 40)
+mainFrame.Size = UDim2.new(0, 500, 0, 320)
+mainFrame.Position = UDim2.new(0, 60, 0, 80)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
+mainFrame.BackgroundTransparency = 0.25
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = skeetGui
 
@@ -25,6 +26,7 @@ mainFrame.Parent = skeetGui
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 60, 1, 0)
 sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 24)
+sidebar.BackgroundTransparency = 0.25
 sidebar.Parent = mainFrame
 
 local miscIcon = Instance.new("TextButton")
@@ -42,6 +44,7 @@ local checkbox = Instance.new("TextButton")
 checkbox.Size = UDim2.new(0, 18, 0, 18)
 checkbox.Position = UDim2.new(0, 76, 0, 16)
 checkbox.BackgroundColor3 = Color3.fromRGB(34, 34, 36)
+checkbox.BackgroundTransparency = 0.1
 checkbox.BorderSizePixel = 2
 checkbox.BorderColor3 = Color3.fromRGB(220, 220, 220)
 checkbox.Text = ""
@@ -54,7 +57,7 @@ local boxIndicator = Instance.new("Frame")
 boxIndicator.Size = UDim2.new(1, -6, 1, -6)
 boxIndicator.Position = UDim2.new(0, 3, 0, 3)
 boxIndicator.BackgroundColor3 = Color3.fromRGB(85, 210, 120)
-boxIndicator.BackgroundTransparency = 0.15
+boxIndicator.BackgroundTransparency = 0.25
 boxIndicator.Visible = false
 boxIndicator.BorderSizePixel = 0
 boxIndicator.Parent = checkbox
@@ -71,16 +74,17 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Dropdown-меню (Появляется ниже чекбокса)
-local dropdownWidth = 120
-local dropdownHeight = 85
-local dropdownX = 76              -- по левому краю чекбокса
-local dropdownY = 16 + 24         -- на 24px ниже чекбокса (или под строкой)
+-- Dropdown-меню, чуть ниже чекбокса
+local dropdownWidth = 110
+local dropdownHeight = 80
+local dropdownX = 76
+local dropdownY = 16 + 24
 
 local dropdownFrame = Instance.new("Frame")
 dropdownFrame.Size = UDim2.new(0, dropdownWidth, 0, dropdownHeight)
 dropdownFrame.Position = UDim2.new(0, dropdownX, 0, dropdownY)
 dropdownFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
+dropdownFrame.BackgroundTransparency = 0.3
 dropdownFrame.BorderSizePixel = 2
 dropdownFrame.BorderColor3 = Color3.fromRGB(64, 64, 70)
 dropdownFrame.Visible = false
@@ -107,6 +111,7 @@ local function updateDropdown()
         if child:IsA("TextButton") then
             local idx = tonumber(child.Name)
             child.BackgroundColor3 = (idx == selectedOption) and Color3.fromRGB(85, 210, 120) or Color3.fromRGB(36, 36, 38)
+            child.BackgroundTransparency = (idx == selectedOption) and 0.18 or 0.3
             child.TextColor3 = (idx == selectedOption) and Color3.fromRGB(28, 28, 32) or Color3.fromRGB(220,220,220)
         end
     end
@@ -115,9 +120,10 @@ end
 for i, option in ipairs(dropdownOptions) do
     local btn = Instance.new("TextButton")
     btn.Name = tostring(i)
-    btn.Size = UDim2.new(1, 0, 0, 28)
-    btn.Position = UDim2.new(0, 0, 0, 22 + (i-1)*31)
+    btn.Size = UDim2.new(1, 0, 0, 25)
+    btn.Position = UDim2.new(0, 0, 0, 22 + (i-1)*27)
     btn.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
+    btn.BackgroundTransparency = 0.3
     btn.BorderSizePixel = 0
     btn.Text = option
     btn.Font = Enum.Font.SourceSans
