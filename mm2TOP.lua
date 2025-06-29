@@ -15,7 +15,7 @@ skeetGui.ResetOnSpawn = false
 
 -- Главное окно
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 260)
+mainFrame.Size = UDim2.new(0, 400, 0, 280)
 mainFrame.Position = UDim2.new(0, 100, 0, 120)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BorderSizePixel = 0
@@ -58,7 +58,7 @@ sectionTitle.Parent = aboutPage
 
 -- Основной текст
 local aboutText = Instance.new("TextLabel")
-aboutText.Size = UDim2.new(1, -16, 0, 110)
+aboutText.Size = UDim2.new(1, -16, 0, 80)
 aboutText.Position = UDim2.new(0, 8, 0, 54)
 aboutText.BackgroundTransparency = 1
 aboutText.TextWrapped = true
@@ -68,20 +68,57 @@ aboutText.TextSize = 22
 aboutText.TextColor3 = Color3.fromRGB(220,220,220)
 aboutText.Text = [[
 Пример GUI для Roblox Studio.
-creator: 1.
-
-aboutText.Text = [[
-Пример GUI для Roblox Studio.
-creator: 1.
+Автор: твой никнейм.
+Дата: 2025.
 ]]
+aboutText.Parent = aboutPage
 
--- (опционально) картинка или иконка
--- local logo = Instance.new("ImageLabel")
--- logo.Size = UDim2.new(0,40,0,40)
--- logo.Position = UDim2.new(1,-50,0,8)
--- logo.BackgroundTransparency = 1
--- logo.Image = "rbxassetid://ВАШ_ИД"
--- logo.Parent = aboutPage
+-- Кнопка автофарма
+local autoFarmActive = false
+local autoFarmButton = Instance.new("TextButton")
+autoFarmButton.Size = UDim2.new(1, -24, 0, 44)
+autoFarmButton.Position = UDim2.new(0, 12, 0, 160)
+autoFarmButton.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
+autoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoFarmButton.Font = Enum.Font.SourceSansBold
+autoFarmButton.TextSize = 22
+autoFarmButton.Text = "Запустить автофарм"
+autoFarmButton.AutoButtonColor = false
+autoFarmButton.Parent = aboutPage
+
+-- Пример логики автофарма
+local autoFarmThread = nil
+local autoFarmStop = false
+
+local function startAutoFarm()
+    print("Автофарм ЗАПУЩЕН")
+    autoFarmStop = false
+    autoFarmThread = task.spawn(function()
+        while not autoFarmStop do
+            -- Здесь твой автофарм-код (пример):
+            print("Фармим монетки/ресурсы/что нужно...")
+            task.wait(1) -- Пауза между действиями
+        end
+        print("Автофарм остановлен!")
+    end)
+end
+
+local function stopAutoFarm()
+    autoFarmStop = true
+end
+
+autoFarmButton.MouseButton1Click:Connect(function()
+    autoFarmActive = not autoFarmActive
+    if autoFarmActive then
+        autoFarmButton.Text = "Остановить автофарм"
+        autoFarmButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+        startAutoFarm()
+    else
+        autoFarmButton.Text = "Запустить автофарм"
+        autoFarmButton.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
+        stopAutoFarm()
+    end
+end)
 
 -- Открытие/скрытие меню по клавише M
 local UIS = game:GetService("UserInputService")
@@ -92,4 +129,3 @@ UIS.InputBegan:Connect(function(input, processed)
         skeetGui.Enabled = open
     end
 end)
-
