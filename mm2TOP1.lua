@@ -14,7 +14,7 @@ skeetGui.ResetOnSpawn = false
 
 -- Главное окно
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 500, 0, 440)
+mainFrame.Size = UDim2.new(0, 500, 0, 510)
 mainFrame.Position = UDim2.new(0, 60, 0, 80)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BackgroundTransparency = 0.25
@@ -138,7 +138,7 @@ end
 updateDropdown()
 
 -- === СЛАЙДЕРЫ ===
--- Y-позиции для трёх слайдеров
+-- Y-позиции для четырёх слайдеров
 local SLIDER1_LABEL_Y_UP = 42
 local SLIDER1_BG_Y_UP    = 66
 local SLIDER1_LABEL_Y_DOWN = 106
@@ -153,6 +153,11 @@ local SLIDER3_LABEL_Y_UP = 166
 local SLIDER3_BG_Y_UP    = 190
 local SLIDER3_LABEL_Y_DOWN = 230
 local SLIDER3_BG_Y_DOWN   = 254
+
+local SLIDER4_LABEL_Y_UP = 228
+local SLIDER4_BG_Y_UP    = 252
+local SLIDER4_LABEL_Y_DOWN = 292
+local SLIDER4_BG_Y_DOWN   = 316
 
 -- Первый слайдер "скорость в высоту"
 local sliderLabel1 = Instance.new("TextLabel")
@@ -472,7 +477,113 @@ end)
 
 updateSliderVisual3(0)
 
--- === АНИМАЦИЯ СДВИГА ТРЁХ СЛАЙДЕРОВ ===
+-- Четвёртый слайдер "скорость в влева"
+local sliderLabel4 = Instance.new("TextLabel")
+sliderLabel4.Size = UDim2.new(0, 180, 0, 22)
+sliderLabel4.Position = UDim2.new(0, 76, 0, SLIDER4_LABEL_Y_UP)
+sliderLabel4.BackgroundTransparency = 1
+sliderLabel4.Text = "скорость в влева"
+sliderLabel4.Font = Enum.Font.SourceSansBold
+sliderLabel4.TextSize = 18
+sliderLabel4.TextColor3 = Color3.fromRGB(220,220,220)
+sliderLabel4.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel4.Parent = mainFrame
+
+local sliderBackground4 = Instance.new("Frame")
+sliderBackground4.Size = UDim2.new(0, 210, 0, 32)
+sliderBackground4.Position = UDim2.new(0, 72, 0, SLIDER4_BG_Y_UP)
+sliderBackground4.BackgroundColor3 = Color3.fromRGB(19, 20, 22)
+sliderBackground4.BackgroundTransparency = 0.18
+sliderBackground4.BorderSizePixel = 0
+sliderBackground4.Parent = mainFrame
+
+local sliderFrame4 = Instance.new("Frame")
+sliderFrame4.Size = UDim2.new(1, 0, 1, 0)
+sliderFrame4.Position = UDim2.new(0, 0, 0, 0)
+sliderFrame4.BackgroundTransparency = 1
+sliderFrame4.Parent = sliderBackground4
+
+local sliderBarBg4 = Instance.new("Frame")
+sliderBarBg4.Size = UDim2.new(0, 180, 0, 6)
+sliderBarBg4.Position = UDim2.new(0, 15, 0.5, -3)
+sliderBarBg4.BackgroundColor3 = Color3.fromRGB(44, 44, 44)
+sliderBarBg4.BorderSizePixel = 0
+sliderBarBg4.Parent = sliderFrame4
+
+local sliderBarFill4 = Instance.new("Frame")
+sliderBarFill4.Size = UDim2.new(0, 0, 1, 0)
+sliderBarFill4.Position = UDim2.new(0, 0, 0, 0)
+sliderBarFill4.BackgroundColor3 = Color3.fromRGB(210, 120, 190)
+sliderBarFill4.BorderSizePixel = 0
+sliderBarFill4.Parent = sliderBarBg4
+
+local sliderKnob4 = Instance.new("Frame")
+sliderKnob4.Size = UDim2.new(0, 14, 0, 14)
+sliderKnob4.Position = UDim2.new(0, -7, 0.5, -7)
+sliderKnob4.BackgroundColor3 = Color3.fromRGB(230, 120, 210)
+sliderKnob4.BorderSizePixel = 0
+sliderKnob4.BackgroundTransparency = 0.15
+sliderKnob4.Parent = sliderBarBg4
+sliderKnob4.ZIndex = 2
+sliderKnob4.AnchorPoint = Vector2.new(0.5, 0.5)
+sliderKnob4.ClipsDescendants = false
+sliderKnob4.Name = "SliderKnob4"
+
+local sliderValue4 = Instance.new("TextLabel")
+sliderValue4.Size = UDim2.new(0, 60, 1, 0)
+sliderValue4.Position = UDim2.new(0.5, -30, 0, -8)
+sliderValue4.BackgroundTransparency = 1
+sliderValue4.Text = "1 %"
+sliderValue4.Font = Enum.Font.SourceSansBold
+sliderValue4.TextSize = 15
+sliderValue4.TextColor3 = Color3.fromRGB(255,200,255)
+sliderValue4.TextStrokeTransparency = 0.35
+sliderValue4.TextXAlignment = Enum.TextXAlignment.Center
+sliderValue4.TextYAlignment = Enum.TextYAlignment.Center
+sliderValue4.Parent = sliderBarBg4
+sliderValue4.ZIndex = 3
+
+-- Логика четвёртого слайдера
+local minValue4, maxValue4 = 1, 32
+local value4 = minValue4
+local dragging4 = false
+
+local function updateSliderVisual4(rel)
+    local width = sliderBarBg4.AbsoluteSize.X
+    sliderBarFill4.Size = UDim2.new(0, rel * width, 1, 0)
+    sliderKnob4.Position = UDim2.new(0, rel * width, 0.5, 0)
+    value4 = math.floor(minValue4 + (maxValue4 - minValue4) * rel + 0.5)
+    sliderValue4.Text = tostring(value4) .. " %"
+end
+
+local function setSlider4(posX)
+    local barAbsPos = sliderBarBg4.AbsolutePosition.X
+    local barWidth = sliderBarBg4.AbsoluteSize.X
+    local rel = math.clamp((posX - barAbsPos) / barWidth, 0, 1)
+    updateSliderVisual4(rel)
+end
+
+sliderKnob4.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging4 = true end
+end)
+sliderKnob4.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging4 = false end
+end)
+sliderBarBg4.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setSlider4(input.Position.X) dragging4 = true
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if dragging4 and input.UserInputType == Enum.UserInputType.MouseMovement then setSlider4(input.Position.X) end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging4 = false end
+end)
+
+updateSliderVisual4(0)
+
+-- === АНИМАЦИЯ СДВИГА ЧЕТЫРЁХ СЛАЙДЕРОВ ===
 function moveSliders(down)
     -- Первый слайдер
     local newLabelY1 = down and SLIDER1_LABEL_Y_DOWN or SLIDER1_LABEL_Y_UP
@@ -491,6 +602,12 @@ function moveSliders(down)
     local newBgY3    = down and SLIDER3_BG_Y_DOWN or SLIDER3_BG_Y_UP
     TweenService:Create(sliderLabel3, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY3)}):Play()
     TweenService:Create(sliderBackground3, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY3)}):Play()
+
+    -- Четвёртый слайдер
+    local newLabelY4 = down and SLIDER4_LABEL_Y_DOWN or SLIDER4_LABEL_Y_UP
+    local newBgY4    = down and SLIDER4_BG_Y_DOWN or SLIDER4_BG_Y_UP
+    TweenService:Create(sliderLabel4, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY4)}):Play()
+    TweenService:Create(sliderBackground4, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY4)}):Play()
 end
 
 -- ВЫПАДАШКА ОТКРЫТИЕ/ЗАКРЫТИЕ
