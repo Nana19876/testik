@@ -14,7 +14,7 @@ skeetGui.Parent = playerGui
 skeetGui.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 350, 0, 220)
+mainFrame.Size = UDim2.new(0, 350, 0, 270)
 mainFrame.Position = UDim2.new(0, 60, 0, 80)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BackgroundTransparency = 0.25
@@ -71,9 +71,9 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Dropdown ("defolt", "random")
-local dropdownWidth = 120
-local dropdownHeight = 85
+-- Dropdown ("defolt", "random", "teleport")
+local dropdownWidth = 140
+local dropdownHeight = 115
 local dropdownX = 76
 local dropdownY = 40
 
@@ -98,7 +98,7 @@ metodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 metodLabel.TextXAlignment = Enum.TextXAlignment.Left
 metodLabel.Parent = dropdownFrame
 
-local dropdownOptions = {"defolt", "random"}
+local dropdownOptions = {"defolt", "random", "teleport"}
 local selectedOption = 1
 
 local function updateDropdown()
@@ -129,20 +129,22 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
-        moveSlider(false)
+        moveSliders(false)
         isEnabled = true
         boxIndicator.Visible = true
+        showSliderByMethod()
         startAutoFarm()
     end)
 end
 updateDropdown()
 
--- ==== СЛАЙДЕР ====
+-- ==== СЛАЙДЕРЫ ====
 local SLIDER_LABEL_Y_UP = 42
 local SLIDER_LABEL_Y_DOWN = 108
 local SLIDER_BG_Y_UP = 66
 local SLIDER_BG_Y_DOWN = 132
 
+-- Слайдер скорости перемещения
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
 sliderLabel.Position = UDim2.new(0, 76, 0, SLIDER_LABEL_Y_UP)
@@ -247,14 +249,137 @@ end)
 
 updateSliderVisual((valueSpeed-minSpeed)/(maxSpeed-minSpeed))
 
-function moveSlider(down)
+-- Слайдер скорости телепорта
+local teleLabel = Instance.new("TextLabel")
+teleLabel.Size = UDim2.new(0, 180, 0, 22)
+teleLabel.Position = UDim2.new(0, 76, 0, SLIDER_LABEL_Y_UP)
+teleLabel.BackgroundTransparency = 1
+teleLabel.Text = "скорость телепорта"
+teleLabel.Font = Enum.Font.SourceSansBold
+teleLabel.TextSize = 18
+teleLabel.TextColor3 = Color3.fromRGB(255,255,220)
+teleLabel.TextXAlignment = Enum.TextXAlignment.Left
+teleLabel.Parent = mainFrame
+teleLabel.Visible = false
+
+local teleBackground = Instance.new("Frame")
+teleBackground.Size = UDim2.new(0, 210, 0, 32)
+teleBackground.Position = UDim2.new(0, 72, 0, SLIDER_BG_Y_UP)
+teleBackground.BackgroundColor3 = Color3.fromRGB(19, 20, 22)
+teleBackground.BackgroundTransparency = 0.18
+teleBackground.BorderSizePixel = 0
+teleBackground.Parent = mainFrame
+teleBackground.Visible = false
+
+local teleFrame = Instance.new("Frame")
+teleFrame.Size = UDim2.new(1, 0, 1, 0)
+teleFrame.Position = UDim2.new(0, 0, 0, 0)
+teleFrame.BackgroundTransparency = 1
+teleFrame.Parent = teleBackground
+
+local teleBarBg = Instance.new("Frame")
+teleBarBg.Size = UDim2.new(0, 180, 0, 6)
+teleBarBg.Position = UDim2.new(0, 15, 0.5, -3)
+teleBarBg.BackgroundColor3 = Color3.fromRGB(44, 44, 44)
+teleBarBg.BorderSizePixel = 0
+teleBarBg.Parent = teleFrame
+
+local teleBarFill = Instance.new("Frame")
+teleBarFill.Size = UDim2.new(0, 0, 1, 0)
+teleBarFill.Position = UDim2.new(0, 0, 0, 0)
+teleBarFill.BackgroundColor3 = Color3.fromRGB(180, 210, 255)
+teleBarFill.BorderSizePixel = 0
+teleBarFill.Parent = teleBarBg
+
+local teleKnob = Instance.new("Frame")
+teleKnob.Size = UDim2.new(0, 14, 0, 14)
+teleKnob.Position = UDim2.new(0, -7, 0.5, -7)
+teleKnob.BackgroundColor3 = Color3.fromRGB(220, 240, 255)
+teleKnob.BorderSizePixel = 0
+teleKnob.BackgroundTransparency = 0.15
+teleKnob.Parent = teleBarBg
+teleKnob.ZIndex = 2
+teleKnob.AnchorPoint = Vector2.new(0.5, 0.5)
+teleKnob.ClipsDescendants = false
+teleKnob.Name = "TeleKnob"
+
+local teleValue = Instance.new("TextLabel")
+teleValue.Size = UDim2.new(0, 60, 1, 0)
+teleValue.Position = UDim2.new(0.5, -30, 0, -8)
+teleValue.BackgroundTransparency = 1
+teleValue.Text = "0.50"
+teleValue.Font = Enum.Font.SourceSansBold
+teleValue.TextSize = 15
+teleValue.TextColor3 = Color3.fromRGB(180,210,255)
+teleValue.TextStrokeTransparency = 0.35
+teleValue.TextXAlignment = Enum.TextXAlignment.Center
+teleValue.TextYAlignment = Enum.TextYAlignment.Center
+teleValue.Parent = teleBarBg
+teleValue.ZIndex = 3
+
+local minTele, maxTele = 0.05, 1.5
+local valueTele = 0.50
+local teleDragging = false
+
+local function updateTeleVisual(rel)
+    local width = teleBarBg.AbsoluteSize.X
+    teleBarFill.Size = UDim2.new(0, rel * width, 1, 0)
+    teleKnob.Position = UDim2.new(0, rel * width, 0.5, 0)
+    valueTele = math.floor((minTele + (maxTele - minTele) * rel)*100)/100
+    teleValue.Text = string.format("%.2f", valueTele)
+end
+
+local function setTele(posX)
+    local barAbsPos = teleBarBg.AbsolutePosition.X
+    local barWidth = teleBarBg.AbsoluteSize.X
+    local rel = math.clamp((posX - barAbsPos) / barWidth, 0, 1)
+    updateTeleVisual(rel)
+end
+
+teleKnob.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then teleDragging = true end
+end)
+teleKnob.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then teleDragging = false end
+end)
+teleBarBg.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        setTele(input.Position.X) teleDragging = true
+    end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if teleDragging and input.UserInputType == Enum.UserInputType.MouseMovement then setTele(input.Position.X) end
+end)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then teleDragging = false end
+end)
+
+updateTeleVisual((valueTele-minTele)/(maxTele-minTele))
+
+function moveSliders(down)
     local newLabelY = down and SLIDER_LABEL_Y_DOWN or SLIDER_LABEL_Y_UP
     local newBgY    = down and SLIDER_BG_Y_DOWN or SLIDER_BG_Y_UP
     TweenService:Create(sliderLabel, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY)}):Play()
     TweenService:Create(sliderBackground, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY)}):Play()
+    TweenService:Create(teleLabel, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY)}):Play()
+    TweenService:Create(teleBackground, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY)}):Play()
 end
 
--- АВТОФАРМ логика
+function showSliderByMethod()
+    if selectedOption == 3 then
+        sliderLabel.Visible = false
+        sliderBackground.Visible = false
+        teleLabel.Visible = true
+        teleBackground.Visible = true
+    else
+        sliderLabel.Visible = true
+        sliderBackground.Visible = true
+        teleLabel.Visible = false
+        teleBackground.Visible = false
+    end
+end
+
+-- ==== АВТОФАРМ логика
 local autoFarmActive = false
 local autoFarmThread
 
@@ -343,7 +468,7 @@ function startAutoFarm()
                             break
                         end
                     end
-                else -- "random"
+                elseif selectedOption == 2 then -- "random"
                     local remaining = {}
                     for _, coin in ipairs(coins) do
                         table.insert(remaining, coin)
@@ -355,6 +480,24 @@ function startAutoFarm()
                             local hrp = getHRP()
                             smoothFlyTo(hrp, coin)
                             wait(0.12)
+                        end
+                        table.remove(remaining, i)
+                    end
+                elseif selectedOption == 3 then -- "teleport"
+                    local remaining = {}
+                    for _, coin in ipairs(coins) do
+                        table.insert(remaining, coin)
+                    end
+                    while autoFarmActive and #remaining > 0 do
+                        local i = math.random(1, #remaining)
+                        local coin = remaining[i]
+                        if coin and coin.Parent then
+                            local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+                            if pos then
+                                local hrp = getHRP()
+                                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+                                wait(valueTele)
+                            end
                         end
                         table.remove(remaining, i)
                     end
@@ -372,17 +515,17 @@ end
 
 label.MouseButton1Click:Connect(function()
     dropdownFrame.Visible = not dropdownFrame.Visible
-    moveSlider(dropdownFrame.Visible)
+    moveSliders(dropdownFrame.Visible)
 end)
 
 checkbox.MouseButton1Click:Connect(function()
     if not isEnabled then
         dropdownFrame.Visible = true
-        moveSlider(true)
+        moveSliders(true)
     else
         isEnabled = false
         boxIndicator.Visible = false
-        moveSlider(false)
+        moveSliders(false)
         stopAutoFarm()
     end
 end)
@@ -395,3 +538,6 @@ UIS.InputBegan:Connect(function(input, processed)
         skeetGui.Enabled = open
     end
 end)
+
+-- При выборе метода всегда показывать только нужный слайдер!
+showSliderByMethod()
