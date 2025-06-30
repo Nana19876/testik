@@ -13,7 +13,6 @@ skeetGui.Name = "SkeetMenu"
 skeetGui.Parent = playerGui
 skeetGui.ResetOnSpawn = false
 
--- Главное окно
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 350, 0, 220)
 mainFrame.Position = UDim2.new(0, 60, 0, 80)
@@ -22,7 +21,6 @@ mainFrame.BackgroundTransparency = 0.25
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = skeetGui
 
--- Сайдбар
 local sidebar = Instance.new("Frame")
 sidebar.Size = UDim2.new(0, 60, 1, 0)
 sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 24)
@@ -39,7 +37,6 @@ miscIcon.TextSize = 32
 miscIcon.TextColor3 = Color3.fromRGB(240, 200, 90)
 miscIcon.Parent = sidebar
 
--- avto farm чекбокс + текст
 local checkbox = Instance.new("TextButton")
 checkbox.Size = UDim2.new(0, 18, 0, 18)
 checkbox.Position = UDim2.new(0, 76, 0, 16)
@@ -74,7 +71,7 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Dropdown меню ("metod")
+-- Dropdown ("defolt", "random")
 local dropdownWidth = 120
 local dropdownHeight = 85
 local dropdownX = 76
@@ -101,9 +98,8 @@ metodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 metodLabel.TextXAlignment = Enum.TextXAlignment.Left
 metodLabel.Parent = dropdownFrame
 
--- "defolt" (поиск ближайшей), "random"
 local dropdownOptions = {"defolt", "random"}
-local selectedOption = 1  -- defolt всегда первый
+local selectedOption = 1
 
 local function updateDropdown()
     for i, child in ipairs(dropdownFrame:GetChildren()) do
@@ -134,7 +130,6 @@ for i, option in ipairs(dropdownOptions) do
         updateDropdown()
         dropdownFrame.Visible = false
         moveSlider(false)
-        -- Запускаем фарм после выбора метода!
         isEnabled = true
         boxIndicator.Visible = true
         startAutoFarm()
@@ -142,7 +137,7 @@ for i, option in ipairs(dropdownOptions) do
 end
 updateDropdown()
 
--- ==== СЛАЙДЕР "скорость перемещения" с анимацией ====
+-- ==== СЛАЙДЕР ====
 local SLIDER_LABEL_Y_UP = 42
 local SLIDER_LABEL_Y_DOWN = 108
 local SLIDER_BG_Y_UP = 66
@@ -252,7 +247,6 @@ end)
 
 updateSliderVisual((valueSpeed-minSpeed)/(maxSpeed-minSpeed))
 
--- ==== АНИМАЦИЯ СДВИГА СЛАЙДЕРА ====
 function moveSlider(down)
     local newLabelY = down and SLIDER_LABEL_Y_DOWN or SLIDER_LABEL_Y_UP
     local newBgY    = down and SLIDER_BG_Y_DOWN or SLIDER_BG_Y_UP
@@ -260,7 +254,7 @@ function moveSlider(down)
     TweenService:Create(sliderBackground, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY)}):Play()
 end
 
--- ==== АВТО ФАРМ МОНЕТ (defolt/random) ====
+-- АВТОФАРМ логика
 local autoFarmActive = false
 local autoFarmThread
 
@@ -303,8 +297,15 @@ local function getClosestCoin(hrp, coins)
     return closestCoin
 end
 
-local function smoothFlyTo(hrp, targetPos)
+-- Вот тут главный фикс!
+local function smoothFlyTo(hrp, coin)
     while true do
+        -- Проверка на исчезновение монеты
+        if not coin or not coin.Parent then break end
+        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+        if not pos then break end
+
+        local targetPos = pos + Vector3.new(0, 2, 0)
         local currentPos = hrp.Position
         local direction = (targetPos - currentPos)
         local dist = direction.Magnitude
@@ -333,12 +334,9 @@ function startAutoFarm()
                         hrp = getHRP()
                         local closestCoin = getClosestCoin(hrp, coins)
                         if closestCoin and closestCoin.Parent then
-                            local pos = closestCoin.Position or (closestCoin:FindFirstChild("CoinVisual") and closestCoin.CoinVisual.Position)
-                            if hrp and pos then
-                                smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0))
-                                wait(0.12)
-                            end
-                            -- убираем монету из списка (вдруг ещё осталась)
+                            smoothFlyTo(hrp, closestCoin)
+                            wait(0.12)
+                            -- убираем монету из списка
                             for i, c in ipairs(coins) do
                                 if c == closestCoin then
                                     table.remove(coins, i)
@@ -352,10 +350,9 @@ function startAutoFarm()
                 else -- random
                     for _, coin in ipairs(coins) do
                         if not autoFarmActive then break end
-                        local hrp = getHRP()
-                        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
-                        if hrp and pos and coin and coin.Parent then
-                            smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0))
+                        if coin and coin.Parent then
+                            local hrp = getHRP()
+                            smoothFlyTo(hrp, coin)
                             wait(0.12)
                         end
                     end
@@ -380,7 +377,6 @@ checkbox.MouseButton1Click:Connect(function()
     if not isEnabled then
         dropdownFrame.Visible = true
         moveSlider(true)
-        -- После выбора метода фарм стартует внутри dropdown (см. код выше)
     else
         isEnabled = false
         boxIndicator.Visible = false
