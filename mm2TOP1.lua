@@ -133,6 +133,7 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
+        moveSlider(false)
         -- Запускаем фарм после выбора метода!
         isEnabled = true
         boxIndicator.Visible = true
@@ -141,14 +142,15 @@ for i, option in ipairs(dropdownOptions) do
 end
 updateDropdown()
 
-label.MouseButton1Click:Connect(function()
-    dropdownFrame.Visible = not dropdownFrame.Visible
-end)
+-- ==== СЛАЙДЕР "скорость перемещения" с анимацией ====
+local SLIDER_LABEL_Y_UP = 42
+local SLIDER_LABEL_Y_DOWN = 108
+local SLIDER_BG_Y_UP = 66
+local SLIDER_BG_Y_DOWN = 132
 
--- Слайдер "скорость перемещения"
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
-sliderLabel.Position = UDim2.new(0, 76, 0, 85)
+sliderLabel.Position = UDim2.new(0, 76, 0, SLIDER_LABEL_Y_UP)
 sliderLabel.BackgroundTransparency = 1
 sliderLabel.Text = "скорость перемещения"
 sliderLabel.Font = Enum.Font.SourceSansBold
@@ -159,7 +161,7 @@ sliderLabel.Parent = mainFrame
 
 local sliderBackground = Instance.new("Frame")
 sliderBackground.Size = UDim2.new(0, 210, 0, 32)
-sliderBackground.Position = UDim2.new(0, 72, 0, 110)
+sliderBackground.Position = UDim2.new(0, 72, 0, SLIDER_BG_Y_UP)
 sliderBackground.BackgroundColor3 = Color3.fromRGB(19, 20, 22)
 sliderBackground.BackgroundTransparency = 0.18
 sliderBackground.BorderSizePixel = 0
@@ -250,7 +252,15 @@ end)
 
 updateSliderVisual((valueSpeed-minSpeed)/(maxSpeed-minSpeed))
 
--- === АВТО ФАРМ МОНЕТ (defolt/random) ===
+-- ==== АНИМАЦИЯ СДВИГА СЛАЙДЕРА ====
+function moveSlider(down)
+    local newLabelY = down and SLIDER_LABEL_Y_DOWN or SLIDER_LABEL_Y_UP
+    local newBgY    = down and SLIDER_BG_Y_DOWN or SLIDER_BG_Y_UP
+    TweenService:Create(sliderLabel, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 76, 0, newLabelY)}):Play()
+    TweenService:Create(sliderBackground, TweenInfo.new(0.17, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 72, 0, newBgY)}):Play()
+end
+
+-- ==== АВТО ФАРМ МОНЕТ (defolt/random) ====
 local autoFarmActive = false
 local autoFarmThread
 
@@ -361,14 +371,20 @@ local function stopAutoFarm()
     autoFarmActive = false
 end
 
+label.MouseButton1Click:Connect(function()
+    dropdownFrame.Visible = not dropdownFrame.Visible
+    moveSlider(dropdownFrame.Visible)
+end)
+
 checkbox.MouseButton1Click:Connect(function()
     if not isEnabled then
-        -- Показать меню выбора метода
         dropdownFrame.Visible = true
-        -- После выбора метода фарм стартует внутри dropdown (см. выше)
+        moveSlider(true)
+        -- После выбора метода фарм стартует внутри dropdown (см. код выше)
     else
         isEnabled = false
         boxIndicator.Visible = false
+        moveSlider(false)
         stopAutoFarm()
     end
 end)
