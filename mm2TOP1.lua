@@ -71,9 +71,9 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Dropdown ("defolt", "random", "teleport")
+-- Dropdown ("defolt", "random", "teleport", "safe")
 local dropdownWidth = 140
-local dropdownHeight = 120 -- увеличил высоту!
+local dropdownHeight = 150 -- увеличено под 4 опции
 local dropdownX = 76
 local dropdownY = 40
 
@@ -98,7 +98,7 @@ metodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 metodLabel.TextXAlignment = Enum.TextXAlignment.Left
 metodLabel.Parent = dropdownFrame
 
-local dropdownOptions = {"defolt", "random", "teleport"}
+local dropdownOptions = {"defolt", "random", "teleport", "safe"}
 local selectedOption = 1
 
 local function updateDropdown()
@@ -129,7 +129,6 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
-        -- moveSliders(false) -- НЕ вызываем тут!
         isEnabled = true
         boxIndicator.Visible = true
         showSliderByMethod()
@@ -140,9 +139,9 @@ updateDropdown()
 
 -- ==== СЛАЙДЕРЫ ====
 local SLIDER_LABEL_Y_UP = 42
-local SLIDER_LABEL_Y_DOWN = 135  -- увеличил!
+local SLIDER_LABEL_Y_DOWN = 170 -- увеличено для 4 опций!
 local SLIDER_BG_Y_UP = 66
-local SLIDER_BG_Y_DOWN = 165     -- увеличил!
+local SLIDER_BG_Y_DOWN = 200    -- увеличено для 4 опций!
 
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
@@ -495,6 +494,25 @@ function startAutoFarm()
                                 local hrp = getHRP()
                                 hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                                 wait(valueTele)
+                            end
+                        end
+                        table.remove(remaining, i)
+                    end
+                elseif selectedOption == 4 then -- "safe"
+                    local remaining = {}
+                    for _, coin in ipairs(coins) do
+                        table.insert(remaining, coin)
+                    end
+                    while autoFarmActive and #remaining > 0 do
+                        local i = math.random(1, #remaining)
+                        local coin = remaining[i]
+                        if coin and coin.Parent then
+                            local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+                            if pos then
+                                local hrp = getHRP()
+                                -- safe: под землёй, но голова торчит (минус 2.5 блока по Y)
+                                hrp.CFrame = CFrame.new(pos.X, pos.Y - 2.5, pos.Z)
+                                wait(0.3)
                             end
                         end
                         table.remove(remaining, i)
