@@ -440,6 +440,28 @@ local function smoothFlyTo(hrp, coin)
     end
 end
 
+local function safeFlyTo(hrp, coin)
+    while true do
+        if not coin or not coin.Parent then break end
+        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+        if not pos then break end
+        -- целимся под землю
+        local targetPos = Vector3.new(pos.X, pos.Y - 2.5, pos.Z)
+        local currentPos = hrp.Position
+        local direction = (targetPos - currentPos)
+        local dist = direction.Magnitude
+        if dist < 2 then
+            hrp.CFrame = CFrame.new(targetPos)
+            break
+        end
+        direction = direction.Unit
+        local dt = RunService.RenderStepped:Wait()
+        local moveDist = math.min(valueSpeed * dt, dist)
+        hrp.CFrame = CFrame.new(currentPos + direction * moveDist)
+        if not autoFarmActive then break end
+    end
+end
+
 function startAutoFarm()
     autoFarmActive = true
     autoFarmThread = coroutine.create(function()
@@ -507,13 +529,9 @@ function startAutoFarm()
                         local i = math.random(1, #remaining)
                         local coin = remaining[i]
                         if coin and coin.Parent then
-                            local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
-                            if pos then
-                                local hrp = getHRP()
-                                -- safe: под землёй, но голова торчит (минус 2.5 блока по Y)
-                                hrp.CFrame = CFrame.new(pos.X, pos.Y - 2.5, pos.Z)
-                                wait(0.3)
-                            end
+                            local hrp = getHRP()
+                            safeFlyTo(hrp, coin)
+                            wait(0.13)
                         end
                         table.remove(remaining, i)
                     end
