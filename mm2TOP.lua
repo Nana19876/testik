@@ -94,16 +94,16 @@ local metodLabel = Instance.new("TextLabel")
 metodLabel.Size = UDim2.new(1, 0, 0, 22)
 metodLabel.Position = UDim2.new(0, 0, 0, 0)
 metodLabel.BackgroundTransparency = 1
-metodLabel.Text = "metod"
+metodLabel.Text = "Выбери метод фарма"
 metodLabel.Font = Enum.Font.SourceSansBold
 metodLabel.TextSize = 18
 metodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 metodLabel.TextXAlignment = Enum.TextXAlignment.Left
 metodLabel.Parent = dropdownFrame
 
--- Только два варианта: "closest" (по умолчанию), "random"
-local dropdownOptions = {"closest", "random"}
-local selectedOption = 1
+-- "defolt" (поиск ближайшей), "random"
+local dropdownOptions = {"defolt", "random"}
+local selectedOption = 1  -- defolt всегда первый
 
 local function updateDropdown()
     for i, child in ipairs(dropdownFrame:GetChildren()) do
@@ -133,7 +133,10 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
-        print("Метод фарма: "..option)
+        -- Запускаем фарм после выбора метода!
+        isEnabled = true
+        boxIndicator.Visible = true
+        startAutoFarm()
     end)
 end
 updateDropdown()
@@ -247,7 +250,7 @@ end)
 
 updateSliderVisual((valueSpeed-minSpeed)/(maxSpeed-minSpeed))
 
--- === АВТО ФАРМ МОНЕТ (closest/ random) ===
+-- === АВТО ФАРМ МОНЕТ (defolt/random) ===
 local autoFarmActive = false
 local autoFarmThread
 
@@ -307,7 +310,7 @@ local function smoothFlyTo(hrp, targetPos)
     end
 end
 
-local function startAutoFarm()
+function startAutoFarm()
     autoFarmActive = true
     autoFarmThread = coroutine.create(function()
         while autoFarmActive do
@@ -315,7 +318,7 @@ local function startAutoFarm()
             if coinContainer then
                 local hrp = getHRP()
                 local coins = getCoins(coinContainer)
-                if selectedOption == 1 then -- "closest"
+                if selectedOption == 1 then -- "defolt"
                     while autoFarmActive and #coins > 0 do
                         hrp = getHRP()
                         local closestCoin = getClosestCoin(hrp, coins)
@@ -359,11 +362,13 @@ local function stopAutoFarm()
 end
 
 checkbox.MouseButton1Click:Connect(function()
-    isEnabled = not isEnabled
-    boxIndicator.Visible = isEnabled
-    if isEnabled then
-        startAutoFarm()
+    if not isEnabled then
+        -- Показать меню выбора метода
+        dropdownFrame.Visible = true
+        -- После выбора метода фарм стартует внутри dropdown (см. выше)
     else
+        isEnabled = false
+        boxIndicator.Visible = false
         stopAutoFarm()
     end
 end)
