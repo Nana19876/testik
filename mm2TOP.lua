@@ -440,12 +440,13 @@ local function smoothFlyTo(hrp, coin)
     end
 end
 
--- Новый вариант safe: как defolt, но персонаж ВСЕГДА на низкой высоте
+-- Новый вариант safe: как defolt, но персонаж ВСЕГДА на низкой высоте и ЛЕЖИТ
 local function safeFlyToStaticY(hrp, coin)
     if not coin or not coin.Parent then return end
     local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
     if not pos then return end
     local safeY = pos.Y - 2.5
+    local lyingCFrameOffset = CFrame.Angles(math.rad(90), 0, 0) -- лежит на спине
     while true do
         if not coin or not coin.Parent then break end
         local currentPos = hrp.Position
@@ -453,15 +454,14 @@ local function safeFlyToStaticY(hrp, coin)
         local direction = (targetPos - currentPos)
         local dist = direction.Magnitude
         if dist < 2 then
-            hrp.CFrame = CFrame.new(targetPos)
+            hrp.CFrame = CFrame.new(targetPos) * lyingCFrameOffset
             break
         end
         direction = direction.Unit
         local dt = RunService.RenderStepped:Wait()
         local moveDist = math.min(valueSpeed * dt, dist)
-        hrp.CFrame = CFrame.new(currentPos + direction * moveDist)
-        -- фиксируем высоту всегда!
-        hrp.CFrame = CFrame.new(hrp.Position.X, safeY, hrp.Position.Z)
+        local newPos = currentPos + direction * moveDist
+        hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z) * lyingCFrameOffset
         if not autoFarmActive then break end
     end
 end
