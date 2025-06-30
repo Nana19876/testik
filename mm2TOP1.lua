@@ -15,7 +15,7 @@ skeetGui.ResetOnSpawn = false
 
 -- Главное окно
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 350, 0, 180)
+mainFrame.Size = UDim2.new(0, 350, 0, 220)
 mainFrame.Position = UDim2.new(0, 60, 0, 80)
 mainFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
 mainFrame.BackgroundTransparency = 0.25
@@ -74,10 +74,78 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
+-- Dropdown меню ("metod")
+local dropdownWidth = 120
+local dropdownHeight = 85
+local dropdownX = 76
+local dropdownY = 40
+
+local dropdownFrame = Instance.new("Frame")
+dropdownFrame.Size = UDim2.new(0, dropdownWidth, 0, dropdownHeight)
+dropdownFrame.Position = UDim2.new(0, dropdownX, 0, dropdownY)
+dropdownFrame.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
+dropdownFrame.BackgroundTransparency = 0.3
+dropdownFrame.BorderSizePixel = 2
+dropdownFrame.BorderColor3 = Color3.fromRGB(64, 64, 70)
+dropdownFrame.Visible = false
+dropdownFrame.Parent = mainFrame
+
+local metodLabel = Instance.new("TextLabel")
+metodLabel.Size = UDim2.new(1, 0, 0, 22)
+metodLabel.Position = UDim2.new(0, 0, 0, 0)
+metodLabel.BackgroundTransparency = 1
+metodLabel.Text = "metod"
+metodLabel.Font = Enum.Font.SourceSansBold
+metodLabel.TextSize = 18
+metodLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+metodLabel.TextXAlignment = Enum.TextXAlignment.Left
+metodLabel.Parent = dropdownFrame
+
+-- Только два варианта: "closest" (по умолчанию), "random"
+local dropdownOptions = {"closest", "random"}
+local selectedOption = 1
+
+local function updateDropdown()
+    for i, child in ipairs(dropdownFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            local idx = tonumber(child.Name)
+            child.BackgroundColor3 = (idx == selectedOption) and Color3.fromRGB(85, 210, 120) or Color3.fromRGB(36, 36, 38)
+            child.BackgroundTransparency = (idx == selectedOption) and 0.18 or 0.3
+            child.TextColor3 = (idx == selectedOption) and Color3.fromRGB(28, 28, 32) or Color3.fromRGB(220,220,220)
+        end
+    end
+end
+
+for i, option in ipairs(dropdownOptions) do
+    local btn = Instance.new("TextButton")
+    btn.Name = tostring(i)
+    btn.Size = UDim2.new(1, 0, 0, 25)
+    btn.Position = UDim2.new(0, 0, 0, 22 + (i-1)*27)
+    btn.BackgroundColor3 = Color3.fromRGB(36, 36, 38)
+    btn.BackgroundTransparency = 0.3
+    btn.BorderSizePixel = 0
+    btn.Text = option
+    btn.Font = Enum.Font.SourceSans
+    btn.TextSize = 19
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Parent = dropdownFrame
+    btn.MouseButton1Click:Connect(function()
+        selectedOption = i
+        updateDropdown()
+        dropdownFrame.Visible = false
+        print("Метод фарма: "..option)
+    end)
+end
+updateDropdown()
+
+label.MouseButton1Click:Connect(function()
+    dropdownFrame.Visible = not dropdownFrame.Visible
+end)
+
 -- Слайдер "скорость перемещения"
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
-sliderLabel.Position = UDim2.new(0, 76, 0, 58)
+sliderLabel.Position = UDim2.new(0, 76, 0, 85)
 sliderLabel.BackgroundTransparency = 1
 sliderLabel.Text = "скорость перемещения"
 sliderLabel.Font = Enum.Font.SourceSansBold
@@ -88,7 +156,7 @@ sliderLabel.Parent = mainFrame
 
 local sliderBackground = Instance.new("Frame")
 sliderBackground.Size = UDim2.new(0, 210, 0, 32)
-sliderBackground.Position = UDim2.new(0, 72, 0, 82)
+sliderBackground.Position = UDim2.new(0, 72, 0, 110)
 sliderBackground.BackgroundColor3 = Color3.fromRGB(19, 20, 22)
 sliderBackground.BackgroundTransparency = 0.18
 sliderBackground.BorderSizePixel = 0
@@ -179,7 +247,7 @@ end)
 
 updateSliderVisual((valueSpeed-minSpeed)/(maxSpeed-minSpeed))
 
--- === АВТО ФАРМ МОНЕТ С ПЛАВНЫМ ПОЛЁТОМ ===
+-- === АВТО ФАРМ МОНЕТ (closest/ random) ===
 local autoFarmActive = false
 local autoFarmThread
 
@@ -207,12 +275,27 @@ local function getCoins(coinContainer)
     return coins
 end
 
+local function getClosestCoin(hrp, coins)
+    local closestCoin, minDist = nil, math.huge
+    for _, coin in ipairs(coins) do
+        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+        if pos then
+            local dist = (hrp.Position - pos).Magnitude
+            if dist < minDist then
+                closestCoin = coin
+                minDist = dist
+            end
+        end
+    end
+    return closestCoin
+end
+
 local function smoothFlyTo(hrp, targetPos)
     while true do
         local currentPos = hrp.Position
         local direction = (targetPos - currentPos)
         local dist = direction.Magnitude
-        if dist < 2 then -- быстро доходим, без залипания
+        if dist < 2 then
             hrp.CFrame = CFrame.new(targetPos)
             break
         end
@@ -230,14 +313,38 @@ local function startAutoFarm()
         while autoFarmActive do
             local coinContainer = findCoinContainer()
             if coinContainer then
+                local hrp = getHRP()
                 local coins = getCoins(coinContainer)
-                for _, coin in ipairs(coins) do
-                    if not autoFarmActive then break end
-                    local hrp = getHRP()
-                    local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
-                    if hrp and pos and coin and coin.Parent then
-                        smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0))
-                        wait(0.12)
+                if selectedOption == 1 then -- "closest"
+                    while autoFarmActive and #coins > 0 do
+                        hrp = getHRP()
+                        local closestCoin = getClosestCoin(hrp, coins)
+                        if closestCoin and closestCoin.Parent then
+                            local pos = closestCoin.Position or (closestCoin:FindFirstChild("CoinVisual") and closestCoin.CoinVisual.Position)
+                            if hrp and pos then
+                                smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0))
+                                wait(0.12)
+                            end
+                            -- убираем монету из списка (вдруг ещё осталась)
+                            for i, c in ipairs(coins) do
+                                if c == closestCoin then
+                                    table.remove(coins, i)
+                                    break
+                                end
+                            end
+                        else
+                            break
+                        end
+                    end
+                else -- random
+                    for _, coin in ipairs(coins) do
+                        if not autoFarmActive then break end
+                        local hrp = getHRP()
+                        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+                        if hrp and pos and coin and coin.Parent then
+                            smoothFlyTo(hrp, pos + Vector3.new(0, 2, 0))
+                            wait(0.12)
+                        end
                     end
                 end
             end
@@ -261,7 +368,6 @@ checkbox.MouseButton1Click:Connect(function()
     end
 end)
 
--- Открытие/скрытие меню по клавише M
 local UIS = game:GetService("UserInputService")
 local open = true
 UIS.InputBegan:Connect(function(input, processed)
