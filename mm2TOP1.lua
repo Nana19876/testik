@@ -297,14 +297,11 @@ local function getClosestCoin(hrp, coins)
     return closestCoin
 end
 
--- Вот тут главный фикс!
 local function smoothFlyTo(hrp, coin)
     while true do
-        -- Проверка на исчезновение монеты
         if not coin or not coin.Parent then break end
         local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
         if not pos then break end
-
         local targetPos = pos + Vector3.new(0, 2, 0)
         local currentPos = hrp.Position
         local direction = (targetPos - currentPos)
@@ -329,14 +326,13 @@ function startAutoFarm()
             if coinContainer then
                 local hrp = getHRP()
                 local coins = getCoins(coinContainer)
-                if selectedOption == 1 then -- "defolt"
+                if selectedOption == 1 then -- "defolt" (ближайшая)
                     while autoFarmActive and #coins > 0 do
                         hrp = getHRP()
                         local closestCoin = getClosestCoin(hrp, coins)
                         if closestCoin and closestCoin.Parent then
                             smoothFlyTo(hrp, closestCoin)
                             wait(0.12)
-                            -- убираем монету из списка
                             for i, c in ipairs(coins) do
                                 if c == closestCoin then
                                     table.remove(coins, i)
@@ -347,14 +343,20 @@ function startAutoFarm()
                             break
                         end
                     end
-                else -- random
+                else -- "random"
+                    local remaining = {}
                     for _, coin in ipairs(coins) do
-                        if not autoFarmActive then break end
+                        table.insert(remaining, coin)
+                    end
+                    while autoFarmActive and #remaining > 0 do
+                        local i = math.random(1, #remaining)
+                        local coin = remaining[i]
                         if coin and coin.Parent then
                             local hrp = getHRP()
                             smoothFlyTo(hrp, coin)
                             wait(0.12)
                         end
+                        table.remove(remaining, i)
                     end
                 end
             end
