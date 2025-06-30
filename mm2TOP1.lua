@@ -129,7 +129,7 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
-        moveSliders(false)
+        -- НЕ НУЖНО moveSliders(false) здесь!
         isEnabled = true
         boxIndicator.Visible = true
         showSliderByMethod()
@@ -144,7 +144,6 @@ local SLIDER_LABEL_Y_DOWN = 108
 local SLIDER_BG_Y_UP = 66
 local SLIDER_BG_Y_DOWN = 132
 
--- Слайдер скорости перемещения
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
 sliderLabel.Position = UDim2.new(0, 76, 0, SLIDER_LABEL_Y_UP)
@@ -249,7 +248,6 @@ end)
 
 updateSliderVisual((valueSpeed-minSpeed)/(maxSpeed-minSpeed))
 
--- Слайдер скорости телепорта
 local teleLabel = Instance.new("TextLabel")
 teleLabel.Size = UDim2.new(0, 180, 0, 22)
 teleLabel.Position = UDim2.new(0, 76, 0, SLIDER_LABEL_Y_UP)
@@ -539,5 +537,4 @@ UIS.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- При выборе метода всегда показывать только нужный слайдер!
 showSliderByMethod()
