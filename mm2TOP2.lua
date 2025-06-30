@@ -73,7 +73,7 @@ label.Parent = mainFrame
 
 -- Dropdown ("defolt", "random", "teleport", "safe")
 local dropdownWidth = 140
-local dropdownHeight = 150 -- увеличено под 4 опции
+local dropdownHeight = 150 -- под 4 опции
 local dropdownX = 76
 local dropdownY = 40
 
@@ -139,9 +139,9 @@ updateDropdown()
 
 -- ==== СЛАЙДЕРЫ ====
 local SLIDER_LABEL_Y_UP = 42
-local SLIDER_LABEL_Y_DOWN = 170 -- увеличено для 4 опций!
+local SLIDER_LABEL_Y_DOWN = 170 -- под 4 опции!
 local SLIDER_BG_Y_UP = 66
-local SLIDER_BG_Y_DOWN = 200    -- увеличено для 4 опций!
+local SLIDER_BG_Y_DOWN = 200    -- под 4 опции!
 
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
@@ -440,14 +440,16 @@ local function smoothFlyTo(hrp, coin)
     end
 end
 
-local function safeFlyTo(hrp, coin)
+-- Новый вариант safe: как defolt, но персонаж ВСЕГДА на низкой высоте
+local function safeFlyToStaticY(hrp, coin)
+    if not coin or not coin.Parent then return end
+    local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+    if not pos then return end
+    local safeY = pos.Y - 2.5
     while true do
         if not coin or not coin.Parent then break end
-        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
-        if not pos then break end
-        -- целимся под землю
-        local targetPos = Vector3.new(pos.X, pos.Y - 2.5, pos.Z)
         local currentPos = hrp.Position
+        local targetPos = Vector3.new(pos.X, safeY, pos.Z)
         local direction = (targetPos - currentPos)
         local dist = direction.Magnitude
         if dist < 2 then
@@ -458,6 +460,8 @@ local function safeFlyTo(hrp, coin)
         local dt = RunService.RenderStepped:Wait()
         local moveDist = math.min(valueSpeed * dt, dist)
         hrp.CFrame = CFrame.new(currentPos + direction * moveDist)
+        -- фиксируем высоту всегда!
+        hrp.CFrame = CFrame.new(hrp.Position.X, safeY, hrp.Position.Z)
         if not autoFarmActive then break end
     end
 end
@@ -521,19 +525,21 @@ function startAutoFarm()
                         table.remove(remaining, i)
                     end
                 elseif selectedOption == 4 then -- "safe"
-                    local remaining = {}
-                    for _, coin in ipairs(coins) do
-                        table.insert(remaining, coin)
-                    end
-                    while autoFarmActive and #remaining > 0 do
-                        local i = math.random(1, #remaining)
-                        local coin = remaining[i]
-                        if coin and coin.Parent then
-                            local hrp = getHRP()
-                            safeFlyTo(hrp, coin)
+                    while autoFarmActive and #coins > 0 do
+                        hrp = getHRP()
+                        local closestCoin = getClosestCoin(hrp, coins)
+                        if closestCoin and closestCoin.Parent then
+                            safeFlyToStaticY(hrp, closestCoin)
                             wait(0.13)
+                            for i, c in ipairs(coins) do
+                                if c == closestCoin then
+                                    table.remove(coins, i)
+                                    break
+                                end
+                            end
+                        else
+                            break
                         end
-                        table.remove(remaining, i)
                     end
                 end
             end
