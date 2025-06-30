@@ -73,7 +73,7 @@ label.Parent = mainFrame
 
 -- Dropdown ("defolt", "random", "teleport")
 local dropdownWidth = 140
-local dropdownHeight = 115
+local dropdownHeight = 120 -- увеличил высоту!
 local dropdownX = 76
 local dropdownY = 40
 
@@ -129,7 +129,7 @@ for i, option in ipairs(dropdownOptions) do
         selectedOption = i
         updateDropdown()
         dropdownFrame.Visible = false
-        -- НЕ НУЖНО moveSliders(false) здесь!
+        -- moveSliders(false) -- НЕ вызываем тут!
         isEnabled = true
         boxIndicator.Visible = true
         showSliderByMethod()
@@ -140,9 +140,9 @@ updateDropdown()
 
 -- ==== СЛАЙДЕРЫ ====
 local SLIDER_LABEL_Y_UP = 42
-local SLIDER_LABEL_Y_DOWN = 108
+local SLIDER_LABEL_Y_DOWN = 135  -- увеличил!
 local SLIDER_BG_Y_UP = 66
-local SLIDER_BG_Y_DOWN = 132
+local SLIDER_BG_Y_DOWN = 165     -- увеличил!
 
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
