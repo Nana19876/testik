@@ -71,7 +71,6 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.AutoButtonColor = false
 label.Parent = mainFrame
 
--- Dropdown ("defolt", "random", "teleport", "safe")
 local dropdownWidth = 140
 local dropdownHeight = 150
 local dropdownX = 76
@@ -137,7 +136,6 @@ for i, option in ipairs(dropdownOptions) do
 end
 updateDropdown()
 
--- ==== СЛАЙДЕРЫ ====
 local SLIDER_LABEL_Y_UP = 42
 local SLIDER_LABEL_Y_DOWN = 170
 local SLIDER_BG_Y_UP = 66
@@ -376,13 +374,36 @@ function showSliderByMethod()
     end
 end
 
--- ==== FARM POSITION/LOBBY CHECK ====
-local FARM_POSITION = Vector3.new(100, 3, 100) -- ← УКАЖИ ТОЧКУ СПАВНА НА КАРТЕ (где монеты!)
+-- ========== MAP/LOBBY LOGIC ==========
+local MAP_NAMES = {
+    "Bank 2", "Bio Lab", "Factory", "Hospital 3", "House 2", "Mansion 2",
+    "Mil Base", "Office 3", "Police Station", "Research Facility", "Workplace"
+}
 local function isInLobby(hrp)
-    return hrp.Position.Y < 5 -- если твое лобби выше/ниже, измени это число!
+    return hrp.Parent and hrp.Parent == workspace.Lobby
 end
-local function teleportToFarm(hrp)
-    hrp.CFrame = CFrame.new(FARM_POSITION)
+local function getActiveMap()
+    for _, mapName in ipairs(MAP_NAMES) do
+        local map = workspace:FindFirstChild(mapName)
+        if map and map:IsA("Model") then
+            local pos = map:FindFirstChild("Spawn") and map.Spawn.Position
+            if not pos then
+                if map.PrimaryPart then
+                    pos = map.PrimaryPart.Position
+                else
+                    pos = map:GetModelCFrame().p
+                end
+            end
+            return pos
+        end
+    end
+    return nil
+end
+local function teleportToActiveMap(hrp)
+    local pos = getActiveMap()
+    if pos then
+        hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+    end
 end
 
 -- ==== АВТОФАРМ логика ====
@@ -434,8 +455,8 @@ local function smoothFlyTo(hrp, coin)
         local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
         if not pos then break end
         if isInLobby(hrp) then
-            teleportToFarm(hrp)
-            wait(0.6)
+            teleportToActiveMap(hrp)
+            wait(0.7)
         end
         local targetPos = pos + Vector3.new(0, 2, 0)
         local currentPos = hrp.Position
@@ -474,8 +495,8 @@ local function safeFlyToStaticY(hrp, coin)
     local character = player.Character or player.CharacterAdded:Wait()
     setSafePose(character)
     if isInLobby(hrp) then
-        teleportToFarm(hrp)
-        wait(0.6)
+        teleportToActiveMap(hrp)
+        wait(0.7)
     end
     local safeY = pos.Y - 2.1
     while true do
@@ -496,8 +517,8 @@ local function safeFlyToStaticY(hrp, coin)
         hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z)
         setSafePose(character)
         if isInLobby(hrp) then
-            teleportToFarm(hrp)
-            wait(0.6)
+            teleportToActiveMap(hrp)
+            wait(0.7)
         end
         if not autoFarmActive then break end
     end
@@ -556,8 +577,8 @@ function startAutoFarm()
                             if pos then
                                 local hrp = getHRP()
                                 if isInLobby(hrp) then
-                                    teleportToFarm(hrp)
-                                    wait(0.6)
+                                    teleportToActiveMap(hrp)
+                                    wait(0.7)
                                 end
                                 hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                                 wait(valueTele)
@@ -626,7 +647,6 @@ end)
 
 showSliderByMethod()
 
--- === АВТОПЕРЕЗАПУСК ФАРМА ПОСЛЕ РЕСПАВНА ===
 local function onNewCharacter(char)
     if isEnabled and autoFarmActive then
         wait(1.2)
