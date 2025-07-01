@@ -440,13 +440,13 @@ local function smoothFlyTo(hrp, coin)
     end
 end
 
--- ВОТ ЭТА ФУНКЦИЯ ОТВЕЧАЕТ ЗА SAFE (ЕДЕМ НА СПИНЕ К МОНЕТЕ)
-local function setLyingPose(character)
+-- --- SAFE МЕТОД: персонаж "прячется" под землей, голова слегка сверху
+local function setSafePose(character)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid then
-        humanoid.PlatformStand = true -- лежать!
+        humanoid.PlatformStand = true
     end
-    -- Остановить анимации
+    -- Стоп анимации
     for _, desc in ipairs(character:GetDescendants()) do
         if desc:IsA("Animator") then
             for _, tr in ipairs(desc:GetPlayingAnimationTracks()) do
@@ -454,15 +454,7 @@ local function setLyingPose(character)
             end
         end
     end
-    -- Повернуть туловище и HRP
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
-    if hrp then
-        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(math.rad(90), 0, 0)
-    end
-    if torso then
-        torso.CFrame = CFrame.new(torso.Position) * CFrame.Angles(math.rad(90), 0, 0)
-    end
+    -- Не поворачиваем части тела!
 end
 
 local function safeFlyToStaticY(hrp, coin)
@@ -470,8 +462,8 @@ local function safeFlyToStaticY(hrp, coin)
     local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
     if not pos then return end
     local character = player.Character or player.CharacterAdded:Wait()
-    setLyingPose(character)
-    local safeY = pos.Y - 2.5
+    setSafePose(character)
+    local safeY = pos.Y - 2.1 -- Чем больше по модулю (например -2.5), тем ниже, подбирай под свою карту!
     while true do
         if not coin or not coin.Parent then break end
         local currentPos = hrp.Position
@@ -479,16 +471,16 @@ local function safeFlyToStaticY(hrp, coin)
         local direction = (targetPos - currentPos)
         local dist = direction.Magnitude
         if dist < 2 then
-            hrp.CFrame = CFrame.new(targetPos) * CFrame.Angles(math.rad(90), 0, 0)
-            setLyingPose(character)
+            hrp.CFrame = CFrame.new(targetPos)
+            setSafePose(character)
             break
         end
         direction = direction.Unit
         local dt = RunService.RenderStepped:Wait()
         local moveDist = math.min(valueSpeed * dt, dist)
         local newPos = currentPos + direction * moveDist
-        hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z) * CFrame.Angles(math.rad(90), 0, 0)
-        setLyingPose(character)
+        hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z)
+        setSafePose(character)
         if not autoFarmActive then break end
     end
 end
@@ -578,7 +570,6 @@ end
 
 local function stopAutoFarm()
     autoFarmActive = false
-    -- вернуть персонажа в нормальное состояние (если надо)
     local char = player.Character
     if char and char:FindFirstChildOfClass("Humanoid") then
         char:FindFirstChildOfClass("Humanoid").PlatformStand = false
