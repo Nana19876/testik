@@ -1,8 +1,4 @@
--- Скрипт автосбора монет для MM2 с поддержкой автотелепорта из лобби
--- Работает для карт: Bank 2, Bio Lab, Factory, Hospital 3, House 2, Mansion 2, Mil Base, Office 3, Police Station, Research Facility, Workplace
--- Если у карт есть Part "Spawn" - телепорт к нему, иначе в центр модели карты
--- Персонаж моментально появляется у монеты при выходе из лобби!
-
+-- MM2 автосбор монет с автотелепортом на карту, исправлено обращение к Position!
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -432,17 +428,29 @@ end
 local function getCoins(coinContainer)
     local coins = {}
     for _, coin in ipairs(coinContainer:GetChildren()) do
-        if coin:IsA("BasePart") or coin:FindFirstChild("CoinVisual") then
+        -- Фильтруем только BasePart или CoinVisual, которые BasePart
+        if coin:IsA("BasePart") then
+            table.insert(coins, coin)
+        elseif coin:FindFirstChild("CoinVisual") and coin.CoinVisual:IsA("BasePart") then
             table.insert(coins, coin)
         end
     end
     return coins
 end
 
+local function getCoinPosition(coin)
+    if coin and coin:IsA("BasePart") then
+        return coin.Position
+    elseif coin and coin:FindFirstChild("CoinVisual") and coin.CoinVisual:IsA("BasePart") then
+        return coin.CoinVisual.Position
+    end
+    return nil
+end
+
 local function getClosestCoin(hrp, coins)
     local closestCoin, minDist = nil, math.huge
     for _, coin in ipairs(coins) do
-        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+        local pos = getCoinPosition(coin)
         if pos then
             local dist = (hrp.Position - pos).Magnitude
             if dist < minDist then
@@ -454,22 +462,19 @@ local function getClosestCoin(hrp, coins)
     return closestCoin
 end
 
--- Функция перемещения с автотелепортом из лобби прямо к монете!
 local function smoothFlyTo(hrp, coin)
     if isInLobby(hrp) then
         teleportToActiveMap(hrp)
         wait(0.7)
-        if coin and coin.Parent then
-            local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
-            if pos then
-                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
-                wait(0.15)
-            end
+        local pos = getCoinPosition(coin)
+        if pos then
+            hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+            wait(0.15)
         end
     end
     while true do
         if not coin or not coin.Parent then break end
-        local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+        local pos = getCoinPosition(coin)
         if not pos then break end
         local targetPos = pos + Vector3.new(0, 2, 0)
         local currentPos = hrp.Position
@@ -502,8 +507,7 @@ local function setSafePose(character)
 end
 
 local function safeFlyToStaticY(hrp, coin)
-    if not coin or not coin.Parent then return end
-    local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+    local pos = getCoinPosition(coin)
     if not pos then return end
     local character = player.Character or player.CharacterAdded:Wait()
     setSafePose(character)
@@ -517,6 +521,8 @@ local function safeFlyToStaticY(hrp, coin)
     local safeY = pos.Y - 2.1
     while true do
         if not coin or not coin.Parent then break end
+        local pos = getCoinPosition(coin)
+        if not pos then break end
         local currentPos = hrp.Position
         local targetPos = Vector3.new(pos.X, safeY, pos.Z)
         local direction = (targetPos - currentPos)
@@ -592,7 +598,7 @@ function startAutoFarm()
                         local i = math.random(1, #remaining)
                         local coin = remaining[i]
                         if coin and coin.Parent then
-                            local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+                            local pos = getCoinPosition(coin)
                             if pos then
                                 local hrp = getHRP()
                                 if isInLobby(hrp) then
