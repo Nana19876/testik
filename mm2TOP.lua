@@ -376,7 +376,16 @@ function showSliderByMethod()
     end
 end
 
--- ==== АВТОФАРМ логика
+-- ==== FARM POSITION/LOBBY CHECK ====
+local FARM_POSITION = Vector3.new(100, 3, 100) -- ← УКАЖИ ТОЧКУ СПАВНА НА КАРТЕ (где монеты!)
+local function isInLobby(hrp)
+    return hrp.Position.Y < 5 -- если твое лобби выше/ниже, измени это число!
+end
+local function teleportToFarm(hrp)
+    hrp.CFrame = CFrame.new(FARM_POSITION)
+end
+
+-- ==== АВТОФАРМ логика ====
 local autoFarmActive = false
 local autoFarmThread
 
@@ -424,6 +433,10 @@ local function smoothFlyTo(hrp, coin)
         if not coin or not coin.Parent then break end
         local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
         if not pos then break end
+        if isInLobby(hrp) then
+            teleportToFarm(hrp)
+            wait(0.6)
+        end
         local targetPos = pos + Vector3.new(0, 2, 0)
         local currentPos = hrp.Position
         local direction = (targetPos - currentPos)
@@ -460,6 +473,10 @@ local function safeFlyToStaticY(hrp, coin)
     if not pos then return end
     local character = player.Character or player.CharacterAdded:Wait()
     setSafePose(character)
+    if isInLobby(hrp) then
+        teleportToFarm(hrp)
+        wait(0.6)
+    end
     local safeY = pos.Y - 2.1
     while true do
         if not coin or not coin.Parent then break end
@@ -478,6 +495,10 @@ local function safeFlyToStaticY(hrp, coin)
         local newPos = currentPos + direction * moveDist
         hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z)
         setSafePose(character)
+        if isInLobby(hrp) then
+            teleportToFarm(hrp)
+            wait(0.6)
+        end
         if not autoFarmActive then break end
     end
 end
@@ -534,6 +555,10 @@ function startAutoFarm()
                             local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
                             if pos then
                                 local hrp = getHRP()
+                                if isInLobby(hrp) then
+                                    teleportToFarm(hrp)
+                                    wait(0.6)
+                                end
                                 hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
                                 wait(valueTele)
                             end
