@@ -1,3 +1,8 @@
+-- Скрипт автосбора монет для MM2 с поддержкой автотелепорта из лобби
+-- Работает для карт: Bank 2, Bio Lab, Factory, Hospital 3, House 2, Mansion 2, Mil Base, Office 3, Police Station, Research Facility, Workplace
+-- Если у карт есть Part "Spawn" - телепорт к нему, иначе в центр модели карты
+-- Персонаж моментально появляется у монеты при выходе из лобби!
+
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -449,15 +454,23 @@ local function getClosestCoin(hrp, coins)
     return closestCoin
 end
 
+-- Функция перемещения с автотелепортом из лобби прямо к монете!
 local function smoothFlyTo(hrp, coin)
+    if isInLobby(hrp) then
+        teleportToActiveMap(hrp)
+        wait(0.7)
+        if coin and coin.Parent then
+            local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
+            if pos then
+                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 2, 0))
+                wait(0.15)
+            end
+        end
+    end
     while true do
         if not coin or not coin.Parent then break end
         local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
         if not pos then break end
-        if isInLobby(hrp) then
-            teleportToActiveMap(hrp)
-            wait(0.7)
-        end
         local targetPos = pos + Vector3.new(0, 2, 0)
         local currentPos = hrp.Position
         local direction = (targetPos - currentPos)
@@ -497,6 +510,9 @@ local function safeFlyToStaticY(hrp, coin)
     if isInLobby(hrp) then
         teleportToActiveMap(hrp)
         wait(0.7)
+        hrp.CFrame = CFrame.new(pos.X, pos.Y - 2.1, pos.Z)
+        setSafePose(character)
+        wait(0.15)
     end
     local safeY = pos.Y - 2.1
     while true do
@@ -519,6 +535,9 @@ local function safeFlyToStaticY(hrp, coin)
         if isInLobby(hrp) then
             teleportToActiveMap(hrp)
             wait(0.7)
+            hrp.CFrame = CFrame.new(pos.X, safeY, pos.Z)
+            setSafePose(character)
+            wait(0.15)
         end
         if not autoFarmActive then break end
     end
