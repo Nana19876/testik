@@ -73,7 +73,7 @@ label.Parent = mainFrame
 
 -- Dropdown ("defolt", "random", "teleport", "safe")
 local dropdownWidth = 140
-local dropdownHeight = 150 -- под 4 опции
+local dropdownHeight = 150
 local dropdownX = 76
 local dropdownY = 40
 
@@ -139,9 +139,9 @@ updateDropdown()
 
 -- ==== СЛАЙДЕРЫ ====
 local SLIDER_LABEL_Y_UP = 42
-local SLIDER_LABEL_Y_DOWN = 170 -- под 4 опции!
+local SLIDER_LABEL_Y_DOWN = 170
 local SLIDER_BG_Y_UP = 66
-local SLIDER_BG_Y_DOWN = 200    -- под 4 опции!
+local SLIDER_BG_Y_DOWN = 200
 
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(0, 180, 0, 22)
@@ -440,13 +440,11 @@ local function smoothFlyTo(hrp, coin)
     end
 end
 
--- --- SAFE МЕТОД: персонаж "прячется" под землей, голова слегка сверху
 local function setSafePose(character)
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if humanoid then
         humanoid.PlatformStand = true
     end
-    -- Стоп анимации
     for _, desc in ipairs(character:GetDescendants()) do
         if desc:IsA("Animator") then
             for _, tr in ipairs(desc:GetPlayingAnimationTracks()) do
@@ -454,7 +452,6 @@ local function setSafePose(character)
             end
         end
     end
-    -- Не поворачиваем части тела!
 end
 
 local function safeFlyToStaticY(hrp, coin)
@@ -463,7 +460,7 @@ local function safeFlyToStaticY(hrp, coin)
     if not pos then return end
     local character = player.Character or player.CharacterAdded:Wait()
     setSafePose(character)
-    local safeY = pos.Y - 2.1 -- Чем больше по модулю (например -2.5), тем ниже, подбирай под свою карту!
+    local safeY = pos.Y - 2.1
     while true do
         if not coin or not coin.Parent then break end
         local currentPos = hrp.Position
@@ -493,7 +490,7 @@ function startAutoFarm()
             if coinContainer then
                 local hrp = getHRP()
                 local coins = getCoins(coinContainer)
-                if selectedOption == 1 then -- "defolt"
+                if selectedOption == 1 then
                     while autoFarmActive and #coins > 0 do
                         hrp = getHRP()
                         local closestCoin = getClosestCoin(hrp, coins)
@@ -510,7 +507,7 @@ function startAutoFarm()
                             break
                         end
                     end
-                elseif selectedOption == 2 then -- "random"
+                elseif selectedOption == 2 then
                     local remaining = {}
                     for _, coin in ipairs(coins) do
                         table.insert(remaining, coin)
@@ -525,7 +522,7 @@ function startAutoFarm()
                         end
                         table.remove(remaining, i)
                     end
-                elseif selectedOption == 3 then -- "teleport"
+                elseif selectedOption == 3 then
                     local remaining = {}
                     for _, coin in ipairs(coins) do
                         table.insert(remaining, coin)
@@ -543,7 +540,7 @@ function startAutoFarm()
                         end
                         table.remove(remaining, i)
                     end
-                elseif selectedOption == 4 then -- "safe"
+                elseif selectedOption == 4 then
                     while autoFarmActive and #coins > 0 do
                         hrp = getHRP()
                         local closestCoin = getClosestCoin(hrp, coins)
@@ -603,3 +600,12 @@ UIS.InputBegan:Connect(function(input, processed)
 end)
 
 showSliderByMethod()
+
+-- === АВТОПЕРЕЗАПУСК ФАРМА ПОСЛЕ РЕСПАВНА ===
+local function onNewCharacter(char)
+    if isEnabled and autoFarmActive then
+        wait(1.2)
+        startAutoFarm()
+    end
+end
+player.CharacterAdded:Connect(onNewCharacter)
