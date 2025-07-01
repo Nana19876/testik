@@ -440,13 +440,38 @@ local function smoothFlyTo(hrp, coin)
     end
 end
 
--- Новый вариант safe: как defolt, но персонаж ВСЕГДА на низкой высоте и ЛЕЖИТ
+-- ВОТ ЭТА ФУНКЦИЯ ОТВЕЧАЕТ ЗА SAFE (ЕДЕМ НА СПИНЕ К МОНЕТЕ)
+local function setLyingPose(character)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = true -- лежать!
+    end
+    -- Остановить анимации
+    for _, desc in ipairs(character:GetDescendants()) do
+        if desc:IsA("Animator") then
+            for _, tr in ipairs(desc:GetPlayingAnimationTracks()) do
+                tr:Stop()
+            end
+        end
+    end
+    -- Повернуть туловище и HRP
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+    if hrp then
+        hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(math.rad(90), 0, 0)
+    end
+    if torso then
+        torso.CFrame = CFrame.new(torso.Position) * CFrame.Angles(math.rad(90), 0, 0)
+    end
+end
+
 local function safeFlyToStaticY(hrp, coin)
     if not coin or not coin.Parent then return end
     local pos = coin.Position or (coin:FindFirstChild("CoinVisual") and coin.CoinVisual.Position)
     if not pos then return end
+    local character = player.Character or player.CharacterAdded:Wait()
+    setLyingPose(character)
     local safeY = pos.Y - 2.5
-    local lyingCFrameOffset = CFrame.Angles(math.rad(90), 0, 0) -- лежит на спине
     while true do
         if not coin or not coin.Parent then break end
         local currentPos = hrp.Position
@@ -454,14 +479,16 @@ local function safeFlyToStaticY(hrp, coin)
         local direction = (targetPos - currentPos)
         local dist = direction.Magnitude
         if dist < 2 then
-            hrp.CFrame = CFrame.new(targetPos) * lyingCFrameOffset
+            hrp.CFrame = CFrame.new(targetPos) * CFrame.Angles(math.rad(90), 0, 0)
+            setLyingPose(character)
             break
         end
         direction = direction.Unit
         local dt = RunService.RenderStepped:Wait()
         local moveDist = math.min(valueSpeed * dt, dist)
         local newPos = currentPos + direction * moveDist
-        hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z) * lyingCFrameOffset
+        hrp.CFrame = CFrame.new(newPos.X, safeY, newPos.Z) * CFrame.Angles(math.rad(90), 0, 0)
+        setLyingPose(character)
         if not autoFarmActive then break end
     end
 end
@@ -474,7 +501,7 @@ function startAutoFarm()
             if coinContainer then
                 local hrp = getHRP()
                 local coins = getCoins(coinContainer)
-                if selectedOption == 1 then -- "defolt" (ближайшая)
+                if selectedOption == 1 then -- "defolt"
                     while autoFarmActive and #coins > 0 do
                         hrp = getHRP()
                         local closestCoin = getClosestCoin(hrp, coins)
@@ -551,6 +578,11 @@ end
 
 local function stopAutoFarm()
     autoFarmActive = false
+    -- вернуть персонажа в нормальное состояние (если надо)
+    local char = player.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").PlatformStand = false
+    end
 end
 
 label.MouseButton1Click:Connect(function()
