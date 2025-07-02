@@ -12,7 +12,6 @@ local settings = {
 }
 local highlightColor = Color3.fromRGB(0, 255, 0)
 local box3dColor = Color3.fromRGB(255, 0, 0)
-
 local espEnabled = false
 local highlightEnabled = false
 local box3dEnabled = false
@@ -20,7 +19,7 @@ local box3dEnabled = false
 -- Drawing storage для 2D Box
 local espCache = {}
 
--- Drawing storage для 3D Box (без лагов!)
+-- 3D Box индексы
 local EDGE_PAIRS = {
     {1,2},{2,6},{6,5},{5,1}, -- Bottom
     {3,4},{4,8},{8,7},{7,3}, -- Top
@@ -128,7 +127,7 @@ ESPTab:CreateColorPicker({
 
 Rayfield:LoadConfiguration()
 
--- ==================== 2D BOX ESP =====================
+-- ========== 2D BOX ==========
 local newVector2, newDrawing = Vector2.new, Drawing.new
 local tan, rad = math.tan, math.rad
 local round = function(...) local a = {}; for i,v in next, table.pack(...) do a[i] = math.round(v); end return unpack(a); end
@@ -186,7 +185,7 @@ PlayersService.PlayerRemoving:Connect(function(player)
     removeEsp(player)
 end)
 
--- ==================== 3D BOX ESP (оптимально) =====================
+-- ========== 3D BOX (толстые линии) ==========
 local function screen(pos)
 	local s, vis = Camera:WorldToViewportPoint(pos)
 	return Vector2.new(s.X, s.Y), vis
@@ -208,7 +207,7 @@ local function setupPlayerESP(player)
     ESPObjects[player] = {Lines={},Quads={}}
     for i = 1, #EDGE_PAIRS do
         local line = Drawing.new("Line")
-        line.Thickness = 2
+        line.Thickness = 5  -- <=== ТОЛЩИНА ЛИНИЙ (можно 4, 5, 6 — смотри что нравится)
         line.Color = box3dColor
         line.Transparency = 0
         line.Visible = false
@@ -248,6 +247,7 @@ local function updatePlayerESP(player)
         if va and vb then
             line.From = a
             line.To = b
+            line.Color = box3dColor
             line.Visible = true
         else
             line.Visible = false
@@ -264,6 +264,7 @@ local function updatePlayerESP(player)
             quad.PointB = b
             quad.PointC = c
             quad.PointD = d
+            quad.Color = box3dColor
             quad.Visible = true
         else
             quad.Visible = false
@@ -277,7 +278,7 @@ end
 PlayersService.PlayerAdded:Connect(setupPlayerESP)
 PlayersService.PlayerRemoving:Connect(clearPlayerESP)
 
--- ==================== Render Step =====================
+-- ========== Render Step ==========
 RunService.RenderStepped:Connect(function()
     -- 2D box
     for player, drawings in next, espCache do
@@ -296,7 +297,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ========== Highlight поддержка для новых персонажей ==========
+-- ========== Highlight поддержка ==========
 local function handleHighlight(player, char)
     if highlightEnabled and player ~= LocalPlayer then
         local hl = char:FindFirstChild("Highlight")
