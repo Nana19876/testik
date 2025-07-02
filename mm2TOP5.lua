@@ -1,10 +1,12 @@
 -- settings
 local settings = {
-   boxcolor = Color3.fromRGB(255, 255, 255), -- Белый по умолчанию
+   boxcolor = Color3.fromRGB(255, 255, 255),   -- по умолчанию белый бокс
    teamcheck = false,
    teamcolor = false
 }
 local espEnabled = false
+local highlightEnabled = false
+local highlightColor = Color3.fromRGB(0, 255, 0) -- по умолчанию зелёный
 
 -- Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -33,6 +35,49 @@ ESPTab:CreateColorPicker({
     Color = settings.boxcolor,
     Callback = function(Value)
         settings.boxcolor = Value
+    end,
+})
+
+ESPTab:CreateToggle({
+    Name = "Color (Highlight)",
+    CurrentValue = highlightEnabled,
+    Callback = function(Value)
+        highlightEnabled = Value
+        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= game:GetService("Players").LocalPlayer and player.Character then
+                local char = player.Character
+                local hl = char:FindFirstChild("Highlight")
+                if Value then
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Name = "Highlight"
+                        hl.Parent = char
+                        hl.FillTransparency = 0.2
+                        hl.OutlineTransparency = 1
+                    end
+                    hl.FillColor = highlightColor
+                    hl.Adornee = char
+                else
+                    if hl then hl:Destroy() end
+                end
+            end
+        end
+    end,
+})
+
+ESPTab:CreateColorPicker({
+    Name = "Highlight Color",
+    Color = highlightColor,
+    Callback = function(Value)
+        highlightColor = Value
+        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= game:GetService("Players").LocalPlayer and player.Character then
+                local hl = player.Character:FindFirstChild("Highlight")
+                if hl then
+                    hl.FillColor = highlightColor
+                end
+            end
+        end
     end,
 })
 
@@ -118,7 +163,7 @@ runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
            updateEsp(player, drawings)
        end
    end
-   -- Обновляем цвет бокса на лету, если поменяли через меню
+   -- Обновление цвета бокса "на лету"
    for _, drawings in pairs(espCache) do
        if drawings.box then
            drawings.box.Color = settings.boxcolor
