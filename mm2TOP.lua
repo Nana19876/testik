@@ -1,12 +1,12 @@
 -- settings
 local settings = {
-   boxcolor = Color3.fromRGB(255, 255, 255),   -- по умолчанию белый бокс
+   boxcolor = Color3.fromRGB(255, 255, 255),   -- цвет бокса по умолчанию
    teamcheck = false,
    teamcolor = false
 }
 local espEnabled = false
 local highlightEnabled = false
-local highlightColor = Color3.fromRGB(0, 255, 0) -- по умолчанию зелёный
+local highlightColor = Color3.fromRGB(0, 255, 0) -- цвет контура по умолчанию
 
 -- Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -22,6 +22,7 @@ local Window = Rayfield:CreateWindow({
 })
 local ESPTab = Window:CreateTab("ESP", 4483362458)
 
+-- Чекбокс включения бокса
 ESPTab:CreateToggle({
     Name = "Box ESP",
     CurrentValue = espEnabled,
@@ -30,6 +31,7 @@ ESPTab:CreateToggle({
     end,
 })
 
+-- Палитра цвета бокса
 ESPTab:CreateColorPicker({
     Name = "Box Color",
     Color = settings.boxcolor,
@@ -38,6 +40,7 @@ ESPTab:CreateColorPicker({
     end,
 })
 
+-- Чекбокс включения Outline (Highlight)
 ESPTab:CreateToggle({
     Name = "Color (Highlight)",
     CurrentValue = highlightEnabled,
@@ -52,10 +55,10 @@ ESPTab:CreateToggle({
                         hl = Instance.new("Highlight")
                         hl.Name = "Highlight"
                         hl.Parent = char
-                        hl.FillTransparency = 0.2
-                        hl.OutlineTransparency = 1
                     end
-                    hl.FillColor = highlightColor
+                    hl.FillTransparency = 1           -- Прозрачный Fill (только Outline)
+                    hl.OutlineTransparency = 0        -- Outline видимый
+                    hl.OutlineColor = highlightColor  -- Цвет Outline
                     hl.Adornee = char
                 else
                     if hl then hl:Destroy() end
@@ -65,6 +68,7 @@ ESPTab:CreateToggle({
     end,
 })
 
+-- Палитра цвета Outline
 ESPTab:CreateColorPicker({
     Name = "Highlight Color",
     Color = highlightColor,
@@ -74,7 +78,7 @@ ESPTab:CreateColorPicker({
             if player ~= game:GetService("Players").LocalPlayer and player.Character then
                 local hl = player.Character:FindFirstChild("Highlight")
                 if hl then
-                    hl.FillColor = highlightColor
+                    hl.OutlineColor = highlightColor -- Меняем только цвет Outline
                 end
             end
         end
@@ -163,10 +167,50 @@ runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
            updateEsp(player, drawings)
        end
    end
-   -- Обновление цвета бокса "на лету"
+   -- Обновляем цвет бокса "на лету"
    for _, drawings in pairs(espCache) do
        if drawings.box then
            drawings.box.Color = settings.boxcolor
        end
    end
+end)
+
+-- Поддержка Highlights для новых персонажей!
+local function handleHighlight(player, char)
+    if highlightEnabled and player ~= localPlayer then
+        local hl = char:FindFirstChild("Highlight")
+        if not hl then
+            hl = Instance.new("Highlight")
+            hl.Name = "Highlight"
+            hl.Parent = char
+        end
+        hl.FillTransparency = 1
+        hl.OutlineTransparency = 0
+        hl.OutlineColor = highlightColor
+        hl.Adornee = char
+    else
+        local hl = char:FindFirstChild("Highlight")
+        if hl then hl:Destroy() end
+    end
+end
+
+for _, player in ipairs(players:GetPlayers()) do
+    if player ~= localPlayer then
+        if player.Character then
+            handleHighlight(player, player.Character)
+        end
+        player.CharacterAdded:Connect(function(char)
+            wait(1)
+            handleHighlight(player, char)
+        end)
+    end
+end
+
+players.PlayerAdded:Connect(function(player)
+    if player ~= localPlayer then
+        player.CharacterAdded:Connect(function(char)
+            wait(1)
+            handleHighlight(player, char)
+        end)
+    end
 end)
