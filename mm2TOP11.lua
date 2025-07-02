@@ -207,7 +207,7 @@ local function setupPlayerESP(player)
     ESPObjects[player] = {Lines={},Quads={}}
     for i = 1, #EDGE_PAIRS do
         local line = Drawing.new("Line")
-        line.Thickness = 5  -- <=== ТОЛЩИНА ЛИНИЙ (можно 4, 5, 6 — смотри что нравится)
+        line.Thickness = 8  -- <=== ТОЛЩИНА ЛИНИЙ (можно 4, 5, 6 — смотри что нравится)
         line.Color = box3dColor
         line.Transparency = 0
         line.Visible = false
