@@ -15,6 +15,7 @@ local box3dColor = Color3.fromRGB(255, 0, 0)
 local espEnabled = false
 local highlightEnabled = false
 local box3dEnabled = false
+local box3dThickness = 5 -- толщина жирных линий
 
 -- Drawing storage для 2D Box
 local espCache = {}
@@ -107,7 +108,8 @@ ESPTab:CreateToggle({
         box3dEnabled = Value
         if not box3dEnabled then
             for _, esp in pairs(ESPObjects) do
-                for _, l in ipairs(esp.Lines) do l.Visible = false end
+                for _, l in ipairs(esp.Lines) do pcall(function() l:Remove() end) end
+                esp.Lines = {}
                 for _, q in ipairs(esp.Quads) do q.Visible = false end
             end
         end
@@ -118,10 +120,7 @@ ESPTab:CreateColorPicker({
     Color = box3dColor,
     Callback = function(Value)
         box3dColor = Value
-        for _, esp in pairs(ESPObjects) do
-            for _, l in ipairs(esp.Lines) do l.Color = box3dColor end
-            for _, q in ipairs(esp.Quads) do q.Color = box3dColor end
-        end
+        -- перекрасить все линии
     end,
 })
 
@@ -185,7 +184,7 @@ PlayersService.PlayerRemoving:Connect(function(player)
     removeEsp(player)
 end)
 
--- ========== 3D BOX (толстые линии) ==========
+-- ========== 3D BOX (жирные линии-имитация) ==========
 local function screen(pos)
 	local s, vis = Camera:WorldToViewportPoint(pos)
 	return Vector2.new(s.X, s.Y), vis
@@ -202,17 +201,30 @@ local function GetCorners(cf, size)
 	end
 	return corners
 end
+
+-- Функция создания "жирной" линии
+local function DrawThickLine(from, to, color, thickness, linesTable)
+    local offsets = {{0,0}}
+    for i = 1, thickness-1 do
+        table.insert(offsets, {i,0})
+        table.insert(offsets, {-i,0})
+        table.insert(offsets, {0,i})
+        table.insert(offsets, {0,-i})
+    end
+    for _,off in ipairs(offsets) do
+        local l = Drawing.new("Line")
+        l.From = from + Vector2.new(off[1],off[2])
+        l.To = to + Vector2.new(off[1],off[2])
+        l.Color = color
+        l.Transparency = 0
+        l.Visible = true
+        table.insert(linesTable, l)
+    end
+end
+
 local function setupPlayerESP(player)
     if ESPObjects[player] then return end
     ESPObjects[player] = {Lines={},Quads={}}
-    for i = 1, #EDGE_PAIRS do
-        local line = Drawing.new("Line")
-        line.Thickness = 8  -- <=== ТОЛЩИНА ЛИНИЙ (можно 4, 5, 6 — смотри что нравится)
-        line.Color = box3dColor
-        line.Transparency = 0
-        line.Visible = false
-        table.insert(ESPObjects[player].Lines, line)
-    end
     for i = 1, #QUAD_PAIRS do
         local quad = Drawing.new("Quad")
         quad.Color = box3dColor
@@ -224,18 +236,21 @@ local function setupPlayerESP(player)
 end
 local function clearPlayerESP(player)
     if not ESPObjects[player] then return end
-    for _, obj in ipairs(ESPObjects[player].Lines) do pcall(function() obj:Remove() end) end
-    for _, obj in ipairs(ESPObjects[player].Quads) do pcall(function() obj:Remove() end) end
+    for _, l in ipairs(ESPObjects[player].Lines) do pcall(function() l:Remove() end) end
+    for _, q in ipairs(ESPObjects[player].Quads) do pcall(function() q:Remove() end) end
     ESPObjects[player] = nil
 end
 local function updatePlayerESP(player)
     local esp = ESPObjects[player]
     if not esp then return end
+    for _, l in ipairs(esp.Lines) do pcall(function() l:Remove() end) end
+    esp.Lines = {}
+
     if not box3dEnabled or player == LocalPlayer or not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-        for _, l in ipairs(esp.Lines) do l.Visible = false end
         for _, q in ipairs(esp.Quads) do q.Visible = false end
         return
     end
+
     local HRP = player.Character.HumanoidRootPart
     local size = Vector3.new(3, 5.5, 3)
     local offset = CFrame.new(0, -0.5, 0)
@@ -243,17 +258,11 @@ local function updatePlayerESP(player)
     for i,pair in ipairs(EDGE_PAIRS) do
         local a, va = screen(verts[pair[1]])
         local b, vb = screen(verts[pair[2]])
-        local line = esp.Lines[i]
         if va and vb then
-            line.From = a
-            line.To = b
-            line.Color = box3dColor
-            line.Visible = true
-        else
-            line.Visible = false
+            DrawThickLine(a, b, box3dColor, box3dThickness, esp.Lines)
         end
     end
-    for i,pair in ipairs(QUAD_PAIRS) do
+    for i, pair in ipairs(QUAD_PAIRS) do
         local a, va = screen(verts[pair[1]])
         local b, vb = screen(verts[pair[2]])
         local c, vc = screen(verts[pair[3]])
