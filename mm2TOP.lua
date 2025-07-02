@@ -20,6 +20,23 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local ESPs = {}
 
+function GetBottomPart(character)
+    -- Проверяем поочерёдно для R15 и R6
+    if character:FindFirstChild("LeftFoot") then
+        return character.LeftFoot
+    elseif character:FindFirstChild("LeftLeg") then
+        return character.LeftLeg
+    elseif character:FindFirstChild("RightFoot") then
+        return character.RightFoot
+    elseif character:FindFirstChild("RightLeg") then
+        return character.RightLeg
+    elseif character:FindFirstChild("HumanoidRootPart") then
+        return character.HumanoidRootPart
+    else
+        return nil
+    end
+end
+
 function CreateESP(player)
     if player == LocalPlayer then return end
 
@@ -42,25 +59,28 @@ function UpdateESP()
             box.Visible = false
         else
             local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("Head") then
-                local hrp = character.HumanoidRootPart
+            if character and character:FindFirstChild("Head") then
                 local head = character.Head
+                local bottomPart = GetBottomPart(character)
 
-                -- Находим верх и низ персонажа
-                local topWorld = head.Position + Vector3.new(0, head.Size.Y/2, 0)
-                local bottomWorld = hrp.Position - Vector3.new(0, hrp.Size.Y/2, 0)
+                if bottomPart then
+                    local topWorld = head.Position + Vector3.new(0, head.Size.Y / 2, 0)
+                    local bottomWorld = bottomPart.Position - Vector3.new(0, bottomPart.Size.Y / 2, 0)
 
-                local top2D, topOnScreen = Camera:WorldToViewportPoint(topWorld)
-                local bottom2D, bottomOnScreen = Camera:WorldToViewportPoint(bottomWorld)
-                local hrp2D = Camera:WorldToViewportPoint(hrp.Position)
+                    local top2D, topOnScreen = Camera:WorldToViewportPoint(topWorld)
+                    local bottom2D, bottomOnScreen = Camera:WorldToViewportPoint(bottomWorld)
+                    local center2D = Camera:WorldToViewportPoint((head.Position + bottomPart.Position) / 2)
 
-                if topOnScreen and bottomOnScreen then
-                    local height = math.abs(bottom2D.Y - top2D.Y)
-                    local width = height / 2 -- Можешь поиграться с делителем ширины
+                    if topOnScreen and bottomOnScreen then
+                        local height = math.abs(bottom2D.Y - top2D.Y)
+                        local width = height / 2 -- Подстрой под нужную ширину
 
-                    box.Size = Vector2.new(width, height)
-                    box.Position = Vector2.new(hrp2D.X - width / 2, top2D.Y)
-                    box.Visible = true
+                        box.Size = Vector2.new(width, height)
+                        box.Position = Vector2.new(center2D.X - width / 2, top2D.Y)
+                        box.Visible = true
+                    else
+                        box.Visible = false
+                    end
                 else
                     box.Visible = false
                 end
