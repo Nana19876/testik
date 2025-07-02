@@ -1,12 +1,10 @@
 -- settings
 local settings = {
-   defaultcolor = Color3.fromRGB(255,0,0),
+   boxcolor = Color3.fromRGB(255, 255, 255), -- Белый по умолчанию
    teamcheck = false,
-   teamcolor = true
-};
+   teamcolor = false
+}
 local espEnabled = false
-local highlightEnabled = false
-local highlightColor = Color3.fromRGB(0, 255, 0) -- Можно любой стартовый
 
 -- Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -32,52 +30,9 @@ ESPTab:CreateToggle({
 
 ESPTab:CreateColorPicker({
     Name = "Box Color",
-    Color = settings.defaultcolor,
+    Color = settings.boxcolor,
     Callback = function(Value)
-        settings.defaultcolor = Value
-    end,
-})
-
-ESPTab:CreateToggle({
-    Name = "Color (Highlight)",
-    CurrentValue = highlightEnabled,
-    Callback = function(Value)
-        highlightEnabled = Value
-        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-            if player ~= game:GetService("Players").LocalPlayer and player.Character then
-                local char = player.Character
-                local hl = char:FindFirstChild("Highlight")
-                if Value then
-                    if not hl then
-                        hl = Instance.new("Highlight")
-                        hl.Name = "Highlight"
-                        hl.Parent = char
-                        hl.FillTransparency = 0.2
-                        hl.OutlineTransparency = 1
-                    end
-                    hl.FillColor = highlightColor
-                    hl.Adornee = char
-                else
-                    if hl then hl:Destroy() end
-                end
-            end
-        end
-    end,
-})
-
-ESPTab:CreateColorPicker({
-    Name = "Highlight Color",
-    Color = highlightColor,
-    Callback = function(Value)
-        highlightColor = Value
-        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-            if player ~= game:GetService("Players").LocalPlayer and player.Character then
-                local hl = player.Character:FindFirstChild("Highlight")
-                if hl then
-                    hl.FillColor = highlightColor
-                end
-            end
-        end
+        settings.boxcolor = Value
     end,
 })
 
@@ -90,7 +45,7 @@ local localPlayer = players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 -- functions
-local newVector2, newColor3, newDrawing = Vector2.new, Color3.new, Drawing.new
+local newVector2, newDrawing = Vector2.new, Drawing.new
 local tan, rad = math.tan, math.rad
 local round = function(...) local a = {}; for i,v in next, table.pack(...) do a[i] = math.round(v); end return unpack(a); end
 local wtvp = function(...) local a, b = camera.WorldToViewportPoint(camera, ...) return newVector2(a.X, a.Y), b, a.Z end
@@ -100,18 +55,11 @@ local function createEsp(player)
    local drawings = {}
    
    drawings.box = newDrawing("Square")
-   drawings.box.Thickness = 1
+   drawings.box.Thickness = 2
    drawings.box.Filled = false
-   drawings.box.Color = settings.defaultcolor
+   drawings.box.Color = settings.boxcolor
    drawings.box.Visible = false
    drawings.box.ZIndex = 2
-
-   drawings.boxoutline = newDrawing("Square")
-   drawings.boxoutline.Thickness = 3
-   drawings.boxoutline.Filled = false
-   drawings.boxoutline.Color = newColor3()
-   drawings.boxoutline.Visible = false
-   drawings.boxoutline.ZIndex = 1
 
    espCache[player] = drawings
 end
@@ -131,7 +79,6 @@ local function updateEsp(player, esp)
        local cframe = character:GetModelCFrame()
        local position, visible, depth = wtvp(cframe.Position)
        esp.box.Visible = visible
-       esp.boxoutline.Visible = visible
 
        if cframe and visible then
            local scaleFactor = 1 / (depth * tan(rad(camera.FieldOfView / 2)) * 2) * 1000
@@ -140,18 +87,13 @@ local function updateEsp(player, esp)
 
            esp.box.Size = newVector2(width, height)
            esp.box.Position = newVector2(round(x - width / 2, y - height / 2))
-           esp.box.Color = settings.teamcolor and player.TeamColor.Color or settings.defaultcolor
-
-           esp.boxoutline.Size = esp.box.Size
-           esp.boxoutline.Position = esp.box.Position
+           esp.box.Color = settings.boxcolor
        end
    else
        esp.box.Visible = false
-       esp.boxoutline.Visible = false
    end
 end
 
--- main
 for _, player in next, players:GetPlayers() do
    if player ~= localPlayer then
        createEsp(player)
@@ -174,6 +116,12 @@ runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
 
        if drawings and player ~= localPlayer then
            updateEsp(player, drawings)
+       end
+   end
+   -- Обновляем цвет бокса на лету, если поменяли через меню
+   for _, drawings in pairs(espCache) do
+       if drawings.box then
+           drawings.box.Color = settings.boxcolor
        end
    end
 end)
