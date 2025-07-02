@@ -6,7 +6,12 @@ local settings = {
 }
 local espEnabled = false
 local highlightEnabled = false
+local box3dEnabled = false
+
 local highlightColor = Color3.fromRGB(0, 255, 0) -- цвет контура по умолчанию
+local box3dColor = Color3.fromRGB(0, 170, 255)   -- цвет 3d box по умолчанию
+
+local Lines, Quads = {}, {}
 
 -- Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -22,7 +27,7 @@ local Window = Rayfield:CreateWindow({
 })
 local ESPTab = Window:CreateTab("ESP", 4483362458)
 
--- Чекбокс включения бокса
+-- Чекбокс 2D бокса
 ESPTab:CreateToggle({
     Name = "Box ESP",
     CurrentValue = espEnabled,
@@ -30,8 +35,7 @@ ESPTab:CreateToggle({
         espEnabled = Value
     end,
 })
-
--- Палитра цвета бокса
+-- Палитра цвета 2D бокса
 ESPTab:CreateColorPicker({
     Name = "Box Color",
     Color = settings.boxcolor,
@@ -39,8 +43,7 @@ ESPTab:CreateColorPicker({
         settings.boxcolor = Value
     end,
 })
-
--- Чекбокс включения Outline (Highlight)
+-- Чекбокс Outline Highlight
 ESPTab:CreateToggle({
     Name = "Color (Highlight)",
     CurrentValue = highlightEnabled,
@@ -67,8 +70,7 @@ ESPTab:CreateToggle({
         end
     end,
 })
-
--- Палитра цвета Outline
+-- Палитра цвета Highlight
 ESPTab:CreateColorPicker({
     Name = "Highlight Color",
     Color = highlightColor,
@@ -82,6 +84,23 @@ ESPTab:CreateColorPicker({
                 end
             end
         end
+    end,
+})
+
+-- Чекбокс 3D бокса
+ESPTab:CreateToggle({
+    Name = "3D Box ESP",
+    CurrentValue = box3dEnabled,
+    Callback = function(Value)
+        box3dEnabled = Value
+    end,
+})
+-- Палитра цвета 3D Box
+ESPTab:CreateColorPicker({
+    Name = "3D Box Color",
+    Color = box3dColor,
+    Callback = function(Value)
+        box3dColor = Value
     end,
 })
 
@@ -99,17 +118,16 @@ local tan, rad = math.tan, math.rad
 local round = function(...) local a = {}; for i,v in next, table.pack(...) do a[i] = math.round(v); end return unpack(a); end
 local wtvp = function(...) local a, b = camera.WorldToViewportPoint(camera, ...) return newVector2(a.X, a.Y), b, a.Z end
 
+-- 2D BOX ESP
 local espCache = {}
 local function createEsp(player)
    local drawings = {}
-   
    drawings.box = newDrawing("Square")
    drawings.box.Thickness = 2
    drawings.box.Filled = false
    drawings.box.Color = settings.boxcolor
    drawings.box.Visible = false
    drawings.box.ZIndex = 2
-
    espCache[player] = drawings
 end
 
@@ -152,28 +170,117 @@ end
 players.PlayerAdded:Connect(function(player)
    createEsp(player)
 end)
-
 players.PlayerRemoving:Connect(function(player)
    removeEsp(player)
 end)
 
-runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
-   for player, drawings in next, espCache do
-       if settings.teamcheck and player.Team == localPlayer.Team then
-           continue
-       end
+-- 3D BOX ESP
+local function HasCharacter(Player)
+    return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+end
+local function Get3DBoxVertices(hrp, size)
+    local cframe = hrp.CFrame
+    local half = size / 2
+    local points = {
+        cframe * Vector3.new(-half.X, -half.Y, -half.Z),
+        cframe * Vector3.new( half.X, -half.Y, -half.Z),
+        cframe * Vector3.new( half.X, -half.Y,  half.Z),
+        cframe * Vector3.new(-half.X, -half.Y,  half.Z),
 
-       if drawings and player ~= localPlayer then
-           updateEsp(player, drawings)
-       end
-   end
-   -- Обновляем цвет бокса "на лету"
-   for _, drawings in pairs(espCache) do
-       if drawings.box then
-           drawings.box.Color = settings.boxcolor
-       end
-   end
+        cframe * Vector3.new(-half.X,  half.Y, -half.Z),
+        cframe * Vector3.new( half.X,  half.Y, -half.Z),
+        cframe * Vector3.new( half.X,  half.Y,  half.Z),
+        cframe * Vector3.new(-half.X,  half.Y,  half.Z),
+    }
+    return points
+end
+
+local function DrawLine(p1, p2)
+    local line = Drawing.new("Line")
+    line.From = p1
+    line.To = p2
+    line.Thickness = 2
+    line.Color = box3dColor
+    line.Visible = true
+    table.insert(Lines, line)
+end
+
+local function WorldToScreen(vec)
+    local v, onScreen = camera:WorldToViewportPoint(vec)
+    return Vector2.new(v.X, v.Y), onScreen
+end
+
+local function DrawEsp3D(Player)
+    local character = Player.Character
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    local size = hrp.Size + Vector3.new(2, 6, 2) -- делаем коробку чуть больше
+    local vertices = Get3DBoxVertices(hrp, size)
+    local screen = {}
+    local onScreenAll = true
+
+    for i, v in ipairs(vertices) do
+        local vec, onScreen = WorldToScreen(v)
+        screen[i] = vec
+        if not onScreen then onScreenAll = false end
+    end
+
+    if onScreenAll then
+        -- Низ
+        DrawLine(screen[1], screen[2])
+        DrawLine(screen[2], screen[3])
+        DrawLine(screen[3], screen[4])
+        DrawLine(screen[4], screen[1])
+        -- Верх
+        DrawLine(screen[5], screen[6])
+        DrawLine(screen[6], screen[7])
+        DrawLine(screen[7], screen[8])
+        DrawLine(screen[8], screen[5])
+        -- Вертикали
+        DrawLine(screen[1], screen[5])
+        DrawLine(screen[2], screen[6])
+        DrawLine(screen[3], screen[7])
+        DrawLine(screen[4], screen[8])
+    end
+end
+
+local function BoxEsp3D()
+    -- Очищаем старые линии
+    for i = 1, #Lines do
+        local Line = rawget(Lines, i)
+        if (Line) then Line:Remove() end
+    end
+    Lines = {}
+
+    if not box3dEnabled then return end
+
+    local playersList = players:GetPlayers()
+    for i = 1, #playersList do
+        local Player = playersList[i]
+        if Player ~= localPlayer and HasCharacter(Player) then
+            DrawEsp3D(Player)
+        end
+    end
+end
+
+-- RenderStepped: обновляет 2D Box, Highlight и 3D Box
+runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
+    for player, drawings in next, espCache do
+        if settings.teamcheck and player.Team == localPlayer.Team then
+            continue
+        end
+        if drawings and player ~= localPlayer then
+            updateEsp(player, drawings)
+        end
+    end
+    -- Обновляем цвет бокса "на лету"
+    for _, drawings in pairs(espCache) do
+        if drawings.box then
+            drawings.box.Color = settings.boxcolor
+        end
+    end
 end)
+runService:BindToRenderStep("esp3d", Enum.RenderPriority.Camera.Value+1, BoxEsp3D)
 
 -- Поддержка Highlights для новых персонажей!
 local function handleHighlight(player, char)
