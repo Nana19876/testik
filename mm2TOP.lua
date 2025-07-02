@@ -1,3 +1,4 @@
+-- Загружаем Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
@@ -17,7 +18,6 @@ local boxEnabled = false
 local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-
 local ESPs = {}
 
 function CreateESP(player)
@@ -45,15 +45,21 @@ function UpdateESP()
             if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("Head") then
                 local hrp = character.HumanoidRootPart
                 local head = character.Head
-                local hrpPos, hrpOnScreen = Camera:WorldToViewportPoint(hrp.Position)
-                local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
-                if hrpOnScreen and headOnScreen then
-                    -- Динамический размер
-                    local boxHeight = math.abs(hrpPos.Y - headPos.Y) * 2.3
-                    local boxWidth = boxHeight / 1.8
 
-                    box.Size = Vector2.new(boxWidth, boxHeight)
-                    box.Position = Vector2.new(hrpPos.X - boxWidth/2, hrpPos.Y - boxHeight/2)
+                -- Находим верх и низ персонажа
+                local topWorld = head.Position + Vector3.new(0, head.Size.Y/2, 0)
+                local bottomWorld = hrp.Position - Vector3.new(0, hrp.Size.Y/2, 0)
+
+                local top2D, topOnScreen = Camera:WorldToViewportPoint(topWorld)
+                local bottom2D, bottomOnScreen = Camera:WorldToViewportPoint(bottomWorld)
+                local hrp2D = Camera:WorldToViewportPoint(hrp.Position)
+
+                if topOnScreen and bottomOnScreen then
+                    local height = math.abs(bottom2D.Y - top2D.Y)
+                    local width = height / 2 -- Можешь поиграться с делителем ширины
+
+                    box.Size = Vector2.new(width, height)
+                    box.Position = Vector2.new(hrp2D.X - width / 2, top2D.Y)
                     box.Visible = true
                 else
                     box.Visible = false
@@ -77,8 +83,6 @@ ESPTab:CreateToggle({
     CurrentValue = boxEnabled,
     Callback = function(Value)
         boxEnabled = Value
-        -- Можно сделать принт для отладки
-        print("-- Box ESP:", Value)
     end,
 })
 
