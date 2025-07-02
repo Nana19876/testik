@@ -1,22 +1,23 @@
 -- Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local highlightColor = Color3.fromRGB(255, 0, 0)
 local boxEnabled = false
+local colorEnabled = false
+local boxColor = Color3.fromRGB(255, 0, 0)
+local highlightColor = Color3.fromRGB(0, 255, 0) -- по умолчанию зеленый для наглядности
 
 local Window = Rayfield:CreateWindow({
-   Name = "ESP & Highlight Menu",
+   Name = "ESP Menu",
    LoadingTitle = "Loading...",
    LoadingSubtitle = "by YourName",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = nil,
-      FileName = "ESPHighlightConfig"
+      FileName = "ESPMenuConfig"
    }
 })
 
 local ESPTab = Window:CreateTab("ESP", 4483362458)
-local ColorTab = Window:CreateTab("Color", 4483362458)
 
 ESPTab:CreateToggle({
     Name = "Box ESP",
@@ -26,12 +27,48 @@ ESPTab:CreateToggle({
     end,
 })
 
-ColorTab:CreateColorPicker({
-    Name = "Highlight/Box Color",
+ESPTab:CreateColorPicker({
+    Name = "Box Color",
+    Color = boxColor,
+    Callback = function(Value)
+        boxColor = Value
+    end,
+})
+
+ESPTab:CreateToggle({
+    Name = "Color (Highlight)",
+    CurrentValue = colorEnabled,
+    Callback = function(Value)
+        colorEnabled = Value
+        -- При включении — применяем Highlight, при выключении — удаляем
+        for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+            if player ~= game:GetService("Players").LocalPlayer and player.Character then
+                local char = player.Character
+                local hl = char:FindFirstChild("Highlight")
+                if Value then
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Name = "Highlight"
+                        hl.Parent = char
+                        hl.FillTransparency = 0.2
+                        hl.OutlineTransparency = 1
+                    end
+                    hl.FillColor = highlightColor
+                    hl.Adornee = char
+                else
+                    if hl then hl:Destroy() end
+                end
+            end
+        end
+    end,
+})
+
+ESPTab:CreateColorPicker({
+    Name = "Highlight Color",
     Color = highlightColor,
     Callback = function(Value)
         highlightColor = Value
-        -- обновим все Highlights
+        -- Обновим только цвета Highlights (если они включены)
         for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
             if player ~= game:GetService("Players").LocalPlayer and player.Character then
                 local hl = player.Character:FindFirstChild("Highlight")
@@ -45,26 +82,12 @@ ColorTab:CreateColorPicker({
 
 Rayfield:LoadConfiguration()
 
--- ESP Box (Drawing) и Highlight logic
+-- ESP Box (Drawing)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 local runService = game:GetService("RunService")
-
 local ESPs = {}
-
-local function applyHighlight(character)
-    local hl = character:FindFirstChild("Highlight")
-    if not hl then
-        hl = Instance.new("Highlight")
-        hl.Name = "Highlight"
-        hl.Parent = character
-        hl.FillTransparency = 0.2
-        hl.OutlineTransparency = 1
-    end
-    hl.FillColor = highlightColor
-    hl.Adornee = character
-end
 
 local function createESP(player)
     if player == LocalPlayer then return end
@@ -72,7 +95,7 @@ local function createESP(player)
     local box = Drawing.new("Square")
     box.Thickness = 2
     box.Filled = false
-    box.Color = highlightColor
+    box.Color = boxColor
     box.Visible = false
     box.ZIndex = 2
 
@@ -80,27 +103,18 @@ local function createESP(player)
 
     player.CharacterAdded:Connect(function(char)
         ESPs[player] = box
-        wait(1)
-        applyHighlight(char)
     end)
 end
 
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         createESP(player)
-        if player.Character then
-            applyHighlight(player.Character)
-        end
     end
 end
 
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
         createESP(player)
-        player.CharacterAdded:Connect(function(char)
-            wait(1)
-            applyHighlight(char)
-        end)
     end
 end)
 
@@ -119,7 +133,6 @@ runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
                 local hrp = character.HumanoidRootPart
                 local head = character.Head
 
-                -- Динамический бокс (сверху головы до HRP)
                 local topWorld = head.Position + Vector3.new(0, head.Size.Y/2, 0)
                 local bottomWorld = hrp.Position - Vector3.new(0, hrp.Size.Y/2, 0)
 
@@ -133,7 +146,7 @@ runService:BindToRenderStep("esp", Enum.RenderPriority.Camera.Value, function()
 
                     box.Size = Vector2.new(width, height)
                     box.Position = Vector2.new(hrp2D.X - width / 2, top2D.Y)
-                    box.Color = highlightColor
+                    box.Color = boxColor
                     box.Visible = true
                 else
                     box.Visible = false
