@@ -1,6 +1,6 @@
 -- settings
 local settings = {
-   boxcolor = Color3.fromRGB(255, 255, 255),   -- цвет бокса по умолчанию
+   boxcolor = Color3.fromRGB(255, 255, 255),
    teamcheck = false,
    teamcolor = false
 }
@@ -8,10 +8,10 @@ local espEnabled = false
 local highlightEnabled = false
 local box3dEnabled = false
 
-local highlightColor = Color3.fromRGB(0, 255, 0) -- цвет контура по умолчанию
-local box3dColor = Color3.fromRGB(0, 170, 255)   -- цвет 3d box по умолчанию
+local highlightColor = Color3.fromRGB(0, 255, 0)
+local box3dColor = Color3.fromRGB(255, 0, 200)
 
-local Lines, Quads = {}, {}
+local Lines = {}
 
 -- Rayfield UI
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -27,7 +27,6 @@ local Window = Rayfield:CreateWindow({
 })
 local ESPTab = Window:CreateTab("ESP", 4483362458)
 
--- Чекбокс 2D бокса
 ESPTab:CreateToggle({
     Name = "Box ESP",
     CurrentValue = espEnabled,
@@ -35,7 +34,7 @@ ESPTab:CreateToggle({
         espEnabled = Value
     end,
 })
--- Палитра цвета 2D бокса
+
 ESPTab:CreateColorPicker({
     Name = "Box Color",
     Color = settings.boxcolor,
@@ -43,7 +42,7 @@ ESPTab:CreateColorPicker({
         settings.boxcolor = Value
     end,
 })
--- Чекбокс Outline Highlight
+
 ESPTab:CreateToggle({
     Name = "Color (Highlight)",
     CurrentValue = highlightEnabled,
@@ -59,9 +58,9 @@ ESPTab:CreateToggle({
                         hl.Name = "Highlight"
                         hl.Parent = char
                     end
-                    hl.FillTransparency = 1           -- Прозрачный Fill (только Outline)
-                    hl.OutlineTransparency = 0        -- Outline видимый
-                    hl.OutlineColor = highlightColor  -- Цвет Outline
+                    hl.FillTransparency = 1
+                    hl.OutlineTransparency = 0
+                    hl.OutlineColor = highlightColor
                     hl.Adornee = char
                 else
                     if hl then hl:Destroy() end
@@ -70,7 +69,7 @@ ESPTab:CreateToggle({
         end
     end,
 })
--- Палитра цвета Highlight
+
 ESPTab:CreateColorPicker({
     Name = "Highlight Color",
     Color = highlightColor,
@@ -80,14 +79,13 @@ ESPTab:CreateColorPicker({
             if player ~= game:GetService("Players").LocalPlayer and player.Character then
                 local hl = player.Character:FindFirstChild("Highlight")
                 if hl then
-                    hl.OutlineColor = highlightColor -- Меняем только цвет Outline
+                    hl.OutlineColor = highlightColor
                 end
             end
         end
     end,
 })
 
--- Чекбокс 3D бокса
 ESPTab:CreateToggle({
     Name = "3D Box ESP",
     CurrentValue = box3dEnabled,
@@ -95,7 +93,7 @@ ESPTab:CreateToggle({
         box3dEnabled = Value
     end,
 })
--- Палитра цвета 3D Box
+
 ESPTab:CreateColorPicker({
     Name = "3D Box Color",
     Color = box3dColor,
@@ -178,6 +176,7 @@ end)
 local function HasCharacter(Player)
     return Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
 end
+
 local function Get3DBoxVertices(hrp, size)
     local cframe = hrp.CFrame
     local half = size / 2
@@ -199,8 +198,9 @@ local function DrawLine(p1, p2)
     local line = Drawing.new("Line")
     line.From = p1
     line.To = p2
-    line.Thickness = 2
+    line.Thickness = 3           -- Толще
     line.Color = box3dColor
+    line.Transparency = 0        -- Ярко!
     line.Visible = true
     table.insert(Lines, line)
 end
@@ -214,7 +214,7 @@ local function DrawEsp3D(Player)
     local character = Player.Character
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-    local size = hrp.Size + Vector3.new(2, 6, 2) -- делаем коробку чуть больше
+    local size = hrp.Size + Vector3.new(0, 2, 0) -- Коробка стала меньше по X и Z
     local vertices = Get3DBoxVertices(hrp, size)
     local screen = {}
     local onScreenAll = true
