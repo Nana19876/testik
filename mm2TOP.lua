@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Window = Rayfield:CreateWindow({
    Name = "ESP Menu",
    LoadingTitle = "Loading...",
-   LoadingSubtitle = "by 123",
+   LoadingSubtitle = "by YourName",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = nil,
@@ -12,48 +12,73 @@ local Window = Rayfield:CreateWindow({
 })
 
 local ESPTab = Window:CreateTab("ESP", 4483362458)
-
 local boxEnabled = false
+
+local Players = game:GetService("Players")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local ESPs = {}
+
+function CreateESP(player)
+    if player == LocalPlayer then return end
+
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Filled = false
+    box.Visible = false
+
+    ESPs[player] = box
+
+    player.CharacterAdded:Connect(function()
+        ESPs[player] = box
+    end)
+end
+
+function UpdateESP()
+    for player, box in pairs(ESPs) do
+        if not boxEnabled then
+            box.Visible = false
+        else
+            local character = player.Character
+            if character and character:FindFirstChild("HumanoidRootPart") and character:FindFirstChild("Head") then
+                local hrp = character.HumanoidRootPart
+                local head = character.Head
+                local hrpPos, hrpOnScreen = Camera:WorldToViewportPoint(hrp.Position)
+                local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
+                if hrpOnScreen and headOnScreen then
+                    -- Динамический размер
+                    local boxHeight = math.abs(hrpPos.Y - headPos.Y) * 2.3
+                    local boxWidth = boxHeight / 1.8
+
+                    box.Size = Vector2.new(boxWidth, boxHeight)
+                    box.Position = Vector2.new(hrpPos.X - boxWidth/2, hrpPos.Y - boxHeight/2)
+                    box.Visible = true
+                else
+                    box.Visible = false
+                end
+            else
+                box.Visible = false
+            end
+        end
+    end
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    CreateESP(player)
+end
+Players.PlayerAdded:Connect(CreateESP)
+
+game:GetService("RunService").RenderStepped:Connect(UpdateESP)
 
 ESPTab:CreateToggle({
     Name = "Box ESP",
     CurrentValue = boxEnabled,
     Callback = function(Value)
         boxEnabled = Value
-        print("Box ESP:", Value)
-       function UpdateESP()
-    if not boxEnabled then
-        for _, box in pairs(ESPs) do
-            box.Visible = false
-        end
-        return
-    end
-
-    for player, box in pairs(ESPs) do
-        local character = player.Character
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            -- Ищем нужные точки (например, голова и HumanoidRootPart)
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            local head = character:FindFirstChild("Head")
-            local rootPos, onScreen1 = Camera:WorldToViewportPoint(hrp.Position)
-            local headPos, onScreen2 = Camera:WorldToViewportPoint(head.Position)
-            if onScreen1 and onScreen2 then
-                -- Высота бокса — от головы до HRP (или чуть ниже для ног)
-                local boxHeight = math.abs(rootPos.Y - headPos.Y) * 2.3 -- множитель по ситуации
-                local boxWidth = boxHeight / 1.8
-
-                box.Size = Vector2.new(boxWidth, boxHeight)
-                box.Position = Vector2.new(rootPos.X - boxWidth/2, rootPos.Y - boxHeight/2)
-                box.Visible = true
-            else
-                box.Visible = false
-            end
-        else
-            box.Visible = false
-        end
-    end
-end
-
+        -- Можно сделать принт для отладки
+        print("-- Box ESP:", Value)
     end,
 })
 
