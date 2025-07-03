@@ -902,13 +902,13 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) coinHighlightEnabled = Value end
 })
+
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Coin",
 	Color = coinHighlightColor,
-	Callback = function(Color) coinHighlightColor = Color 
-		
-	end,
-
+	Callback = function(Color)
+		coinHighlightColor = Color
+	end
 })
 
 EspTab:CreateSection("3D Box")
