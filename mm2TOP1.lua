@@ -686,88 +686,152 @@ end)
 
 EspTab:CreateSection("Color ESP (игроки и предметы)")
 
-local colorHighlightEnabled = false
-local colorHighlightColor = Color3.fromRGB(255, 255, 255)
+-- Переменные включения и цвета
+local colorPlayerEnabled = false
+local murderHighlightEnabled = false
+local sheriffHighlightEnabled = false
+local innocentHighlightEnabled = false
 
--- Функция создания Highlight
+local colorPlayerColor = Color3.fromRGB(255, 255, 255)
+local murderHighlightColor = Color3.fromRGB(255, 30, 60)
+local sheriffHighlightColor = Color3.fromRGB(40, 255, 60)
+local innocentHighlightColor = Color3.fromRGB(200, 255, 255)
+
+-- Проверка ролей
+local function isMurder(player)
+	local bp, ch = player:FindFirstChild("Backpack"), player.Character
+	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+local function isSheriff(player)
+	local bp, ch = player:FindFirstChild("Backpack"), player.Character
+	return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
+end
+local function isInnocent(player)
+	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
+end
+
+-- Применение Highlight
 local function applyHighlight(player)
-    if player == LocalPlayer then return end
-    if not player.Character then return end
+	if player == LocalPlayer or not player.Character then return end
 
-    -- Если уже есть highlight — обновим цвет
-    local existing = player.Character:FindFirstChild("ColorHighlight")
-    if existing then
-        existing.OutlineColor = colorHighlightColor
-        existing.FillColor = colorHighlightColor
-        return
-    end
+	local char = player.Character
+	local hl = char:FindFirstChild("ColorHighlight")
+	if not hl then
+		hl = Instance.new("Highlight")
+		hl.Name = "ColorHighlight"
+		hl.FillTransparency = 1
+		hl.OutlineTransparency = 0
+		hl.Adornee = char
+		hl.Parent = char
+	end
 
-    -- Создание нового
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "ColorHighlight"
-    highlight.FillTransparency = 1
-    highlight.OutlineTransparency = 0
-    highlight.OutlineColor = colorHighlightColor
-    highlight.FillColor = colorHighlightColor
-    highlight.Adornee = player.Character
-    highlight.Parent = player.Character
+	-- Определение нужного цвета и состояния
+	if isMurder(player) and murderHighlightEnabled then
+		hl.OutlineColor = murderHighlightColor
+		hl.Enabled = true
+	elseif isSheriff(player) and sheriffHighlightEnabled then
+		hl.OutlineColor = sheriffHighlightColor
+		hl.Enabled = true
+	elseif isInnocent(player) and innocentHighlightEnabled then
+		hl.OutlineColor = innocentHighlightColor
+		hl.Enabled = true
+	elseif colorPlayerEnabled then
+		hl.OutlineColor = colorPlayerColor
+		hl.Enabled = true
+	else
+		hl.Enabled = false
+	end
 end
 
 -- Удаление Highlight
 local function removeHighlight(player)
-    local highlight = player.Character and player.Character:FindFirstChild("ColorHighlight")
-    if highlight then
-        highlight:Destroy()
-    end
+	local char = player.Character
+	if char then
+		local hl = char:FindFirstChild("ColorHighlight")
+		if hl then hl:Destroy() end
+	end
 end
 
--- Обновление всех Highlight в зависимости от переключателя
+-- Обновление всех игроков
 local function updateAllHighlights()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            if colorHighlightEnabled then
-                applyHighlight(player)
-            else
-                removeHighlight(player)
-            end
-        end
-    end
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then
+			if player.Character then
+				applyHighlight(player)
+			end
+		end
+	end
 end
 
--- Обработка новых игроков
+-- Новые игроки/переспавн
 Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        if colorHighlightEnabled then
-            applyHighlight(player)
-        end
-    end)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		applyHighlight(player)
+	end)
 end)
 
--- Переключатель
+-- Обновление на каждый кадр
+RunService.RenderStepped:Connect(updateAllHighlights)
+
+-- === UI ===
 EspTab:CreateToggle({
-    Name = "Обводка игроков (Highlight)",
-    CurrentValue = false,
-    Callback = function(Value)
-        colorHighlightEnabled = Value
-        updateAllHighlights()
-    end
+	Name = "Обводка: Все игроки",
+	CurrentValue = false,
+	Callback = function(Value)
+		colorPlayerEnabled = Value
+	end
+})
+EspTab:CreateColorPicker({
+	Name = "Цвет обводки: Все игроки",
+	Color = colorPlayerColor,
+	Callback = function(Color)
+		colorPlayerColor = Color
+	end
 })
 
--- Цвет
+EspTab:CreateToggle({
+	Name = "Обводка: Murder",
+	CurrentValue = false,
+	Callback = function(Value)
+		murderHighlightEnabled = Value
+	end
+})
 EspTab:CreateColorPicker({
-    Name = "Цвет обводки",
-    Color = colorHighlightColor,
-    Callback = function(Color)
-        colorHighlightColor = Color
-        -- Обновим цвет у всех активных
-        for _, player in ipairs(Players:GetPlayers()) do
-            local highlight = player.Character and player.Character:FindFirstChild("ColorHighlight")
-            if highlight then
-                highlight.OutlineColor = colorHighlightColor
-                highlight.FillColor = colorHighlightColor
-            end
-        end
-    end
+	Name = "Цвет обводки: Murder",
+	Color = murderHighlightColor,
+	Callback = function(Color)
+		murderHighlightColor = Color
+	end
+})
+
+EspTab:CreateToggle({
+	Name = "Обводка: Sheriff",
+	CurrentValue = false,
+	Callback = function(Value)
+		sheriffHighlightEnabled = Value
+	end
+})
+EspTab:CreateColorPicker({
+	Name = "Цвет обводки: Sheriff",
+	Color = sheriffHighlightColor,
+	Callback = function(Color)
+		sheriffHighlightColor = Color
+	end
+})
+
+EspTab:CreateToggle({
+	Name = "Обводка: Innocent",
+	CurrentValue = false,
+	Callback = function(Value)
+		innocentHighlightEnabled = Value
+	end
+})
+EspTab:CreateColorPicker({
+	Name = "Цвет обводки: Innocent",
+	Color = innocentHighlightColor,
+	Callback = function(Color)
+		innocentHighlightColor = Color
+	end
 })
 
