@@ -684,9 +684,9 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
-EspTab:CreateSection("outlining ESP (игроки и предметы)")
+EspTab:CreateSection("Outlining ESP (Players and Items)")
 
--- Переменные включения и цвета
+-- Toggle states and colors
 local colorPlayerEnabled = false
 local murderHighlightEnabled = false
 local sheriffHighlightEnabled = false
@@ -697,7 +697,7 @@ local murderHighlightColor = Color3.fromRGB(255, 30, 60)
 local sheriffHighlightColor = Color3.fromRGB(40, 255, 60)
 local innocentHighlightColor = Color3.fromRGB(200, 255, 255)
 
--- Проверка ролей
+-- Helper functions to identify roles
 local function isMurder(player)
 	local bp, ch = player:FindFirstChild("Backpack"), player.Character
 	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
@@ -710,22 +710,27 @@ local function isInnocent(player)
 	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
 end
 
--- Применение Highlight
+-- Apply highlight to player
 local function applyHighlight(player)
 	if player == LocalPlayer or not player.Character then return end
-
 	local char = player.Character
+
+	-- Ensure Highlight exists
 	local hl = char:FindFirstChild("ColorHighlight")
 	if not hl then
 		hl = Instance.new("Highlight")
 		hl.Name = "ColorHighlight"
 		hl.FillTransparency = 1
 		hl.OutlineTransparency = 0
-		hl.Adornee = char
+		hl.Adornee = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char
 		hl.Parent = char
 	end
 
-	-- Определение нужного цвета и состояния
+	-- Always reset transparency
+	hl.FillTransparency = 1
+	hl.OutlineTransparency = 0
+
+	-- Determine role color
 	if isMurder(player) and murderHighlightEnabled then
 		hl.OutlineColor = murderHighlightColor
 		hl.Enabled = true
@@ -743,7 +748,7 @@ local function applyHighlight(player)
 	end
 end
 
--- Удаление Highlight
+-- Remove highlight
 local function removeHighlight(player)
 	local char = player.Character
 	if char then
@@ -752,7 +757,7 @@ local function removeHighlight(player)
 	end
 end
 
--- Обновление всех игроков
+-- Update all players
 local function updateAllHighlights()
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
@@ -763,27 +768,30 @@ local function updateAllHighlights()
 	end
 end
 
--- Новые игроки/переспавн
+-- Connect character respawn
 Players.PlayerAdded:Connect(function(player)
+	if player.Character then
+		task.delay(1, function() applyHighlight(player) end)
+	end
 	player.CharacterAdded:Connect(function()
 		task.wait(1)
 		applyHighlight(player)
 	end)
 end)
 
--- Обновление на каждый кадр
+-- Update every frame
 RunService.RenderStepped:Connect(updateAllHighlights)
 
--- === UI ===
+-- === UI Elements ===
 EspTab:CreateToggle({
-	Name = "outlining: player",
+	Name = "Outline: All Players",
 	CurrentValue = false,
 	Callback = function(Value)
 		colorPlayerEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Color: player",
+	Name = "Outline Color: All Players",
 	Color = colorPlayerColor,
 	Callback = function(Color)
 		colorPlayerColor = Color
@@ -791,14 +799,14 @@ EspTab:CreateColorPicker({
 })
 
 EspTab:CreateToggle({
-	Name = "outlining: Murder",
+	Name = "Outline: Murder",
 	CurrentValue = false,
 	Callback = function(Value)
 		murderHighlightEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Color: Murder",
+	Name = "Outline Color: Murder",
 	Color = murderHighlightColor,
 	Callback = function(Color)
 		murderHighlightColor = Color
@@ -806,14 +814,14 @@ EspTab:CreateColorPicker({
 })
 
 EspTab:CreateToggle({
-	Name = "outlining: Sheriff",
+	Name = "Outline: Sheriff",
 	CurrentValue = false,
 	Callback = function(Value)
 		sheriffHighlightEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Color: Sheriff",
+	Name = "Outline Color: Sheriff",
 	Color = sheriffHighlightColor,
 	Callback = function(Color)
 		sheriffHighlightColor = Color
@@ -821,17 +829,18 @@ EspTab:CreateColorPicker({
 })
 
 EspTab:CreateToggle({
-	Name = "outlining: Innocent",
+	Name = "Outline: Innocent",
 	CurrentValue = false,
 	Callback = function(Value)
 		innocentHighlightEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Color: Innocent",
+	Name = "Outline Color: Innocent",
 	Color = innocentHighlightColor,
 	Callback = function(Color)
 		innocentHighlightColor = Color
 	end
 })
+
 
