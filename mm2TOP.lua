@@ -17,7 +17,7 @@ local categories = {
     Murder   = Color3.fromRGB(255,30,60),
     Sheriff  = Color3.fromRGB(40,255,60),
     Innocent = Color3.fromRGB(200,255,255),
-    Coin     = Color3.fromRGB(255,215,0), -- Добавили монеты!
+    Coin     = Color3.fromRGB(255,215,0),
 }
 local boxStates, boxColors = {}, {}
 
@@ -111,61 +111,41 @@ local function update2dEsp(player, esp)
     end
 end
 
--- ========== COIN ESP ==========
-local Workspace = game:GetService("Workspace")
-local coinBoxes = {}
-local COIN_NAME = "Coin" -- Можно указать "Coin" или "Coins" — главное чтобы работало для твоей карты
+-- ========== COIN 2D BOX (4-LINE) ==========
+local coinDrawings = {} -- [coin] = {Line,Line,Line,Line}
+local COIN_PART_NAME = "MainCoin" -- Можно изменить, если у тебя другая деталь монеты
 
-local function createCoinBox(coin)
-    if coinBoxes[coin] then return end
-    local box = Drawing.new("Square")
-    box.Thickness = 2
-    box.Filled = false
-    box.Color = coinBoxColor
-    box.Visible = false
-    coinBoxes[coin] = box
+local function updateCoinBox(coin)
+    local box = coinDrawings[coin]
+    if not box then
+        box = {}
+        for i = 1, 4 do
+            local line = Drawing.new("Line")
+            line.Color = coinBoxColor
+            line.Thickness = 2
+            line.Transparency = 1
+            line.Visible = false
+            box[i] = line
+        end
+        coinDrawings[coin] = box
+    else
+        for i = 1, 4 do
+            box[i].Color = coinBoxColor
+        end
+    end
+    return box
 end
 
 local function removeCoinBox(coin)
-    if coinBoxes[coin] then
-        coinBoxes[coin]:Remove()
-        coinBoxes[coin] = nil
+    local box = coinDrawings[coin]
+    if box then
+        for i = 1, 4 do
+            box[i].Visible = false
+            box[i]:Remove()
+        end
+        coinDrawings[coin] = nil
     end
 end
-
-local function updateCoinBox(coin, box)
-    if not coin or not coin.Parent then
-        box.Visible = false
-        return
-    end
-    if not coinBoxEnabled then
-        box.Visible = false
-        return
-    end
-    local pos, visible, depth = Camera:WorldToViewportPoint(coin.Position)
-    if visible and depth > 0 then
-        local scale = math.clamp(1 / (depth * math.tan(math.rad(Camera.FieldOfView / 2)) * 2) * 1000, 7, 80)
-        local width, height = math.round(3 * scale), math.round(3 * scale)
-        local x, y = math.round(pos.X), math.round(pos.Y)
-        box.Size = Vector2.new(width, height)
-        box.Position = Vector2.new(x - width/2, y - height/2)
-        box.Color = coinBoxColor
-        box.Visible = true
-    else
-        box.Visible = false
-    end
-end
-
--- Игроки ESP
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then create2dEsp(player) end
-end
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then create2dEsp(player) end
-end)
-Players.PlayerRemoving:Connect(function(player)
-    remove2dEsp(player)
-end)
 
 game:GetService("RunService").RenderStepped:Connect(function()
     -- ESP для игроков
@@ -173,17 +153,49 @@ game:GetService("RunService").RenderStepped:Connect(function()
         update2dEsp(player, esp)
     end
 
-    -- ESP для монет
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and obj.Name:lower():find(COIN_NAME:lower()) then
-            createCoinBox(obj)
+    -- COIN ESP
+    if coinBoxEnabled then
+        local coins = {}
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name == COIN_PART_NAME then
+                coins[obj] = true
+            end
         end
-    end
-    for coin, box in pairs(coinBoxes) do
-        if not coin:IsDescendantOf(Workspace) then
-            removeCoinBox(coin)
-        else
-            updateCoinBox(coin, box)
+        for coin,_ in pairs(coins) do
+            local box = updateCoinBox(coin)
+            local center, visible = Camera:WorldToViewportPoint(coin.Position)
+            if visible then
+                local size2D = 28
+                local half = size2D / 2
+                local corners = {
+                    Vector2.new(center.X - half, center.Y - half),
+                    Vector2.new(center.X - half, center.Y + half),
+                    Vector2.new(center.X + half, center.Y + half),
+                    Vector2.new(center.X + half, center.Y - half)
+                }
+                for i = 1, 4 do
+                    box[i].From = corners[i]
+                    box[i].To = corners[i % 4 + 1]
+                    box[i].Visible = true
+                    box[i].Color = coinBoxColor
+                end
+            else
+                for i = 1, 4 do
+                    box[i].Visible = false
+                end
+            end
+        end
+        for coin, _ in pairs(coinDrawings) do
+            if not coins[coin] or not coin:IsDescendantOf(workspace) then
+                removeCoinBox(coin)
+            end
+        end
+    else
+        -- Отключаем все боксы если выключен ESP монет
+        for _, box in pairs(coinDrawings) do
+            for i = 1, 4 do
+                box[i].Visible = false
+            end
         end
     end
 end)
@@ -237,8 +249,10 @@ for category, defaultColor in pairs(categories) do
                 end
             elseif category == "Coin" then
                 coinBoxColor = Color
-                for coin, box in pairs(coinBoxes) do
-                    box.Color = coinBoxColor
+                for _, box in pairs(coinDrawings) do
+                    for i = 1, 4 do
+                        box[i].Color = coinBoxColor
+                    end
                 end
             end
         end
