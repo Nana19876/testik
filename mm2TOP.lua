@@ -24,8 +24,10 @@ local box2dEnabled = false
 local box2dColor = Color3.fromRGB(255,255,255)
 local murderBoxEnabled = false
 local murderBoxColor = Color3.fromRGB(255,30,60)
+local sheriffBoxEnabled = false
+local sheriffBoxColor = Color3.fromRGB(40,255,60)
 
--- ========== ESP 2D Box для Player и Murder ==========
+-- ========== ESP 2D Box для Player, Murder, Sheriff ==========
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -40,6 +42,12 @@ local function isMurderer(player)
     local backpack = player:FindFirstChild("Backpack")
     local character = player.Character
     return (backpack and backpack:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife"))
+end
+
+local function isSheriff(player)
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character
+    return (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun"))
 end
 
 local function create2dEsp(player)
@@ -76,9 +84,12 @@ local function update2dEsp(player, esp)
                 local x, y = round(position.X, position.Y)
                 esp.box.Size = newVector2(width, height)
                 esp.box.Position = newVector2(round(x - width / 2, y - height / 2))
-                -- Murder ESP
+                -- Приоритет: Murder > Sheriff > Player
                 if isMurderer(player) and murderBoxEnabled then
                     esp.box.Color = murderBoxColor
+                    esp.box.Visible = true
+                elseif isSheriff(player) and sheriffBoxEnabled then
+                    esp.box.Color = sheriffBoxColor
                     esp.box.Visible = true
                 elseif box2dEnabled and boxStates["Player"] then
                     esp.box.Color = box2dColor
@@ -130,6 +141,8 @@ for category, defaultColor in pairs(categories) do
                 box2dEnabled = Value
             elseif category == "Murder" then
                 murderBoxEnabled = Value
+            elseif category == "Sheriff" then
+                sheriffBoxEnabled = Value
             end
         end
     })
@@ -149,6 +162,13 @@ for category, defaultColor in pairs(categories) do
                 for player, esp in pairs(espCache) do
                     if isMurderer(player) then
                         esp.box.Color = murderBoxColor
+                    end
+                end
+            elseif category == "Sheriff" then
+                sheriffBoxColor = Color
+                for player, esp in pairs(espCache) do
+                    if isSheriff(player) then
+                        esp.box.Color = sheriffBoxColor
                     end
                 end
             end
