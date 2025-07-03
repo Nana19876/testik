@@ -308,7 +308,7 @@ for category, defaultColor in pairs(categories) do
     })
 
     EspTab:CreateColorPicker({
-        Name = "Цвет для " .. category,
+        Name = "color" .. category,
         Color = defaultColor,
         Callback = function(Color)
             boxColors[category] = Color
@@ -399,7 +399,7 @@ EspTab:CreateToggle({
     end
 })
 EspTab:CreateColorPicker({
-    Name = "Цвет Tracer: Murder",
+    Name = "color Tracer: Murder",
     Color = murderColor,
     Callback = function(Color)
         murderColor = Color
@@ -415,7 +415,7 @@ EspTab:CreateToggle({
     end
 })
 EspTab:CreateColorPicker({
-    Name = "Цвет Tracer: Sheriff",
+    Name = "color Tracer: Sheriff",
     Color = sheriffColor,
     Callback = function(Color)
         sheriffColor = Color
@@ -431,7 +431,7 @@ EspTab:CreateToggle({
     end
 })
 EspTab:CreateColorPicker({
-    Name = "Цвет Tracer: Innocent",
+    Name = "color Tracer: Innocent",
     Color = innocentColor,
     Callback = function(Color)
         innocentColor = Color
@@ -449,7 +449,7 @@ EspTab:CreateToggle({
     end
 })
 EspTab:CreateColorPicker({
-    Name = "Цвет Tracer: Trap",
+    Name = "color Tracer: Trap",
     Color = trapColor,
     Callback = function(Color)
         trapColor = Color
@@ -465,7 +465,7 @@ EspTab:CreateToggle({
     end
 })
 EspTab:CreateColorPicker({
-    Name = "Цвет Tracer: Gun",
+    Name = "color Tracer: Gun",
     Color = gunColor,
     Callback = function(Color)
         gunColor = Color
@@ -481,7 +481,7 @@ EspTab:CreateToggle({
     end
 })
 EspTab:CreateColorPicker({
-    Name = "Цвет Tracer: Coin",
+    Name = "color Tracer: Coin",
     Color = coinColor,
     Callback = function(Color)
         coinColor = Color
@@ -776,14 +776,14 @@ RunService.RenderStepped:Connect(updateAllHighlights)
 
 -- === UI ===
 EspTab:CreateToggle({
-	Name = "Обводка: Все игроки",
+	Name = "outlining: player",
 	CurrentValue = false,
 	Callback = function(Value)
 		colorPlayerEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Цвет обводки: Все игроки",
+	Name = "Color: player",
 	Color = colorPlayerColor,
 	Callback = function(Color)
 		colorPlayerColor = Color
@@ -791,14 +791,14 @@ EspTab:CreateColorPicker({
 })
 
 EspTab:CreateToggle({
-	Name = "Обводка: Murder",
+	Name = "outlining: Murder",
 	CurrentValue = false,
 	Callback = function(Value)
 		murderHighlightEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Цвет обводки: Murder",
+	Name = "Colorи: Murder",
 	Color = murderHighlightColor,
 	Callback = function(Color)
 		murderHighlightColor = Color
@@ -806,14 +806,14 @@ EspTab:CreateColorPicker({
 })
 
 EspTab:CreateToggle({
-	Name = "Обводка: Sheriff",
+	Name = "outlining: Sheriff",
 	CurrentValue = false,
 	Callback = function(Value)
 		sheriffHighlightEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Цвет обводки: Sheriff",
+	Name = "Color: Sheriff",
 	Color = sheriffHighlightColor,
 	Callback = function(Color)
 		sheriffHighlightColor = Color
@@ -821,14 +821,14 @@ EspTab:CreateColorPicker({
 })
 
 EspTab:CreateToggle({
-	Name = "Обводка: Innocent",
+	Name = "outlining: Innocent",
 	CurrentValue = false,
 	Callback = function(Value)
 		innocentHighlightEnabled = Value
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Цвет обводки: Innocent",
+	Name = "Color: Innocent",
 	Color = innocentHighlightColor,
 	Callback = function(Color)
 		innocentHighlightColor = Color
