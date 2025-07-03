@@ -356,3 +356,9 @@ for category, defaultColor in pairs(categories) do
         end
     })
 end
+
+EspTab:CreateSection("Tracer esp")
+
+	end,
+	
+})
