@@ -19,22 +19,28 @@ local categories = {
     Innocent = Color3.fromRGB(200,255,255),
 }
 local boxStates, boxColors = {}, {}
+
 local box2dEnabled = false
 local box2dColor = Color3.fromRGB(255,255,255)
+local murderBoxEnabled = false
+local murderBoxColor = Color3.fromRGB(255,30,60)
 
--- ========== ESP 2D Box для Player ==========
+-- ========== ESP 2D Box для Player и Murder ==========
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
-local box2dEnabled = false  -- true для теста, чтобы всегда работал (замени своим значением)
-local box2dColor = Color3.fromRGB(255, 0, 0)
 
 local espCache = {}
 local newVector2 = Vector2.new
 local tan, rad = math.tan, math.rad
 local round = function(...) local a = {}; for i,v in next, table.pack(...) do a[i] = math.round(v); end return unpack(a); end
 local wtvp = function(...) local a, b = Camera.WorldToViewportPoint(Camera, ...) return newVector2(a.X, a.Y), b, a.Z end
+
+local function isMurderer(player)
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character
+    return (backpack and backpack:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife"))
+end
 
 local function create2dEsp(player)
     if espCache[player] then remove2dEsp(player) end
@@ -60,19 +66,26 @@ end
 local function update2dEsp(player, esp)
     if not esp or not esp.box then return end
     local character = player and player.Character
-    if character and box2dEnabled then
+    if character then
         local root = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
         if root then
             local position, visible, depth = wtvp(root.Position)
             if visible and depth > 0 then
-                -- Фикс: минимальный и максимальный размер бокса, чтобы не исчезал при большом или маленьком depth
                 local scaleFactor = math.clamp(1 / (depth * tan(rad(Camera.FieldOfView / 2)) * 2) * 1000, 7, 120)
                 local width, height = round(4 * scaleFactor, 5 * scaleFactor)
                 local x, y = round(position.X, position.Y)
                 esp.box.Size = newVector2(width, height)
                 esp.box.Position = newVector2(round(x - width / 2, y - height / 2))
-                esp.box.Color = box2dColor
-                esp.box.Visible = true
+                -- Murder ESP
+                if isMurderer(player) and murderBoxEnabled then
+                    esp.box.Color = murderBoxColor
+                    esp.box.Visible = true
+                elseif box2dEnabled and boxStates["Player"] then
+                    esp.box.Color = box2dColor
+                    esp.box.Visible = true
+                else
+                    esp.box.Visible = false
+                end
             else
                 esp.box.Visible = false
             end
@@ -102,7 +115,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
-
 -- ========== Rayfield Menu Integration ==========
 
 for category, defaultColor in pairs(categories) do
@@ -116,6 +128,8 @@ for category, defaultColor in pairs(categories) do
             boxStates[category] = Value
             if category == "Player" then
                 box2dEnabled = Value
+            elseif category == "Murder" then
+                murderBoxEnabled = Value
             end
         end
     })
@@ -129,6 +143,13 @@ for category, defaultColor in pairs(categories) do
                 box2dColor = Color
                 for _, esp in pairs(espCache) do
                     esp.box.Color = Color
+                end
+            elseif category == "Murder" then
+                murderBoxColor = Color
+                for player, esp in pairs(espCache) do
+                    if isMurderer(player) then
+                        esp.box.Color = murderBoxColor
+                    end
                 end
             end
         end
