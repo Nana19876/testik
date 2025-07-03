@@ -836,3 +836,49 @@ EspTab:CreateColorPicker({
 		innocentHighlightColor = Color
 	end
 })
+
+-- Добавлено: 3D Box Toggle
+EspTab:CreateSection("3D Box")
+
+local box3dEnabled = false
+local box3dColor = Color3.fromRGB(255, 0, 0)
+
+EspTab:CreateToggle({
+    Name = "3D Box: Players",
+    CurrentValue = false,
+    Callback = function(Value)
+        box3dEnabled = Value
+    end
+})
+
+EspTab:CreateColorPicker({
+    Name = "3D Box Color",
+    Color = box3dColor,
+    Callback = function(Color)
+        box3dColor = Color
+    end
+})
+
+-- Обновление 3D Box каждый кадр
+RunService.RenderStepped:Connect(function()
+    if not box3dEnabled then return end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local part = player.Character.HumanoidRootPart
+            local adorn = part:FindFirstChild("BoxAdornment")
+            if not adorn then
+                adorn = Instance.new("BoxHandleAdornment")
+                adorn.Name = "BoxAdornment"
+                adorn.Adornee = part
+                adorn.AlwaysOnTop = true
+                adorn.ZIndex = 0
+                adorn.Size = Vector3.new(3, 5, 1.5)
+                adorn.Color3 = box3dColor
+                adorn.Transparency = 0.5
+                adorn.Parent = part
+            end
+            adorn.Visible = true
+            adorn.Color3 = box3dColor
+        end
+    end
+end)
