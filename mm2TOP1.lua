@@ -374,7 +374,6 @@ EspTab:CreateToggle({
     Callback = function(Value)
         tracerPlayerEnabled = Value
         if not Value then
-            -- Отключаем все линии
             for _, line in pairs(Tracers) do
                 line.Visible = false
             end
@@ -382,7 +381,6 @@ EspTab:CreateToggle({
     end
 })
 
--- Очищаем линии если игрок выходит
 Players.PlayerRemoving:Connect(function(player)
     if Tracers[player] then
         Tracers[player]:Remove()
@@ -406,7 +404,7 @@ RunService.RenderStepped:Connect(function()
             if not Tracers[player] then
                 local tracer = Drawing.new("Line")
                 tracer.Thickness = 1.5
-                tracer.Color = Color3.fromRGB(255, 0, 0) -- Можешь изменить цвет
+                tracer.Color = Color3.fromRGB(255, 0, 0)
                 tracer.Transparency = 1
                 tracer.Visible = false
                 Tracers[player] = tracer
@@ -424,4 +422,3 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
