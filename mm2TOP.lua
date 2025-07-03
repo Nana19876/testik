@@ -27,7 +27,7 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-local box2dEnabled = true  -- true для теста, чтобы всегда работал (замени своим значением)
+local box2dEnabled = false  -- true для теста, чтобы всегда работал (замени своим значением)
 local box2dColor = Color3.fromRGB(255, 0, 0)
 
 local espCache = {}
