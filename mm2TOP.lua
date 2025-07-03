@@ -367,7 +367,6 @@ local LocalPlayer = Players.LocalPlayer
 local Tracers = {}              -- [player] = Drawing.Line
 local tracerPlayerEnabled = false
 
--- ==== Rayfield Toggle ====
 EspTab:CreateToggle({
     Name = "Tracer: Player",
     CurrentValue = false,
@@ -381,6 +380,7 @@ EspTab:CreateToggle({
     end
 })
 
+-- Удаляем линию, если игрок вышел
 Players.PlayerRemoving:Connect(function(player)
     if Tracers[player] then
         Tracers[player]:Remove()
@@ -388,6 +388,7 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
+-- Основной цикл отрисовки
 RunService.RenderStepped:Connect(function()
     if not tracerPlayerEnabled then
         for _, line in pairs(Tracers) do
@@ -396,6 +397,7 @@ RunService.RenderStepped:Connect(function()
         return
     end
 
+    -- Обрабатываем каждого игрока
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local rootPart = player.Character.HumanoidRootPart
@@ -404,7 +406,7 @@ RunService.RenderStepped:Connect(function()
             if not Tracers[player] then
                 local tracer = Drawing.new("Line")
                 tracer.Thickness = 1.5
-                tracer.Color = Color3.fromRGB(255, 0, 0)
+                tracer.Color = Color3.fromRGB(255, 0, 0) -- Измени цвет, если нужно
                 tracer.Transparency = 1
                 tracer.Visible = false
                 Tracers[player] = tracer
