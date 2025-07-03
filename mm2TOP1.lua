@@ -364,23 +364,105 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-local Tracers = {}              -- [player] = Drawing.Line
-local tracerPlayerEnabled = false
+local Tracers = {} -- [player] = Drawing.Line
+local tracerMurderEnabled = false
+local tracerSheriffEnabled = false
+local tracerInnocentEnabled = false
+
+local murderColor = Color3.fromRGB(255,30,60)
+local sheriffColor = Color3.fromRGB(40,255,60)
+local innocentColor = Color3.fromRGB(200,255,255)
 
 EspTab:CreateToggle({
-    Name = "Tracer: Player",
+    Name = "Tracer: Murder",
     CurrentValue = false,
     Callback = function(Value)
-        tracerPlayerEnabled = Value
+        tracerMurderEnabled = Value
         if not Value then
-            for _, line in pairs(Tracers) do
-                line.Visible = false
+            for player, line in pairs(Tracers) do
+                if line.Role == "Murder" then line.Visible = false end
+            end
+        end
+    end
+})
+EspTab:CreateColorPicker({
+    Name = "Цвет Tracer: Murder",
+    Color = murderColor,
+    Callback = function(Color)
+        murderColor = Color
+        for player, line in pairs(Tracers) do
+            if line.Role == "Murder" then
+                line.Color = murderColor
             end
         end
     end
 })
 
--- Удаляем линию, если игрок вышел
+EspTab:CreateToggle({
+    Name = "Tracer: Sheriff",
+    CurrentValue = false,
+    Callback = function(Value)
+        tracerSheriffEnabled = Value
+        if not Value then
+            for player, line in pairs(Tracers) do
+                if line.Role == "Sheriff" then line.Visible = false end
+            end
+        end
+    end
+})
+EspTab:CreateColorPicker({
+    Name = "Цвет Tracer: Sheriff",
+    Color = sheriffColor,
+    Callback = function(Color)
+        sheriffColor = Color
+        for player, line in pairs(Tracers) do
+            if line.Role == "Sheriff" then
+                line.Color = sheriffColor
+            end
+        end
+    end
+})
+
+EspTab:CreateToggle({
+    Name = "Tracer: Innocent",
+    CurrentValue = false,
+    Callback = function(Value)
+        tracerInnocentEnabled = Value
+        if not Value then
+            for player, line in pairs(Tracers) do
+                if line.Role == "Innocent" then line.Visible = false end
+            end
+        end
+    end
+})
+EspTab:CreateColorPicker({
+    Name = "Цвет Tracer: Innocent",
+    Color = innocentColor,
+    Callback = function(Color)
+        innocentColor = Color
+        for player, line in pairs(Tracers) do
+            if line.Role == "Innocent" then
+                line.Color = innocentColor
+            end
+        end
+    end
+})
+
+-- Функции определения ролей
+local function isMurderer(player)
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character
+    return (backpack and backpack:FindFirstChild("Knife")) or (character and character:FindFirstChild("Knife"))
+end
+local function isSheriff(player)
+    local backpack = player:FindFirstChild("Backpack")
+    local character = player.Character
+    return (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun"))
+end
+local function isInnocent(player)
+    return not isMurderer(player) and not isSheriff(player) and player ~= LocalPlayer
+end
+
 Players.PlayerRemoving:Connect(function(player)
     if Tracers[player] then
         Tracers[player]:Remove()
@@ -388,39 +470,54 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- Основной цикл отрисовки
 RunService.RenderStepped:Connect(function()
-    if not tracerPlayerEnabled then
-        for _, line in pairs(Tracers) do
-            line.Visible = false
-        end
-        return
-    end
-
-    -- Обрабатываем каждого игрока
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local rootPart = player.Character.HumanoidRootPart
-            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
-
-            if not Tracers[player] then
-                local tracer = Drawing.new("Line")
-                tracer.Thickness = 1.5
-                tracer.Color = Color3.fromRGB(255, 0, 0) -- Измени цвет, если нужно
-                tracer.Transparency = 1
-                tracer.Visible = false
-                Tracers[player] = tracer
+            local role, color, enabled = nil, nil, false
+            if isMurderer(player) and tracerMurderEnabled then
+                role = "Murder"
+                color = murderColor
+                enabled = true
+            elseif isSheriff(player) and tracerSheriffEnabled then
+                role = "Sheriff"
+                color = sheriffColor
+                enabled = true
+            elseif isInnocent(player) and tracerInnocentEnabled then
+                role = "Innocent"
+                color = innocentColor
+                enabled = true
             end
 
-            if onScreen then
-                Tracers[player].From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                Tracers[player].To = Vector2.new(screenPos.X, screenPos.Y)
-                Tracers[player].Visible = true
-            else
+            if enabled then
+                if not Tracers[player] then
+                    local tracer = Drawing.new("Line")
+                    tracer.Thickness = 1.5
+                    tracer.Color = color
+                    tracer.Transparency = 1
+                    tracer.Visible = false
+                    tracer.Role = role
+                    Tracers[player] = tracer
+                end
+
+                Tracers[player].Color = color
+                Tracers[player].Role = role
+
+                local rootPart = player.Character.HumanoidRootPart
+                local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+                if onScreen then
+                    Tracers[player].From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                    Tracers[player].To = Vector2.new(screenPos.X, screenPos.Y)
+                    Tracers[player].Visible = true
+                else
+                    Tracers[player].Visible = false
+                end
+            elseif Tracers[player] then
                 Tracers[player].Visible = false
+                Tracers[player].Role = nil
             end
         elseif Tracers[player] then
             Tracers[player].Visible = false
+            Tracers[player].Role = nil
         end
     end
 end)
