@@ -282,7 +282,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
 end)
 
 -- ========== Rayfield Menu Integration ==========
-
 for category, defaultColor in pairs(categories) do
     boxStates[category] = false
     boxColors[category] = defaultColor
