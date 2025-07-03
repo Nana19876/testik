@@ -20,7 +20,6 @@ local categories = {
     Coin     = Color3.fromRGB(255,215,0),
 }
 local boxStates, boxColors = {}, {}
-local tracerStates, tracerColors = {}, {}
 
 local box2dEnabled = false
 local box2dColor = Color3.fromRGB(255,255,255)
@@ -35,20 +34,7 @@ local coinBoxColor = Color3.fromRGB(255,215,0)
 local gunBoxEnabled = false
 local gunBoxColor = Color3.fromRGB(30,144,255)
 
-local tracer2dEnabled = false
-local tracer2dColor = Color3.fromRGB(255,255,255)
-local murderTracerEnabled = false
-local murderTracerColor = Color3.fromRGB(255,30,60)
-local sheriffTracerEnabled = false
-local sheriffTracerColor = Color3.fromRGB(40,255,60)
-local innocentTracerEnabled = false
-local innocentTracerColor = Color3.fromRGB(200,255,255)
-local coinTracerEnabled = false
-local coinTracerColor = Color3.fromRGB(255,215,0)
-local gunTracerEnabled = false
-local gunTracerColor = Color3.fromRGB(30,144,255)
-
--- ========== ESP 2D Box и Tracer для Player, Murder, Sheriff, Innocent ==========
+-- ========== ESP 2D Box для Player, Murder, Sheriff, Innocent ==========
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -84,13 +70,6 @@ local function create2dEsp(player)
     drawings.box.Color = box2dColor
     drawings.box.Visible = false
     drawings.box.ZIndex = 2
-
-    drawings.tracer = Drawing.new("Line")
-    drawings.tracer.Thickness = 2
-    drawings.tracer.Color = tracer2dColor
-    drawings.tracer.Visible = false
-    drawings.tracer.ZIndex = 1
-
     espCache[player] = drawings
 end
 
@@ -104,7 +83,7 @@ local function remove2dEsp(player)
 end
 
 local function update2dEsp(player, esp)
-    if not esp or not esp.box or not esp.tracer then return end
+    if not esp or not esp.box then return end
     local character = player and player.Character
     if character then
         local root = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
@@ -116,41 +95,30 @@ local function update2dEsp(player, esp)
                 local x, y = round(position.X, position.Y)
                 esp.box.Size = newVector2(width, height)
                 esp.box.Position = newVector2(round(x - width / 2, y - height / 2))
-                esp.tracer.From = newVector2(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                esp.tracer.To = newVector2(x, y)
                 -- Приоритет: Murder > Sheriff > Innocent > Player
-                if isMurderer(player) then
+                if isMurderer(player) and murderBoxEnabled then
                     esp.box.Color = murderBoxColor
-                    esp.box.Visible = murderBoxEnabled
-                    esp.tracer.Color = murderTracerColor
-                    esp.tracer.Visible = murderTracerEnabled
-                elseif isSheriff(player) then
+                    esp.box.Visible = true
+                elseif isSheriff(player) and sheriffBoxEnabled then
                     esp.box.Color = sheriffBoxColor
-                    esp.box.Visible = sheriffBoxEnabled
-                    esp.tracer.Color = sheriffTracerColor
-                    esp.tracer.Visible = sheriffTracerEnabled
-                elseif isInnocent(player) then
+                    esp.box.Visible = true
+                elseif isInnocent(player) and innocentBoxEnabled then
                     esp.box.Color = innocentBoxColor
-                    esp.box.Visible = innocentBoxEnabled
-                    esp.tracer.Color = innocentTracerColor
-                    esp.tracer.Visible = innocentTracerEnabled
-                else
+                    esp.box.Visible = true
+                elseif box2dEnabled and boxStates["Player"] then
                     esp.box.Color = box2dColor
-                    esp.box.Visible = box2dEnabled and boxStates["Player"]
-                    esp.tracer.Color = tracer2dColor
-                    esp.tracer.Visible = tracer2dEnabled and tracerStates["Player"]
+                    esp.box.Visible = true
+                else
+                    esp.box.Visible = false
                 end
             else
                 esp.box.Visible = false
-                esp.tracer.Visible = false
             end
         else
             esp.box.Visible = false
-            esp.tracer.Visible = false
         end
     else
         esp.box.Visible = false
-        esp.tracer.Visible = false
     end
 end
 
@@ -164,11 +132,11 @@ Players.PlayerRemoving:Connect(function(player)
     remove2dEsp(player)
 end)
 
--- ========== COIN 2D BOX и TRACER (4-LINE) ==========
-local coinDrawings = {} -- [coin] = {Line,Line,Line,Line, tracer=Line}
-local COIN_PART_NAME = "MainCoin"
+-- ========== COIN 2D BOX (4-LINE) ==========
+local coinDrawings = {} -- [coin] = {Line,Line,Line,Line}
+local COIN_PART_NAME = "MainCoin" -- Или CoinVisual если у тебя реально так называется деталь!
 
-local function updateCoinBoxAndTracer(coin)
+local function updateCoinBox(coin)
     local box = coinDrawings[coin]
     if not box then
         box = {}
@@ -180,17 +148,11 @@ local function updateCoinBoxAndTracer(coin)
             line.Visible = false
             box[i] = line
         end
-        local tracer = Drawing.new("Line")
-        tracer.Color = coinTracerColor
-        tracer.Thickness = 2
-        tracer.Visible = false
-        box.tracer = tracer
         coinDrawings[coin] = box
     else
         for i = 1, 4 do
             box[i].Color = coinBoxColor
         end
-        box.tracer.Color = coinTracerColor
     end
     return box
 end
@@ -202,14 +164,19 @@ local function removeCoinBox(coin)
             box[i].Visible = false
             box[i]:Remove()
         end
-        if box.tracer then box.tracer.Visible = false box.tracer:Remove() end
         coinDrawings[coin] = nil
     end
 end
 
--- ========== GunDrop ESP и TRACER (4 линии) ==========
-local gunDropLines = {} -- [GunDrop] = {Line,Line,Line,Line, tracer=Line}
+-- ========== GunDrop ESP (4 линии) ==========
+local gunDropLines = {} -- [GunDrop] = {Line,Line,Line,Line}
 local function updateGunDropESP()
+    if not gunBoxEnabled then
+        for obj, box in pairs(gunDropLines) do
+            for i = 1, 4 do if box[i] then box[i].Visible = false end end
+        end
+        return
+    end
     local Camera = workspace.CurrentCamera
     local targets = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
@@ -226,11 +193,6 @@ local function updateGunDropESP()
                     line.Visible = false
                     box[i] = line
                 end
-                local tracer = Drawing.new("Line")
-                tracer.Color = gunTracerColor
-                tracer.Thickness = 2
-                tracer.Visible = false
-                box.tracer = tracer
                 gunDropLines[obj] = box
             end
             local center, visible = Camera:WorldToViewportPoint(obj.Position)
@@ -246,48 +208,40 @@ local function updateGunDropESP()
                 for i = 1, 4 do
                     box[i].From = corners[i]
                     box[i].To = corners[i % 4 + 1]
-                    box[i].Visible = gunBoxEnabled
+                    box[i].Visible = true
                     box[i].Color = gunBoxColor
                 end
-                if gunTracerEnabled then
-                    box.tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                    box.tracer.To = Vector2.new(center.X, center.Y)
-                    box.tracer.Color = gunTracerColor
-                    box.tracer.Visible = true
-                else
-                    box.tracer.Visible = false
-                end
             else
-                for i = 1, 4 do box[i].Visible = false end
-                box.tracer.Visible = false
+                for i = 1, 4 do
+                    box[i].Visible = false
+                end
             end
         end
     end
     for obj, box in pairs(gunDropLines) do
         if not targets[obj] or not obj:IsDescendantOf(workspace) then
             for i = 1, 4 do if box[i] then box[i]:Remove() end end
-            if box.tracer then box.tracer:Remove() end
             gunDropLines[obj] = nil
         end
     end
 end
 
 game:GetService("RunService").RenderStepped:Connect(function()
-    -- ESP и TRACER для игроков
+    -- ESP для игроков
     for player, esp in pairs(espCache) do
         update2dEsp(player, esp)
     end
 
-    -- COIN ESP/TRACER
-    if coinBoxEnabled or coinTracerEnabled then
+    -- COIN ESP
+    if coinBoxEnabled then
         local coins = {}
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") and obj.Name == COIN_PART_NAME then
                 coins[obj] = true
             end
         end
-        for coin, _ in pairs(coins) do
-            local box = updateCoinBoxAndTracer(coin)
+        for coin,_ in pairs(coins) do
+            local box = updateCoinBox(coin)
             local center, visible = Camera:WorldToViewportPoint(coin.Position)
             if visible then
                 local size2D = 28
@@ -301,20 +255,13 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 for i = 1, 4 do
                     box[i].From = corners[i]
                     box[i].To = corners[i % 4 + 1]
-                    box[i].Visible = coinBoxEnabled
+                    box[i].Visible = true
                     box[i].Color = coinBoxColor
                 end
-                if coinTracerEnabled then
-                    box.tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                    box.tracer.To = Vector2.new(center.X, center.Y)
-                    box.tracer.Color = coinTracerColor
-                    box.tracer.Visible = true
-                else
-                    box.tracer.Visible = false
-                end
             else
-                for i = 1, 4 do box[i].Visible = false end
-                box.tracer.Visible = false
+                for i = 1, 4 do
+                    box[i].Visible = false
+                end
             end
         end
         for coin, _ in pairs(coinDrawings) do
@@ -324,12 +271,13 @@ game:GetService("RunService").RenderStepped:Connect(function()
         end
     else
         for _, box in pairs(coinDrawings) do
-            for i = 1, 4 do box[i].Visible = false end
-            if box.tracer then box.tracer.Visible = false end
+            for i = 1, 4 do
+                box[i].Visible = false
+            end
         end
     end
 
-    -- GunDrop ESP и TRACER
+    -- GunDrop ESP (4 линии)
     updateGunDropESP()
 end)
 
@@ -337,8 +285,6 @@ end)
 for category, defaultColor in pairs(categories) do
     boxStates[category] = false
     boxColors[category] = defaultColor
-    tracerStates[category] = false
-    tracerColors[category] = defaultColor
 
     EspTab:CreateToggle({
         Name = "Box ESP: " .. category,
@@ -368,59 +314,44 @@ for category, defaultColor in pairs(categories) do
             boxColors[category] = Color
             if category == "Player" then
                 box2dColor = Color
+                for _, esp in pairs(espCache) do
+                    esp.box.Color = Color
+                end
             elseif category == "Murder" then
                 murderBoxColor = Color
+                for player, esp in pairs(espCache) do
+                    if isMurderer(player) then
+                        esp.box.Color = murderBoxColor
+                    end
+                end
             elseif category == "Sheriff" then
                 sheriffBoxColor = Color
+                for player, esp in pairs(espCache) do
+                    if isSheriff(player) then
+                        esp.box.Color = sheriffBoxColor
+                    end
+                end
             elseif category == "Innocent" then
                 innocentBoxColor = Color
+                for player, esp in pairs(espCache) do
+                    if isInnocent(player) then
+                        esp.box.Color = innocentBoxColor
+                    end
+                end
             elseif category == "Coin" then
                 coinBoxColor = Color
+                for _, box in pairs(coinDrawings) do
+                    for i = 1, 4 do
+                        box[i].Color = coinBoxColor
+                    end
+                end
             elseif category == "Gun" then
                 gunBoxColor = Color
-            end
-        end
-    })
-
-    -- ========== Tracer ==========
-    EspTab:CreateToggle({
-        Name = "Tracer ESP: " .. category,
-        CurrentValue = false,
-        Callback = function(Value)
-            tracerStates[category] = Value
-            if category == "Player" then
-                tracer2dEnabled = Value
-            elseif category == "Murder" then
-                murderTracerEnabled = Value
-            elseif category == "Sheriff" then
-                sheriffTracerEnabled = Value
-            elseif category == "Innocent" then
-                innocentTracerEnabled = Value
-            elseif category == "Coin" then
-                coinTracerEnabled = Value
-            elseif category == "Gun" then
-                gunTracerEnabled = Value
-            end
-        end
-    })
-
-    EspTab:CreateColorPicker({
-        Name = "Цвет трейсера " .. category,
-        Color = defaultColor,
-        Callback = function(Color)
-            tracerColors[category] = Color
-            if category == "Player" then
-                tracer2dColor = Color
-            elseif category == "Murder" then
-                murderTracerColor = Color
-            elseif category == "Sheriff" then
-                sheriffTracerColor = Color
-            elseif category == "Innocent" then
-                innocentTracerColor = Color
-            elseif category == "Coin" then
-                coinTracerColor = Color
-            elseif category == "Gun" then
-                gunTracerColor = Color
+                for _, box in pairs(gunDropLines) do
+                    for i = 1, 4 do
+                        box[i].Color = gunBoxColor
+                    end
+                end
             end
         end
     })
