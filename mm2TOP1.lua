@@ -911,115 +911,178 @@ EspTab:CreateColorPicker({
 	end
 })
 
+-- === GUI Section ===
 EspTab:CreateSection("3D Box")
 
+-- Toggles
 local box3dEnabled = false
-local box3dColor = Color3.fromRGB(255, 0, 0)
+local box3dMurderEnabled = false
+local box3dSheriffEnabled = false
+local box3dInnocentEnabled = false
+local box3dTrapEnabled = false
+local box3dGunEnabled = false
+local box3dCoinEnabled = false
 
-EspTab:CreateToggle({
-    Name = "3D Box: Players",
-    CurrentValue = false,
-    Callback = function(Value)
-        box3dEnabled = Value
-    end
-})
+-- Colors
+local box3dColor = Color3.fromRGB(255, 255, 255)
+local box3dMurderColor = Color3.fromRGB(255, 30, 60)
+local box3dSheriffColor = Color3.fromRGB(40, 255, 60)
+local box3dInnocentColor = Color3.fromRGB(200, 255, 255)
+local box3dTrapColor = Color3.fromRGB(255, 200, 0)
+local box3dGunColor = Color3.fromRGB(30, 144, 255)
+local box3dCoinColor = Color3.fromRGB(255, 215, 0)
 
-EspTab:CreateColorPicker({
-    Name = "3D Box Color",
-    Color = box3dColor,
-    Callback = function(Color)
-        box3dColor = Color
-    end
-})
+-- GUI Binds
+EspTab:CreateToggle({ Name = "3D Box: Players", CurrentValue = false, Callback = function(v) box3dEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Players", Color = box3dColor, Callback = function(c) box3dColor = c end })
+EspTab:CreateToggle({ Name = "3D Box: Murder", CurrentValue = false, Callback = function(v) box3dMurderEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Murder", Color = box3dMurderColor, Callback = function(c) box3dMurderColor = c end })
+EspTab:CreateToggle({ Name = "3D Box: Sheriff", CurrentValue = false, Callback = function(v) box3dSheriffEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Sheriff", Color = box3dSheriffColor, Callback = function(c) box3dSheriffColor = c end })
+EspTab:CreateToggle({ Name = "3D Box: Innocent", CurrentValue = false, Callback = function(v) box3dInnocentEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Innocent", Color = box3dInnocentColor, Callback = function(c) box3dInnocentColor = c end })
+EspTab:CreateToggle({ Name = "3D Box: Trap", CurrentValue = false, Callback = function(v) box3dTrapEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Trap", Color = box3dTrapColor, Callback = function(c) box3dTrapColor = c end })
+EspTab:CreateToggle({ Name = "3D Box: Gun", CurrentValue = false, Callback = function(v) box3dGunEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Gun", Color = box3dGunColor, Callback = function(c) box3dGunColor = c end })
+EspTab:CreateToggle({ Name = "3D Box: Coin", CurrentValue = false, Callback = function(v) box3dCoinEnabled = v end })
+EspTab:CreateColorPicker({ Name = "3D Box Color: Coin", Color = box3dCoinColor, Callback = function(c) box3dCoinColor = c end })
 
+-- === Drawing Logic ===
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
 local BoxData = {}
 
 local function IsValidVector2(v)
-    return v.X == v.X and v.Y == v.Y and math.abs(v.X) < 99999 and math.abs(v.Y) < 99999
+	return v.X == v.X and v.Y == v.Y and math.abs(v.X) < 99999 and math.abs(v.Y) < 99999
 end
 
 local function GetCorners(cf, size)
-    local half = size / 2
-    local corners = {}
-    for x = -1, 1, 2 do
-        for y = -1, 1, 2 do
-            for z = -1, 1, 2 do
-                table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
-            end
-        end
-    end
-    return corners
+	local half = size / 2
+	local corners = {}
+	for x = -1, 1, 2 do
+		for y = -1, 1, 2 do
+			for z = -1, 1, 2 do
+				table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
+			end
+		end
+	end
+	return corners
 end
 
-local function GetOrCreateLines(player)
-    if not BoxData[player] then
-        BoxData[player] = {}
-        for i = 1, 12 do
-            local line = Drawing.new("Line")
-            line.Thickness = 1.5
-            line.Transparency = 1
-            line.Visible = true
-            line.Color = box3dColor
-            BoxData[player][i] = line
-        end
-    end
-    return BoxData[player]
+local function GetOrCreateLines(id)
+	BoxData[id] = BoxData[id] or {}
+	for i = 1, 12 do
+		if not BoxData[id][i] then
+			local line = Drawing.new("Line")
+			line.Thickness = 1.5
+			line.Transparency = 1
+			line.Visible = true
+			BoxData[id][i] = line
+		end
+	end
+	return BoxData[id]
 end
 
-local function RemoveLines(player)
-    if BoxData[player] then
-        for _, line in pairs(BoxData[player]) do
-            line:Remove()
-        end
-        BoxData[player] = nil
-    end
+local function RemoveLines(id)
+	if BoxData[id] then
+		for _, line in pairs(BoxData[id]) do
+			if line then line:Remove() end
+		end
+		BoxData[id] = nil
+	end
+end
+
+local function isMurder(p)
+	local bp, ch = p:FindFirstChild("Backpack"), p.Character
+	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+
+local function isSheriff(p)
+	local bp, ch = p:FindFirstChild("Backpack"), p.Character
+	return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
+end
+
+local function isInnocent(p)
+	return not isMurder(p) and not isSheriff(p) and p ~= LocalPlayer
 end
 
 RunService.RenderStepped:Connect(function()
-    if not box3dEnabled then
-        for _, box in pairs(BoxData) do
-            for _, line in pairs(box) do
-                line.Visible = false
-            end
-        end
-        return
-    end
+	local faces = {
+		{1, 2}, {2, 4}, {4, 3}, {3, 1},
+		{5, 6}, {6, 8}, {8, 7}, {7, 5},
+		{1, 5}, {2, 6}, {3, 7}, {4, 8}
+	}
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = player.Character.HumanoidRootPart
-            local verts = GetCorners(hrp.CFrame, Vector3.new(3, 5, 1.5))
-            local lines = GetOrCreateLines(player)
-            local faces = {
-                {1, 2}, {2, 4}, {4, 3}, {3, 1}, -- bottom
-                {5, 6}, {6, 8}, {8, 7}, {7, 5}, -- top
-                {1, 5}, {2, 6}, {3, 7}, {4, 8}  -- sides
-            }
+	-- Игроки
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local hrp = player.Character.HumanoidRootPart
+			local id = "Player_" .. player.UserId
+			local show, color = false, box3dColor
+			if isMurder(player) and box3dMurderEnabled then show = true; color = box3dMurderColor
+			elseif isSheriff(player) and box3dSheriffEnabled then show = true; color = box3dSheriffColor
+			elseif isInnocent(player) and box3dInnocentEnabled then show = true; color = box3dInnocentColor
+			elseif box3dEnabled then show = true; color = box3dColor end
 
-            for i, edge in ipairs(faces) do
-                local a, b = verts[edge[1]], verts[edge[2]]
-                local sa, va = Camera:WorldToViewportPoint(a)
-                local sb, vb = Camera:WorldToViewportPoint(b)
-                local line = lines[i]
+			if show then
+				local verts = GetCorners(hrp.CFrame, Vector3.new(3, 5, 1.5))
+				local lines = GetOrCreateLines(id)
+				for i, edge in ipairs(faces) do
+					local a, b = verts[edge[1]], verts[edge[2]]
+					local sa, va = Camera:WorldToViewportPoint(a)
+					local sb, vb = Camera:WorldToViewportPoint(b)
+					local line = lines[i]
+					if va and vb and IsValidVector2(Vector2.new(sa.X, sa.Y)) and IsValidVector2(Vector2.new(sb.X, sb.Y)) then
+						line.From = Vector2.new(sa.X, sa.Y)
+						line.To = Vector2.new(sb.X, sb.Y)
+						line.Color = color
+						line.Visible = true
+					else
+						line.Visible = false
+					end
+				end
+			else
+				RemoveLines(id)
+			end
+		end
+	end
 
-                if va and vb and IsValidVector2(Vector2.new(sa.X, sa.Y)) and IsValidVector2(Vector2.new(sb.X, sb.Y)) then
-                    line.From = Vector2.new(sa.X, sa.Y)
-                    line.To = Vector2.new(sb.X, sb.Y)
-                    line.Color = box3dColor
-                    line.Visible = true
-                else
-                    line.Visible = false
-                end
-            end
-        else
-            RemoveLines(player)
-        end
-    end
+	-- Объекты
+	local function drawObjectBoxes(name, color, enabled)
+		if not enabled then return end
+		for _, obj in ipairs(Workspace:GetDescendants()) do
+			if obj:IsA("BasePart") and obj.Name:lower():find(name:lower()) then
+				local id = name .. "_" .. obj:GetDebugId(1)
+				local verts = GetCorners(obj.CFrame, obj.Size)
+				local lines = GetOrCreateLines(id)
+				for i, edge in ipairs(faces) do
+					local a, b = verts[edge[1]], verts[edge[2]]
+					local sa, va = Camera:WorldToViewportPoint(a)
+					local sb, vb = Camera:WorldToViewportPoint(b)
+					local line = lines[i]
+					if va and vb and IsValidVector2(Vector2.new(sa.X, sa.Y)) and IsValidVector2(Vector2.new(sb.X, sb.Y)) then
+						line.From = Vector2.new(sa.X, sa.Y)
+						line.To = Vector2.new(sb.X, sb.Y)
+						line.Color = color
+						line.Visible = true
+					else
+						line.Visible = false
+					end
+				end
+			end
+		end
+	end
+
+	drawObjectBoxes("Trap", box3dTrapColor, box3dTrapEnabled)
+	drawObjectBoxes("Gun", box3dGunColor, box3dGunEnabled)
+	drawObjectBoxes("Coin", box3dCoinColor, box3dCoinEnabled)
 end)
 
-Players.PlayerRemoving:Connect(RemoveLines)
+Players.PlayerRemoving:Connect(function(player)
+	RemoveLines("Player_" .. player.UserId)
+end)
 
