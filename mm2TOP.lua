@@ -357,33 +357,45 @@ for category, defaultColor in pairs(categories) do
     })
 end
 
-EspTab:CreateSection("Tracer esp")
+EspTab:CreateSection("Tracer esp (игроки и предметы)")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-local Tracers = {} -- [player] = Drawing.Line
+local Tracers = {} -- [object or player] = Drawing.Line
+
+-- Переменные для игроков
 local tracerMurderEnabled = false
 local tracerSheriffEnabled = false
 local tracerInnocentEnabled = false
-
 local murderColor = Color3.fromRGB(255,30,60)
 local sheriffColor = Color3.fromRGB(40,255,60)
 local innocentColor = Color3.fromRGB(200,255,255)
-local tracerThickness = 3.5 -- Жирная линия
 
+-- Переменные для предметов
+local tracerTrapEnabled = false
+local tracerGunEnabled = false
+local tracerCoinEnabled = false
+local trapColor = Color3.fromRGB(255,200,0)
+local gunColor = Color3.fromRGB(30,144,255)
+local coinColor = Color3.fromRGB(255,215,0)
+
+local tracerThickness = 3.5 -- Жирность линий
+
+-- Названия объектов
+local TRAP_PART_NAME = "Trap"
+local GUN_PART_NAME = "GunDrop"
+local COIN_PART_NAME = "MainCoin" -- Или "CoinVisual", если нужно
+
+-- Тогглы и палитры игроков
 EspTab:CreateToggle({
     Name = "Tracer: Murder",
     CurrentValue = false,
     Callback = function(Value)
         tracerMurderEnabled = Value
-        if not Value then
-            for _, line in pairs(Tracers) do
-                if line.Role == "Murder" then line.Visible = false end
-            end
-        end
+        if not Value then for obj, line in pairs(Tracers) do if line.Role == "Murder" then line.Visible = false end end end
     end
 })
 EspTab:CreateColorPicker({
@@ -391,22 +403,15 @@ EspTab:CreateColorPicker({
     Color = murderColor,
     Callback = function(Color)
         murderColor = Color
-        for _, line in pairs(Tracers) do
-            if line.Role == "Murder" then line.Color = murderColor end
-        end
+        for obj, line in pairs(Tracers) do if line.Role == "Murder" then line.Color = murderColor end end
     end
 })
-
 EspTab:CreateToggle({
     Name = "Tracer: Sheriff",
     CurrentValue = false,
     Callback = function(Value)
         tracerSheriffEnabled = Value
-        if not Value then
-            for _, line in pairs(Tracers) do
-                if line.Role == "Sheriff" then line.Visible = false end
-            end
-        end
+        if not Value then for obj, line in pairs(Tracers) do if line.Role == "Sheriff" then line.Visible = false end end end
     end
 })
 EspTab:CreateColorPicker({
@@ -414,22 +419,15 @@ EspTab:CreateColorPicker({
     Color = sheriffColor,
     Callback = function(Color)
         sheriffColor = Color
-        for _, line in pairs(Tracers) do
-            if line.Role == "Sheriff" then line.Color = sheriffColor end
-        end
+        for obj, line in pairs(Tracers) do if line.Role == "Sheriff" then line.Color = sheriffColor end end
     end
 })
-
 EspTab:CreateToggle({
     Name = "Tracer: Innocent",
     CurrentValue = false,
     Callback = function(Value)
         tracerInnocentEnabled = Value
-        if not Value then
-            for _, line in pairs(Tracers) do
-                if line.Role == "Innocent" then line.Visible = false end
-            end
-        end
+        if not Value then for obj, line in pairs(Tracers) do if line.Role == "Innocent" then line.Visible = false end end end
     end
 })
 EspTab:CreateColorPicker({
@@ -437,13 +435,68 @@ EspTab:CreateColorPicker({
     Color = innocentColor,
     Callback = function(Color)
         innocentColor = Color
-        for _, line in pairs(Tracers) do
-            if line.Role == "Innocent" then line.Color = innocentColor end
-        end
+        for obj, line in pairs(Tracers) do if line.Role == "Innocent" then line.Color = innocentColor end end
     end
 })
 
--- Роль определение
+-- Тогглы и палитры предметов
+EspTab:CreateToggle({
+    Name = "Tracer: Trap",
+    CurrentValue = false,
+    Callback = function(Value)
+        tracerTrapEnabled = Value
+        if not Value then for obj, line in pairs(Tracers) do if line.ObjType == "Trap" then line.Visible = false end end end
+    end
+})
+EspTab:CreateColorPicker({
+    Name = "Цвет Tracer: Trap",
+    Color = trapColor,
+    Callback = function(Color)
+        trapColor = Color
+        for obj, line in pairs(Tracers) do if line.ObjType == "Trap" then line.Color = trapColor end end
+    end
+})
+EspTab:CreateToggle({
+    Name = "Tracer: Gun",
+    CurrentValue = false,
+    Callback = function(Value)
+        tracerGunEnabled = Value
+        if not Value then for obj, line in pairs(Tracers) do if line.ObjType == "Gun" then line.Visible = false end end end
+    end
+})
+EspTab:CreateColorPicker({
+    Name = "Цвет Tracer: Gun",
+    Color = gunColor,
+    Callback = function(Color)
+        gunColor = Color
+        for obj, line in pairs(Tracers) do if line.ObjType == "Gun" then line.Color = gunColor end end
+    end
+})
+EspTab:CreateToggle({
+    Name = "Tracer: Coin",
+    CurrentValue = false,
+    Callback = function(Value)
+        tracerCoinEnabled = Value
+        if not Value then for obj, line in pairs(Tracers) do if line.ObjType == "Coin" then line.Visible = false end end end
+    end
+})
+EspTab:CreateColorPicker({
+    Name = "Цвет Tracer: Coin",
+    Color = coinColor,
+    Callback = function(Color)
+        coinColor = Color
+        for obj, line in pairs(Tracers) do if line.ObjType == "Coin" then line.Color = coinColor end end
+    end
+})
+
+-- Функция для прижатия к экрану
+local function clampToScreen(x, y)
+    x = math.clamp(x, 0, Camera.ViewportSize.X)
+    y = math.clamp(y, 0, Camera.ViewportSize.Y)
+    return Vector2.new(x, y)
+end
+
+-- Определение ролей
 local function isMurderer(player)
     local backpack = player:FindFirstChild("Backpack")
     local character = player.Character
@@ -458,39 +511,33 @@ local function isInnocent(player)
     return not isMurderer(player) and not isSheriff(player) and player ~= LocalPlayer
 end
 
--- Функция для прижатия точки к экрану
-local function clampToScreen(x, y)
-    x = math.clamp(x, 0, Camera.ViewportSize.X)
-    y = math.clamp(y, 0, Camera.ViewportSize.Y)
-    return Vector2.new(x, y)
+-- Чистим, если игрок/объект исчез
+Players.PlayerRemoving:Connect(function(player)
+    if Tracers[player] then Tracers[player]:Remove() Tracers[player] = nil end
+end)
+local function cleanupTracers(valid)
+    for obj, line in pairs(Tracers) do
+        if not valid[obj] then line:Remove() Tracers[obj] = nil end
+    end
 end
 
-Players.PlayerRemoving:Connect(function(player)
-    if Tracers[player] then
-        Tracers[player]:Remove()
-        Tracers[player] = nil
-    end
-end)
-
 RunService.RenderStepped:Connect(function()
+    local valid = {}
+
+    -- Игроки (murder, sheriff, innocent)
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local role, color, enabled = nil, nil, false
             if isMurderer(player) and tracerMurderEnabled then
-                role = "Murder"
-                color = murderColor
-                enabled = true
+                role = "Murder"; color = murderColor; enabled = true
             elseif isSheriff(player) and tracerSheriffEnabled then
-                role = "Sheriff"
-                color = sheriffColor
-                enabled = true
+                role = "Sheriff"; color = sheriffColor; enabled = true
             elseif isInnocent(player) and tracerInnocentEnabled then
-                role = "Innocent"
-                color = innocentColor
-                enabled = true
+                role = "Innocent"; color = innocentColor; enabled = true
             end
 
             if enabled then
+                valid[player] = true
                 if not Tracers[player] then
                     local tracer = Drawing.new("Line")
                     tracer.Thickness = tracerThickness
@@ -500,7 +547,6 @@ RunService.RenderStepped:Connect(function()
                     tracer.Role = role
                     Tracers[player] = tracer
                 end
-
                 local tracer = Tracers[player]
                 tracer.Color = color
                 tracer.Role = role
@@ -526,5 +572,116 @@ RunService.RenderStepped:Connect(function()
             Tracers[player].Role = nil
         end
     end
+
+    -- Trap
+    if tracerTrapEnabled then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name == TRAP_PART_NAME then
+                valid[obj] = true
+                if not Tracers[obj] then
+                    local line = Drawing.new("Line")
+                    line.Thickness = tracerThickness
+                    line.Color = trapColor
+                    line.Transparency = 1
+                    line.Visible = false
+                    line.ObjType = "Trap"
+                    Tracers[obj] = line
+                end
+                local line = Tracers[obj]
+                line.Color = trapColor
+                line.Thickness = tracerThickness
+
+                local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
+                local toPos
+                if onScreen and screenPos.Z > 0 then
+                    toPos = Vector2.new(screenPos.X, screenPos.Y)
+                else
+                    toPos = clampToScreen(screenPos.X, screenPos.Y)
+                end
+                line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                line.To = toPos
+                line.Visible = true
+            elseif Tracers[obj] and Tracers[obj].ObjType == "Trap" then
+                Tracers[obj].Visible = false
+            end
+        end
+    else
+        for obj, line in pairs(Tracers) do if line.ObjType == "Trap" then line.Visible = false end end
+    end
+
+    -- Gun
+    if tracerGunEnabled then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name == GUN_PART_NAME then
+                valid[obj] = true
+                if not Tracers[obj] then
+                    local line = Drawing.new("Line")
+                    line.Thickness = tracerThickness
+                    line.Color = gunColor
+                    line.Transparency = 1
+                    line.Visible = false
+                    line.ObjType = "Gun"
+                    Tracers[obj] = line
+                end
+                local line = Tracers[obj]
+                line.Color = gunColor
+                line.Thickness = tracerThickness
+
+                local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
+                local toPos
+                if onScreen and screenPos.Z > 0 then
+                    toPos = Vector2.new(screenPos.X, screenPos.Y)
+                else
+                    toPos = clampToScreen(screenPos.X, screenPos.Y)
+                end
+                line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                line.To = toPos
+                line.Visible = true
+            elseif Tracers[obj] and Tracers[obj].ObjType == "Gun" then
+                Tracers[obj].Visible = false
+            end
+        end
+    else
+        for obj, line in pairs(Tracers) do if line.ObjType == "Gun" then line.Visible = false end end
+    end
+
+    -- Coin
+    if tracerCoinEnabled then
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name == COIN_PART_NAME then
+                valid[obj] = true
+                if not Tracers[obj] then
+                    local line = Drawing.new("Line")
+                    line.Thickness = tracerThickness
+                    line.Color = coinColor
+                    line.Transparency = 1
+                    line.Visible = false
+                    line.ObjType = "Coin"
+                    Tracers[obj] = line
+                end
+                local line = Tracers[obj]
+                line.Color = coinColor
+                line.Thickness = tracerThickness
+
+                local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
+                local toPos
+                if onScreen and screenPos.Z > 0 then
+                    toPos = Vector2.new(screenPos.X, screenPos.Y)
+                else
+                    toPos = clampToScreen(screenPos.X, screenPos.Y)
+                end
+                line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                line.To = toPos
+                line.Visible = true
+            elseif Tracers[obj] and Tracers[obj].ObjType == "Coin" then
+                Tracers[obj].Visible = false
+            end
+        end
+    else
+        for obj, line in pairs(Tracers) do if line.ObjType == "Coin" then line.Visible = false end end
+    end
+
+    cleanupTracers(valid)
 end)
+
 
