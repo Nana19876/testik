@@ -837,7 +837,6 @@ EspTab:CreateColorPicker({
 	end
 })
 
--- Добавлено: 3D Box Toggle
 EspTab:CreateSection("3D Box")
 
 local box3dEnabled = false
@@ -859,26 +858,94 @@ EspTab:CreateColorPicker({
     end
 })
 
--- Обновление 3D Box каждый кадр
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local BoxData = {}
+
+local function IsValidVector2(v)
+    return v.X == v.X and v.Y == v.Y and math.abs(v.X) < 99999 and math.abs(v.Y) < 99999
+end
+
+local function GetCorners(cf, size)
+    local half = size / 2
+    local corners = {}
+    for x = -1, 1, 2 do
+        for y = -1, 1, 2 do
+            for z = -1, 1, 2 do
+                table.insert(corners, (cf * CFrame.new(half * Vector3.new(x, y, z))).Position)
+            end
+        end
+    end
+    return corners
+end
+
+local function GetOrCreateLines(player)
+    if not BoxData[player] then
+        BoxData[player] = {}
+        for i = 1, 12 do
+            local line = Drawing.new("Line")
+            line.Thickness = 1.5
+            line.Transparency = 1
+            line.Visible = true
+            line.Color = box3dColor
+            BoxData[player][i] = line
+        end
+    end
+    return BoxData[player]
+end
+
+local function RemoveLines(player)
+    if BoxData[player] then
+        for _, line in pairs(BoxData[player]) do
+            line:Remove()
+        end
+        BoxData[player] = nil
+    end
+end
+
 RunService.RenderStepped:Connect(function()
-    if not box3dEnabled then return end
+    if not box3dEnabled then
+        for _, box in pairs(BoxData) do
+            for _, line in pairs(box) do
+                line.Visible = false
+            end
+        end
+        return
+    end
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local part = player.Character.HumanoidRootPart
-            local adorn = part:FindFirstChild("BoxAdornment")
-            if not adorn then
-                adorn = Instance.new("BoxHandleAdornment")
-                adorn.Name = "BoxAdornment"
-                adorn.Adornee = part
-                adorn.AlwaysOnTop = true
-                adorn.ZIndex = 0
-                adorn.Size = Vector3.new(3, 5, 1.5)
-                adorn.Color3 = box3dColor
-                adorn.Transparency = 0.5
-                adorn.Parent = part
+            local hrp = player.Character.HumanoidRootPart
+            local verts = GetCorners(hrp.CFrame, Vector3.new(3, 5, 1.5))
+            local lines = GetOrCreateLines(player)
+            local faces = {
+                {1, 2}, {2, 4}, {4, 3}, {3, 1}, -- bottom
+                {5, 6}, {6, 8}, {8, 7}, {7, 5}, -- top
+                {1, 5}, {2, 6}, {3, 7}, {4, 8}  -- sides
+            }
+
+            for i, edge in ipairs(faces) do
+                local a, b = verts[edge[1]], verts[edge[2]]
+                local sa, va = Camera:WorldToViewportPoint(a)
+                local sb, vb = Camera:WorldToViewportPoint(b)
+                local line = lines[i]
+
+                if va and vb and IsValidVector2(Vector2.new(sa.X, sa.Y)) and IsValidVector2(Vector2.new(sb.X, sb.Y)) then
+                    line.From = Vector2.new(sa.X, sa.Y)
+                    line.To = Vector2.new(sb.X, sb.Y)
+                    line.Color = box3dColor
+                    line.Visible = true
+                else
+                    line.Visible = false
+                end
             end
-            adorn.Visible = true
-            adorn.Color3 = box3dColor
+        else
+            RemoveLines(player)
         end
     end
 end)
+
+Players.PlayerRemoving:Connect(RemoveLines)
+
