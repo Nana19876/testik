@@ -17,6 +17,7 @@ local categories = {
     Murder   = Color3.fromRGB(255,30,60),
     Sheriff  = Color3.fromRGB(40,255,60),
     Innocent = Color3.fromRGB(200,255,255),
+    Coin     = Color3.fromRGB(255,215,0), -- Добавили монеты!
 }
 local boxStates, boxColors = {}, {}
 
@@ -26,6 +27,8 @@ local murderBoxEnabled = false
 local murderBoxColor = Color3.fromRGB(255,30,60)
 local sheriffBoxEnabled = false
 local sheriffBoxColor = Color3.fromRGB(40,255,60)
+local coinBoxEnabled = false
+local coinBoxColor = Color3.fromRGB(255,215,0)
 
 -- ========== ESP 2D Box для Player, Murder, Sheriff ==========
 local Players = game:GetService("Players")
@@ -108,11 +111,55 @@ local function update2dEsp(player, esp)
     end
 end
 
--- Инициализация на всех игроках, кроме себя
+-- ========== COIN ESP ==========
+local Workspace = game:GetService("Workspace")
+local coinBoxes = {}
+local COIN_NAME = "Coin" -- Можно указать "Coin" или "Coins" — главное чтобы работало для твоей карты
+
+local function createCoinBox(coin)
+    if coinBoxes[coin] then return end
+    local box = Drawing.new("Square")
+    box.Thickness = 2
+    box.Filled = false
+    box.Color = coinBoxColor
+    box.Visible = false
+    coinBoxes[coin] = box
+end
+
+local function removeCoinBox(coin)
+    if coinBoxes[coin] then
+        coinBoxes[coin]:Remove()
+        coinBoxes[coin] = nil
+    end
+end
+
+local function updateCoinBox(coin, box)
+    if not coin or not coin.Parent then
+        box.Visible = false
+        return
+    end
+    if not coinBoxEnabled then
+        box.Visible = false
+        return
+    end
+    local pos, visible, depth = Camera:WorldToViewportPoint(coin.Position)
+    if visible and depth > 0 then
+        local scale = math.clamp(1 / (depth * math.tan(math.rad(Camera.FieldOfView / 2)) * 2) * 1000, 7, 80)
+        local width, height = math.round(3 * scale), math.round(3 * scale)
+        local x, y = math.round(pos.X), math.round(pos.Y)
+        box.Size = Vector2.new(width, height)
+        box.Position = Vector2.new(x - width/2, y - height/2)
+        box.Color = coinBoxColor
+        box.Visible = true
+    else
+        box.Visible = false
+    end
+end
+
+-- Игроки ESP
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then create2dEsp(player) end
 end
-
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then create2dEsp(player) end
 end)
@@ -121,8 +168,23 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 game:GetService("RunService").RenderStepped:Connect(function()
+    -- ESP для игроков
     for player, esp in pairs(espCache) do
         update2dEsp(player, esp)
+    end
+
+    -- ESP для монет
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name:lower():find(COIN_NAME:lower()) then
+            createCoinBox(obj)
+        end
+    end
+    for coin, box in pairs(coinBoxes) do
+        if not coin:IsDescendantOf(Workspace) then
+            removeCoinBox(coin)
+        else
+            updateCoinBox(coin, box)
+        end
     end
 end)
 
@@ -143,6 +205,8 @@ for category, defaultColor in pairs(categories) do
                 murderBoxEnabled = Value
             elseif category == "Sheriff" then
                 sheriffBoxEnabled = Value
+            elseif category == "Coin" then
+                coinBoxEnabled = Value
             end
         end
     })
@@ -170,6 +234,11 @@ for category, defaultColor in pairs(categories) do
                     if isSheriff(player) then
                         esp.box.Color = sheriffBoxColor
                     end
+                end
+            elseif category == "Coin" then
+                coinBoxColor = Color
+                for coin, box in pairs(coinBoxes) do
+                    box.Color = coinBoxColor
                 end
             end
         end
