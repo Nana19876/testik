@@ -684,7 +684,7 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
-EspTab:CreateSection("Color ESP (игроки и предметы)")
+EspTab:CreateSection("outlining ESP (игроки и предметы)")
 
 -- Переменные включения и цвета
 local colorPlayerEnabled = false
@@ -798,7 +798,7 @@ EspTab:CreateToggle({
 	end
 })
 EspTab:CreateColorPicker({
-	Name = "Colorи: Murder",
+	Name = "Color: Murder",
 	Color = murderHighlightColor,
 	Callback = function(Color)
 		murderHighlightColor = Color
