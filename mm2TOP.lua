@@ -359,10 +359,69 @@ end
 
 EspTab:CreateSection("Tracer esp")
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local Tracers = {}              -- [player] = Drawing.Line
+local tracerPlayerEnabled = false
+
+-- ==== Rayfield Toggle ====
 EspTab:CreateToggle({
     Name = "Tracer: Player",
     CurrentValue = false,
     Callback = function(Value)
         tracerPlayerEnabled = Value
+        if not Value then
+            -- Отключаем все линии
+            for _, line in pairs(Tracers) do
+                line.Visible = false
+            end
+        end
     end
 })
+
+-- Очищаем линии если игрок выходит
+Players.PlayerRemoving:Connect(function(player)
+    if Tracers[player] then
+        Tracers[player]:Remove()
+        Tracers[player] = nil
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not tracerPlayerEnabled then
+        for _, line in pairs(Tracers) do
+            line.Visible = false
+        end
+        return
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+            if not Tracers[player] then
+                local tracer = Drawing.new("Line")
+                tracer.Thickness = 1.5
+                tracer.Color = Color3.fromRGB(255, 0, 0) -- Можешь изменить цвет
+                tracer.Transparency = 1
+                tracer.Visible = false
+                Tracers[player] = tracer
+            end
+
+            if onScreen then
+                Tracers[player].From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                Tracers[player].To = Vector2.new(screenPos.X, screenPos.Y)
+                Tracers[player].Visible = true
+            else
+                Tracers[player].Visible = false
+            end
+        elseif Tracers[player] then
+            Tracers[player].Visible = false
+        end
+    end
+end)
+
