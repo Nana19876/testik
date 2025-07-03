@@ -684,4 +684,90 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
-EspTab:CreateSection("Сolor esp (игроки и предметы)")
+EspTab:CreateSection("Color ESP (игроки и предметы)")
+
+local colorHighlightEnabled = false
+local colorHighlightColor = Color3.fromRGB(255, 255, 255)
+
+-- Функция создания Highlight
+local function applyHighlight(player)
+    if player == LocalPlayer then return end
+    if not player.Character then return end
+
+    -- Если уже есть highlight — обновим цвет
+    local existing = player.Character:FindFirstChild("ColorHighlight")
+    if existing then
+        existing.OutlineColor = colorHighlightColor
+        existing.FillColor = colorHighlightColor
+        return
+    end
+
+    -- Создание нового
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ColorHighlight"
+    highlight.FillTransparency = 1
+    highlight.OutlineTransparency = 0
+    highlight.OutlineColor = colorHighlightColor
+    highlight.FillColor = colorHighlightColor
+    highlight.Adornee = player.Character
+    highlight.Parent = player.Character
+end
+
+-- Удаление Highlight
+local function removeHighlight(player)
+    local highlight = player.Character and player.Character:FindFirstChild("ColorHighlight")
+    if highlight then
+        highlight:Destroy()
+    end
+end
+
+-- Обновление всех Highlight в зависимости от переключателя
+local function updateAllHighlights()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if colorHighlightEnabled then
+                applyHighlight(player)
+            else
+                removeHighlight(player)
+            end
+        end
+    end
+end
+
+-- Обработка новых игроков
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        if colorHighlightEnabled then
+            applyHighlight(player)
+        end
+    end)
+end)
+
+-- Переключатель
+EspTab:CreateToggle({
+    Name = "Обводка игроков (Highlight)",
+    CurrentValue = false,
+    Callback = function(Value)
+        colorHighlightEnabled = Value
+        updateAllHighlights()
+    end
+})
+
+-- Цвет
+EspTab:CreateColorPicker({
+    Name = "Цвет обводки",
+    Color = colorHighlightColor,
+    Callback = function(Color)
+        colorHighlightColor = Color
+        -- Обновим цвет у всех активных
+        for _, player in ipairs(Players:GetPlayers()) do
+            local highlight = player.Character and player.Character:FindFirstChild("ColorHighlight")
+            if highlight then
+                highlight.OutlineColor = colorHighlightColor
+                highlight.FillColor = colorHighlightColor
+            end
+        end
+    end
+})
+
