@@ -373,6 +373,8 @@ local murderColor = Color3.fromRGB(255,30,60)
 local sheriffColor = Color3.fromRGB(40,255,60)
 local innocentColor = Color3.fromRGB(200,255,255)
 
+local tracerThickness = 3.5 -- <<<< Жирность линии (увеличь по желанию)
+
 EspTab:CreateToggle({
     Name = "Tracer: Murder",
     CurrentValue = false,
@@ -491,7 +493,7 @@ RunService.RenderStepped:Connect(function()
             if enabled then
                 if not Tracers[player] then
                     local tracer = Drawing.new("Line")
-                    tracer.Thickness = 1.5
+                    tracer.Thickness = tracerThickness -- <<<<< Жирность линии тут!
                     tracer.Color = color
                     tracer.Transparency = 1
                     tracer.Visible = false
@@ -501,6 +503,7 @@ RunService.RenderStepped:Connect(function()
 
                 Tracers[player].Color = color
                 Tracers[player].Role = role
+                Tracers[player].Thickness = tracerThickness -- <<<<< Если хочешь менять "на лету"
 
                 local rootPart = player.Character.HumanoidRootPart
                 local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
@@ -521,3 +524,4 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
