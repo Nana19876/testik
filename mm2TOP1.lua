@@ -358,3 +358,11 @@ for category, defaultColor in pairs(categories) do
 end
 
 EspTab:CreateSection("Tracer esp")
+
+EspTab:CreateToggle({
+    Name = "Tracer: Player",
+    CurrentValue = false,
+    Callback = function(Value)
+        tracerPlayerEnabled = Value
+    end
+})
