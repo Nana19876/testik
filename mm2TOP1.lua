@@ -684,20 +684,21 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
-EspTab:CreateSection("Outlining ESP (Players and Items)")
+EspTab:CreateSection("Outlining ESP (Players and Roles)")
 
--- Toggle states and colors
+-- Highlight state toggles
 local colorPlayerEnabled = false
 local murderHighlightEnabled = false
 local sheriffHighlightEnabled = false
 local innocentHighlightEnabled = false
 
+-- Highlight colors
 local colorPlayerColor = Color3.fromRGB(255, 255, 255)
 local murderHighlightColor = Color3.fromRGB(255, 30, 60)
 local sheriffHighlightColor = Color3.fromRGB(40, 255, 60)
 local innocentHighlightColor = Color3.fromRGB(200, 255, 255)
 
--- Helper functions to identify roles
+-- Role checks
 local function isMurder(player)
 	local bp, ch = player:FindFirstChild("Backpack"), player.Character
 	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
@@ -710,79 +711,72 @@ local function isInnocent(player)
 	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
 end
 
--- Apply highlight to player
-local function applyHighlight(player)
-	if player == LocalPlayer or not player.Character then return end
+-- Apply or update highlight on player
+local function ApplyHighlight(player)
+	if player == LocalPlayer then return end
+	if not player.Character then return end
 	local char = player.Character
 
 	-- Ensure Highlight exists
-	local hl = char:FindFirstChild("ColorHighlight")
-	if not hl then
-		hl = Instance.new("Highlight")
-		hl.Name = "ColorHighlight"
-		hl.FillTransparency = 1
-		hl.OutlineTransparency = 0
-		hl.Adornee = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart") or char
-		hl.Parent = char
+	local highlight = char:FindFirstChild("Highlight")
+	if not highlight then
+		highlight = Instance.new("Highlight")
+		highlight.Name = "Highlight"
+		highlight.FillTransparency = 1
+		highlight.OutlineTransparency = 0
+		highlight.Adornee = char
+		highlight.Parent = char
 	end
 
-	-- Always reset transparency
-	hl.FillTransparency = 1
-	hl.OutlineTransparency = 0
+	-- Always reset visibility
+	highlight.Enabled = false
 
-	-- Determine role color
+	-- Apply role-based color
 	if isMurder(player) and murderHighlightEnabled then
-		hl.OutlineColor = murderHighlightColor
-		hl.Enabled = true
+		highlight.OutlineColor = murderHighlightColor
+		highlight.Enabled = true
 	elseif isSheriff(player) and sheriffHighlightEnabled then
-		hl.OutlineColor = sheriffHighlightColor
-		hl.Enabled = true
+		highlight.OutlineColor = sheriffHighlightColor
+		highlight.Enabled = true
 	elseif isInnocent(player) and innocentHighlightEnabled then
-		hl.OutlineColor = innocentHighlightColor
-		hl.Enabled = true
+		highlight.OutlineColor = innocentHighlightColor
+		highlight.Enabled = true
 	elseif colorPlayerEnabled then
-		hl.OutlineColor = colorPlayerColor
-		hl.Enabled = true
-	else
-		hl.Enabled = false
+		highlight.OutlineColor = colorPlayerColor
+		highlight.Enabled = true
 	end
 end
 
--- Remove highlight
-local function removeHighlight(player)
-	local char = player.Character
-	if char then
-		local hl = char:FindFirstChild("ColorHighlight")
-		if hl then hl:Destroy() end
-	end
-end
-
--- Update all players
-local function updateAllHighlights()
+-- Update highlights for all players
+local function UpdateHighlights()
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer then
-			if player.Character then
-				applyHighlight(player)
-			end
+		if player ~= LocalPlayer and player.Character then
+			ApplyHighlight(player)
 		end
 	end
 end
 
--- Connect character respawn
+-- Hook into new players and respawns
 Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		ApplyHighlight(player)
+	end)
+end)
+for _, player in ipairs(Players:GetPlayers()) do
 	if player.Character then
-		task.delay(1, function() applyHighlight(player) end)
+		ApplyHighlight(player)
 	end
 	player.CharacterAdded:Connect(function()
 		task.wait(1)
-		applyHighlight(player)
+		ApplyHighlight(player)
 	end)
-end)
+end
 
--- Update every frame
-RunService.RenderStepped:Connect(updateAllHighlights)
+-- Run every frame to recheck role-based changes
+RunService.RenderStepped:Connect(UpdateHighlights)
 
--- === UI Elements ===
+-- === UI bindings ===
 EspTab:CreateToggle({
 	Name = "Outline: All Players",
 	CurrentValue = false,
@@ -842,5 +836,3 @@ EspTab:CreateColorPicker({
 		innocentHighlightColor = Color
 	end
 })
-
-
