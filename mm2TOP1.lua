@@ -684,4 +684,4 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
-
+EspTab:CreateSection("Сolor esp (игроки и предметы)")
