@@ -684,6 +684,230 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
+EspTab:CreateSection("Outlining ESP (Players and Roles)")
+
+-- Player/Role Highlight state toggles
+local colorPlayerEnabled = false
+local murderHighlightEnabled = false
+local sheriffHighlightEnabled = false
+local innocentHighlightEnabled = false
+
+-- Object Highlight toggles
+local trapHighlightEnabled = false
+local gunHighlightEnabled = false
+local coinHighlightEnabled = false
+
+-- Highlight colors
+local colorPlayerColor = Color3.fromRGB(255, 255, 255)
+local murderHighlightColor = Color3.fromRGB(255, 30, 60)
+local sheriffHighlightColor = Color3.fromRGB(40, 255, 60)
+local innocentHighlightColor = Color3.fromRGB(200, 255, 255)
+local trapHighlightColor = Color3.fromRGB(255, 200, 0)
+local gunHighlightColor = Color3.fromRGB(30, 144, 255)
+local coinHighlightColor = Color3.fromRGB(255, 215, 0)
+
+-- Role checks
+local function isMurder(player)
+	local bp, ch = player:FindFirstChild("Backpack"), player.Character
+	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+local function isSheriff(player)
+	local bp, ch = player:FindFirstChild("Backpack"), player.Character
+	return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
+end
+local function isInnocent(player)
+	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
+end
+
+-- Apply or update highlight on player
+local function ApplyHighlight(player)
+	if player == LocalPlayer then return end
+	if not player.Character then return end
+	local char = player.Character
+
+	-- Ensure Highlight exists
+	local highlight = char:FindFirstChild("Highlight")
+	if not highlight then
+		highlight = Instance.new("Highlight")
+		highlight.Name = "Highlight"
+		highlight.FillTransparency = 1
+		highlight.OutlineTransparency = 0
+		highlight.Adornee = char
+		highlight.Parent = char
+	end
+
+	-- Always reset visibility
+	highlight.Enabled = false
+
+	-- Apply role-based color
+	if isMurder(player) and murderHighlightEnabled then
+		highlight.OutlineColor = murderHighlightColor
+		highlight.Enabled = true
+	elseif isSheriff(player) and sheriffHighlightEnabled then
+		highlight.OutlineColor = sheriffHighlightColor
+		highlight.Enabled = true
+	elseif isInnocent(player) and innocentHighlightEnabled then
+		highlight.OutlineColor = innocentHighlightColor
+		highlight.Enabled = true
+	elseif colorPlayerEnabled then
+		highlight.OutlineColor = colorPlayerColor
+		highlight.Enabled = true
+	end
+end
+
+-- ==================== OBJECTS ====================
+
+local Workspace = game:GetService("Workspace")
+local objectHighlightRefs = {} -- store for cleanup
+
+local function UpdateObjectHighlights(objectName, color, enabled)
+	-- Удалить старые highlights если выключено
+	if not enabled then
+		if objectHighlightRefs[objectName] then
+			for _, hl in pairs(objectHighlightRefs[objectName]) do
+				if hl and hl.Parent then
+					hl:Destroy()
+				end
+			end
+			objectHighlightRefs[objectName] = nil
+		end
+		return
+	end
+	objectHighlightRefs[objectName] = objectHighlightRefs[objectName] or {}
+
+	-- Получить объекты по имени
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") and obj.Name:lower():find(objectName:lower()) then
+			local parent = obj.Parent
+			local highlight = parent and parent:FindFirstChild("Highlight_" .. objectName)
+			if not highlight then
+				highlight = Instance.new("Highlight")
+				highlight.Name = "Highlight_" .. objectName
+				highlight.FillTransparency = 1
+				highlight.OutlineTransparency = 0
+				highlight.Adornee = parent
+				highlight.Parent = parent
+				table.insert(objectHighlightRefs[objectName], highlight)
+			end
+			highlight.OutlineColor = color
+			highlight.Enabled = true
+		end
+	end
+end
+
+-- Обновление всех highlights
+local function UpdateHighlights()
+	-- Игроки
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer and player.Character then
+			ApplyHighlight(player)
+		end
+	end
+	-- Объекты
+	UpdateObjectHighlights("trap", trapHighlightColor, trapHighlightEnabled)
+	UpdateObjectHighlights("gun", gunHighlightColor, gunHighlightEnabled)
+	UpdateObjectHighlights("coin", coinHighlightColor, coinHighlightEnabled)
+end
+
+-- Hook into new players and respawns
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		ApplyHighlight(player)
+	end)
+end)
+for _, player in ipairs(Players:GetPlayers()) do
+	if player.Character then
+		ApplyHighlight(player)
+	end
+	player.CharacterAdded:Connect(function()
+		task.wait(1)
+		ApplyHighlight(player)
+	end)
+end
+
+RunService.RenderStepped:Connect(UpdateHighlights)
+
+-- === UI bindings ===
+EspTab:CreateToggle({
+	Name = "Outline: All Players",
+	CurrentValue = false,
+	Callback = function(Value) colorPlayerEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: All Players",
+	Color = colorPlayerColor,
+	Callback = function(Color) colorPlayerColor = Color end
+})
+
+EspTab:CreateToggle({
+	Name = "Outline: Murder",
+	CurrentValue = false,
+	Callback = function(Value) murderHighlightEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: Murder",
+	Color = murderHighlightColor,
+	Callback = function(Color) murderHighlightColor = Color end
+})
+
+EspTab:CreateToggle({
+	Name = "Outline: Sheriff",
+	CurrentValue = false,
+	Callback = function(Value) sheriffHighlightEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: Sheriff",
+	Color = sheriffHighlightColor,
+	Callback = function(Color) sheriffHighlightColor = Color end
+})
+
+EspTab:CreateToggle({
+	Name = "Outline: Innocent",
+	CurrentValue = false,
+	Callback = function(Value) innocentHighlightEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: Innocent",
+	Color = innocentHighlightColor,
+	Callback = function(Color) innocentHighlightColor = Color end
+})
+
+-- =========== Новые опции для Trap, Gun, Coin ===========
+
+EspTab:CreateToggle({
+	Name = "Outline: Trap",
+	CurrentValue = false,
+	Callback = function(Value) trapHighlightEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: Trap",
+	Color = trapHighlightColor,
+	Callback = function(Color) trapHighlightColor = Color end
+})
+
+EspTab:CreateToggle({
+	Name = "Outline: Gun",
+	CurrentValue = false,
+	Callback = function(Value) gunHighlightEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: Gun",
+	Color = gunHighlightColor,
+	Callback = function(Color) gunHighlightColor = Color end
+})
+
+EspTab:CreateToggle({
+	Name = "Outline: Coin",
+	CurrentValue = false,
+	Callback = function(Value) coinHighlightEnabled = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Outline Color: Coin",
+	Color = coinHighlightColor,
+	Callback = function(Color) coinHighlightColor = Color end
+})
+
 EspTab:CreateSection("3D Box")
 
 local box3dEnabled = false
