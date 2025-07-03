@@ -21,33 +21,31 @@ local categories = {
 
 local boxStates = {}
 local boxColors = {}
+local boxTypes = {}
 
--- ====== ESP ONLY FOR PLAYERS ======
+local boxVariants = {
+    "2D Box",
+    "3D Box",
+    "Corner Box"
+}
+
+-- ====== ESP ONLY FOR PLAYERS (2D Box) ======
 local runService = game:GetService("RunService")
 local players = game:GetService("Players")
 local localPlayer = players.LocalPlayer
 local camera = workspace.CurrentCamera
 
 local espCache = {}
-local espConnection -- чтобы останавливать рендер
+local espConnection
 
 local function createEsp(player)
     local drawings = {}
-
     drawings.box = Drawing.new("Square")
-    drawings.box.Thickness = 1
+    drawings.box.Thickness = 2
     drawings.box.Filled = false
     drawings.box.Color = boxColors["Player"]
     drawings.box.Visible = false
     drawings.box.ZIndex = 2
-
-    drawings.boxoutline = Drawing.new("Square")
-    drawings.boxoutline.Thickness = 3
-    drawings.boxoutline.Filled = false
-    drawings.boxoutline.Color = Color3.new(0,0,0)
-    drawings.boxoutline.Visible = false
-    drawings.boxoutline.ZIndex = 1
-
     espCache[player] = drawings
 end
 
@@ -63,30 +61,23 @@ end
 local function updateEsp(player, esp)
     local character = player and player.Character
     if character then
-        local head = character:FindFirstChild("Head")
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        if head and humanoidRootPart then
-            local pos, vis = camera:WorldToViewportPoint(humanoidRootPart.Position)
-            if vis and boxStates["Player"] then
+        local torso = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+        if torso then
+            local pos, vis = camera:WorldToViewportPoint(torso.Position)
+            if vis and boxStates["Player"] and boxTypes["Player"] == "2D Box" then
                 esp.box.Visible = true
-                esp.boxoutline.Visible = true
-                local size = Vector2.new(40, 60) -- Можно кастомизировать
-                esp.box.Size = size
-                esp.box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
+                local boxSize = Vector2.new(40, 40)
+                esp.box.Size = boxSize
+                esp.box.Position = Vector2.new(pos.X - boxSize.X/2, pos.Y - boxSize.Y/2)
                 esp.box.Color = boxColors["Player"]
-                esp.boxoutline.Size = size
-                esp.boxoutline.Position = esp.box.Position
             else
                 esp.box.Visible = false
-                esp.boxoutline.Visible = false
             end
         else
             esp.box.Visible = false
-            esp.boxoutline.Visible = false
         end
     else
         esp.box.Visible = false
-        esp.boxoutline.Visible = false
     end
 end
 
@@ -132,6 +123,7 @@ end
 for category, defaultColor in pairs(categories) do
     boxStates[category] = false
     boxColors[category] = defaultColor
+    boxTypes[category] = boxVariants[1]
 
     EspTab:CreateToggle({
         Name = "Box ESP: " .. category,
@@ -141,14 +133,9 @@ for category, defaultColor in pairs(categories) do
             if category == "Player" then
                 if Value then
                     enablePlayerEsp()
-                    print("Box ESP для Player включён")
                 else
                     disablePlayerEsp()
-                    print("Box ESP для Player выключён")
                 end
-            else
-                print("Box ESP для " .. category .. (Value and " включён" or " выключен"))
-                -- Для других категорий сюда вставишь свой esp-код, если появится
             end
         end
     })
@@ -159,12 +146,21 @@ for category, defaultColor in pairs(categories) do
         Callback = function(Color)
             boxColors[category] = Color
             if category == "Player" then
-                -- Меняем цвет уже существующих боксов
                 for _, drawings in pairs(espCache) do
                     drawings.box.Color = Color
                 end
             end
-            print("Цвет Box ESP для " .. category .. " изменён", Color)
+        end
+    })
+
+    EspTab:CreateDropdown({
+        Name = "Вариант бокса для " .. category,
+        Options = boxVariants,
+        CurrentOption = boxVariants[1],
+        MultiSelection = false,
+        Callback = function(option)
+            boxTypes[category] = option
+            print("Box-тип для " .. category .. ": " .. option)
         end
     })
 end
