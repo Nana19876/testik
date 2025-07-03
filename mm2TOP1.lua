@@ -13,7 +13,7 @@ EspTab:CreateSection("Box ESP")
 local categories = {
     Player   = Color3.fromRGB(255,255,255),
     Trap     = Color3.fromRGB(255,200,0),
-    Gun      = Color3.fromRGB(30,144,255),
+    Gun      = Color3.fromRGB(30,144,255), -- Это пункт меню для GunDrop
     Murder   = Color3.fromRGB(255,30,60),
     Sheriff  = Color3.fromRGB(40,255,60),
     Innocent = Color3.fromRGB(200,255,255),
@@ -31,6 +31,8 @@ local innocentBoxEnabled = false
 local innocentBoxColor = Color3.fromRGB(200,255,255)
 local coinBoxEnabled = false
 local coinBoxColor = Color3.fromRGB(255,215,0)
+local gunBoxEnabled = false
+local gunBoxColor = Color3.fromRGB(30,144,255)
 
 -- ========== ESP 2D Box для Player, Murder, Sheriff, Innocent ==========
 local Players = game:GetService("Players")
@@ -56,7 +58,6 @@ local function isSheriff(player)
 end
 
 local function isInnocent(player)
-    -- Игрок не является Murderer, не является Sheriff, и не LocalPlayer
     return not isMurderer(player) and not isSheriff(player) and player ~= LocalPlayer
 end
 
@@ -121,7 +122,6 @@ local function update2dEsp(player, esp)
     end
 end
 
--- Игроки ESP
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then create2dEsp(player) end
 end
@@ -165,6 +165,51 @@ local function removeCoinBox(coin)
             box[i]:Remove()
         end
         coinDrawings[coin] = nil
+    end
+end
+
+-- ========== GunDrop ESP ==========
+local gunDropBox = nil
+
+local function createGunDropBox()
+    if gunDropBox then return end
+    gunDropBox = Drawing.new("Square")
+    gunDropBox.Thickness = 2
+    gunDropBox.Filled = false
+    gunDropBox.Color = gunBoxColor
+    gunDropBox.Visible = false
+end
+
+local function removeGunDropBox()
+    if gunDropBox then
+        gunDropBox.Visible = false
+        gunDropBox:Remove()
+        gunDropBox = nil
+    end
+end
+
+local function updateGunDropBox()
+    if not gunBoxEnabled then
+        if gunDropBox then gunDropBox.Visible = false end
+        return
+    end
+    local gunDrop = workspace:FindFirstChild("GunDrop")
+    if gunDrop and gunDrop:IsA("BasePart") then
+        createGunDropBox()
+        local Camera = workspace.CurrentCamera
+        local pos, visible, depth = Camera:WorldToViewportPoint(gunDrop.Position)
+        if visible and depth > 0 then
+            local scale = math.clamp(1 / (depth * math.tan(math.rad(Camera.FieldOfView / 2)) * 2) * 1000, 10, 60)
+            local width, height = math.round(4 * scale), math.round(2 * scale)
+            gunDropBox.Size = Vector2.new(width, height)
+            gunDropBox.Position = Vector2.new(math.round(pos.X - width/2), math.round(pos.Y - height/2))
+            gunDropBox.Color = gunBoxColor
+            gunDropBox.Visible = true
+        else
+            gunDropBox.Visible = false
+        end
+    else
+        removeGunDropBox()
     end
 end
 
@@ -218,6 +263,9 @@ game:GetService("RunService").RenderStepped:Connect(function()
             end
         end
     end
+
+    -- GunDrop ESP
+    updateGunDropBox()
 end)
 
 -- ========== Rayfield Menu Integration ==========
@@ -240,6 +288,8 @@ for category, defaultColor in pairs(categories) do
                 innocentBoxEnabled = Value
             elseif category == "Coin" then
                 coinBoxEnabled = Value
+            elseif category == "Gun" then
+                gunBoxEnabled = Value
             end
         end
     })
@@ -282,6 +332,9 @@ for category, defaultColor in pairs(categories) do
                         box[i].Color = coinBoxColor
                     end
                 end
+            elseif category == "Gun" then
+                gunBoxColor = Color
+                if gunDropBox then gunDropBox.Color = gunBoxColor end
             end
         end
     })
