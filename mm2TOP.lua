@@ -27,10 +27,12 @@ local murderBoxEnabled = false
 local murderBoxColor = Color3.fromRGB(255,30,60)
 local sheriffBoxEnabled = false
 local sheriffBoxColor = Color3.fromRGB(40,255,60)
+local innocentBoxEnabled = false
+local innocentBoxColor = Color3.fromRGB(200,255,255)
 local coinBoxEnabled = false
 local coinBoxColor = Color3.fromRGB(255,215,0)
 
--- ========== ESP 2D Box для Player, Murder, Sheriff ==========
+-- ========== ESP 2D Box для Player, Murder, Sheriff, Innocent ==========
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
@@ -51,6 +53,11 @@ local function isSheriff(player)
     local backpack = player:FindFirstChild("Backpack")
     local character = player.Character
     return (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun"))
+end
+
+local function isInnocent(player)
+    -- Игрок не является Murderer, не является Sheriff, и не LocalPlayer
+    return not isMurderer(player) and not isSheriff(player) and player ~= LocalPlayer
 end
 
 local function create2dEsp(player)
@@ -87,12 +94,15 @@ local function update2dEsp(player, esp)
                 local x, y = round(position.X, position.Y)
                 esp.box.Size = newVector2(width, height)
                 esp.box.Position = newVector2(round(x - width / 2, y - height / 2))
-                -- Приоритет: Murder > Sheriff > Player
+                -- Приоритет: Murder > Sheriff > Innocent > Player
                 if isMurderer(player) and murderBoxEnabled then
                     esp.box.Color = murderBoxColor
                     esp.box.Visible = true
                 elseif isSheriff(player) and sheriffBoxEnabled then
                     esp.box.Color = sheriffBoxColor
+                    esp.box.Visible = true
+                elseif isInnocent(player) and innocentBoxEnabled then
+                    esp.box.Color = innocentBoxColor
                     esp.box.Visible = true
                 elseif box2dEnabled and boxStates["Player"] then
                     esp.box.Color = box2dColor
@@ -226,6 +236,8 @@ for category, defaultColor in pairs(categories) do
                 murderBoxEnabled = Value
             elseif category == "Sheriff" then
                 sheriffBoxEnabled = Value
+            elseif category == "Innocent" then
+                innocentBoxEnabled = Value
             elseif category == "Coin" then
                 coinBoxEnabled = Value
             end
@@ -254,6 +266,13 @@ for category, defaultColor in pairs(categories) do
                 for player, esp in pairs(espCache) do
                     if isSheriff(player) then
                         esp.box.Color = sheriffBoxColor
+                    end
+                end
+            elseif category == "Innocent" then
+                innocentBoxColor = Color
+                for player, esp in pairs(espCache) do
+                    if isInnocent(player) then
+                        esp.box.Color = innocentBoxColor
                     end
                 end
             elseif category == "Coin" then
