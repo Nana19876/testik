@@ -684,8 +684,6 @@ RunService.RenderStepped:Connect(function()
     cleanupTracers(valid)
 end)
 
-Outline
-
 EspTab:CreateSection("3D Box")
 
 local box3dEnabled = false
