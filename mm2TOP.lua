@@ -13,7 +13,7 @@ EspTab:CreateSection("Box ESP")
 local categories = {
     Player   = Color3.fromRGB(255,255,255),
     Trap     = Color3.fromRGB(255,200,0),
-    Gun      = Color3.fromRGB(30,144,255), -- Это пункт меню для GunDrop
+    Gun      = Color3.fromRGB(30,144,255), -- GunDrop ESP
     Murder   = Color3.fromRGB(255,30,60),
     Sheriff  = Color3.fromRGB(40,255,60),
     Innocent = Color3.fromRGB(200,255,255),
@@ -168,48 +168,61 @@ local function removeCoinBox(coin)
     end
 end
 
--- ========== GunDrop ESP ==========
-local gunDropBox = nil
-
-local function createGunDropBox()
-    if gunDropBox then return end
-    gunDropBox = Drawing.new("Square")
-    gunDropBox.Thickness = 2
-    gunDropBox.Filled = false
-    gunDropBox.Color = gunBoxColor
-    gunDropBox.Visible = false
-end
-
-local function removeGunDropBox()
-    if gunDropBox then
-        gunDropBox.Visible = false
-        gunDropBox:Remove()
-        gunDropBox = nil
-    end
-end
-
-local function updateGunDropBox()
+-- ========== GunDrop ESP (4 линии) ==========
+local gunDropLines = {} -- [GunDrop] = {Line,Line,Line,Line}
+local function updateGunDropESP()
     if not gunBoxEnabled then
-        if gunDropBox then gunDropBox.Visible = false end
+        for obj, box in pairs(gunDropLines) do
+            for i = 1, 4 do if box[i] then box[i].Visible = false end end
+        end
         return
     end
-    local gunDrop = workspace:FindFirstChild("GunDrop")
-    if gunDrop and gunDrop:IsA("BasePart") then
-        createGunDropBox()
-        local Camera = workspace.CurrentCamera
-        local pos, visible, depth = Camera:WorldToViewportPoint(gunDrop.Position)
-        if visible and depth > 0 then
-            local scale = math.clamp(1 / (depth * math.tan(math.rad(Camera.FieldOfView / 2)) * 2) * 1000, 10, 60)
-            local width, height = math.round(4 * scale), math.round(2 * scale)
-            gunDropBox.Size = Vector2.new(width, height)
-            gunDropBox.Position = Vector2.new(math.round(pos.X - width/2), math.round(pos.Y - height/2))
-            gunDropBox.Color = gunBoxColor
-            gunDropBox.Visible = true
-        else
-            gunDropBox.Visible = false
+    local Camera = workspace.CurrentCamera
+    local targets = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name == "GunDrop" then
+            targets[obj] = true
+            local box = gunDropLines[obj]
+            if not box then
+                box = {}
+                for i = 1, 4 do
+                    local line = Drawing.new("Line")
+                    line.Color = gunBoxColor
+                    line.Thickness = 2
+                    line.Transparency = 1
+                    line.Visible = false
+                    box[i] = line
+                end
+                gunDropLines[obj] = box
+            end
+            local center, visible = Camera:WorldToViewportPoint(obj.Position)
+            if visible then
+                local size2D = 36
+                local half = size2D / 2
+                local corners = {
+                    Vector2.new(center.X - half, center.Y - half),
+                    Vector2.new(center.X - half, center.Y + half),
+                    Vector2.new(center.X + half, center.Y + half),
+                    Vector2.new(center.X + half, center.Y - half)
+                }
+                for i = 1, 4 do
+                    box[i].From = corners[i]
+                    box[i].To = corners[i % 4 + 1]
+                    box[i].Visible = true
+                    box[i].Color = gunBoxColor
+                end
+            else
+                for i = 1, 4 do
+                    box[i].Visible = false
+                end
+            end
         end
-    else
-        removeGunDropBox()
+    end
+    for obj, box in pairs(gunDropLines) do
+        if not targets[obj] or not obj:IsDescendantOf(workspace) then
+            for i = 1, 4 do if box[i] then box[i]:Remove() end end
+            gunDropLines[obj] = nil
+        end
     end
 end
 
@@ -264,11 +277,12 @@ game:GetService("RunService").RenderStepped:Connect(function()
         end
     end
 
-    -- GunDrop ESP
-    updateGunDropBox()
+    -- GunDrop ESP (4 линии)
+    updateGunDropESP()
 end)
 
 -- ========== Rayfield Menu Integration ==========
+
 for category, defaultColor in pairs(categories) do
     boxStates[category] = false
     boxColors[category] = defaultColor
@@ -334,7 +348,11 @@ for category, defaultColor in pairs(categories) do
                 end
             elseif category == "Gun" then
                 gunBoxColor = Color
-                if gunDropBox then gunDropBox.Color = gunBoxColor end
+                for _, box in pairs(gunDropLines) do
+                    for i = 1, 4 do
+                        box[i].Color = gunBoxColor
+                    end
+                end
             end
         end
     })
