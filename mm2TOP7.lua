@@ -111,9 +111,20 @@ local function update2dEsp(player, esp)
     end
 end
 
+-- Игроки ESP
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then create2dEsp(player) end
+end
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then create2dEsp(player) end
+end)
+Players.PlayerRemoving:Connect(function(player)
+    remove2dEsp(player)
+end)
+
 -- ========== COIN 2D BOX (4-LINE) ==========
 local coinDrawings = {} -- [coin] = {Line,Line,Line,Line}
-local COIN_PART_NAME = "MainCoin" -- Можно изменить, если у тебя другая деталь монеты
+local COIN_PART_NAME = "MainCoin" -- Или CoinVisual если у тебя реально так называется деталь!
 
 local function updateCoinBox(coin)
     local box = coinDrawings[coin]
@@ -191,7 +202,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
             end
         end
     else
-        -- Отключаем все боксы если выключен ESP монет
         for _, box in pairs(coinDrawings) do
             for i = 1, 4 do
                 box[i].Visible = false
@@ -201,7 +211,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
 end)
 
 -- ========== Rayfield Menu Integration ==========
-
 for category, defaultColor in pairs(categories) do
     boxStates[category] = false
     boxColors[category] = defaultColor
