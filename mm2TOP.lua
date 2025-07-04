@@ -876,28 +876,6 @@ EspTab:CreateColorPicker({
 -- =========== Новые опции для Trap, Gun, Coin ===========
 
 EspTab:CreateToggle({
-	Name = "Outline: Trap",
-	CurrentValue = false,
-	Callback = function(Value) trapHighlightEnabled = Value end
-})
-EspTab:CreateColorPicker({
-	Name = "Outline Color: Trap",
-	Color = trapHighlightColor,
-	Callback = function(Color) trapHighlightColor = Color end
-})
-
-EspTab:CreateToggle({
-	Name = "Outline: Gun",
-	CurrentValue = false,
-	Callback = function(Value) gunHighlightEnabled = Value end
-})
-EspTab:CreateColorPicker({
-	Name = "Outline Color: Gun",
-	Color = gunHighlightColor,
-	Callback = function(Color) gunHighlightColor = Color end
-})
-
-EspTab:CreateToggle({
 	Name = "Outline: Coin",
 	CurrentValue = false,
 	Callback = function(Value) coinHighlightEnabled = Value end
