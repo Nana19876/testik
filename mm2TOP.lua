@@ -919,18 +919,12 @@ local box3dEnabled = false
 local box3dMurderEnabled = false
 local box3dSheriffEnabled = false
 local box3dInnocentEnabled = false
-local box3dTrapEnabled = false
-local box3dGunEnabled = false
-local box3dCoinEnabled = false
 
 -- Colors
 local box3dColor = Color3.fromRGB(255, 255, 255)
 local box3dMurderColor = Color3.fromRGB(255, 30, 60)
 local box3dSheriffColor = Color3.fromRGB(40, 255, 60)
 local box3dInnocentColor = Color3.fromRGB(200, 255, 255)
-local box3dTrapColor = Color3.fromRGB(255, 200, 0)
-local box3dGunColor = Color3.fromRGB(30, 144, 255)
-local box3dCoinColor = Color3.fromRGB(255, 215, 0)
 
 -- GUI Binds
 EspTab:CreateToggle({ Name = "3D Box: Players", CurrentValue = false, Callback = function(v) box3dEnabled = v end })
@@ -941,12 +935,6 @@ EspTab:CreateToggle({ Name = "3D Box: Sheriff", CurrentValue = false, Callback =
 EspTab:CreateColorPicker({ Name = "3D Box Color: Sheriff", Color = box3dSheriffColor, Callback = function(c) box3dSheriffColor = c end })
 EspTab:CreateToggle({ Name = "3D Box: Innocent", CurrentValue = false, Callback = function(v) box3dInnocentEnabled = v end })
 EspTab:CreateColorPicker({ Name = "3D Box Color: Innocent", Color = box3dInnocentColor, Callback = function(c) box3dInnocentColor = c end })
-EspTab:CreateToggle({ Name = "3D Box: Trap", CurrentValue = false, Callback = function(v) box3dTrapEnabled = v end })
-EspTab:CreateColorPicker({ Name = "3D Box Color: Trap", Color = box3dTrapColor, Callback = function(c) box3dTrapColor = c end })
-EspTab:CreateToggle({ Name = "3D Box: Gun", CurrentValue = false, Callback = function(v) box3dGunEnabled = v end })
-EspTab:CreateColorPicker({ Name = "3D Box Color: Gun", Color = box3dGunColor, Callback = function(c) box3dGunColor = c end })
-EspTab:CreateToggle({ Name = "3D Box: Coin", CurrentValue = false, Callback = function(v) box3dCoinEnabled = v end })
-EspTab:CreateColorPicker({ Name = "3D Box Color: Coin", Color = box3dCoinColor, Callback = function(c) box3dCoinColor = c end })
 
 -- === Drawing Logic ===
 local Players = game:GetService("Players")
@@ -1050,36 +1038,6 @@ RunService.RenderStepped:Connect(function()
 			end
 		end
 	end
-
-	-- Объекты
-	local function drawObjectBoxes(name, color, enabled)
-		if not enabled then return end
-		for _, obj in ipairs(Workspace:GetDescendants()) do
-			if obj:IsA("BasePart") and obj.Name:lower():find(name:lower()) then
-				local id = name .. "_" .. obj:GetDebugId(1)
-				local verts = GetCorners(obj.CFrame, obj.Size)
-				local lines = GetOrCreateLines(id)
-				for i, edge in ipairs(faces) do
-					local a, b = verts[edge[1]], verts[edge[2]]
-					local sa, va = Camera:WorldToViewportPoint(a)
-					local sb, vb = Camera:WorldToViewportPoint(b)
-					local line = lines[i]
-					if va and vb and IsValidVector2(Vector2.new(sa.X, sa.Y)) and IsValidVector2(Vector2.new(sb.X, sb.Y)) then
-						line.From = Vector2.new(sa.X, sa.Y)
-						line.To = Vector2.new(sb.X, sb.Y)
-						line.Color = color
-						line.Visible = true
-					else
-						line.Visible = false
-					end
-				end
-			end
-		end
-	end
-
-	drawObjectBoxes("Trap", box3dTrapColor, box3dTrapEnabled)
-	drawObjectBoxes("Gun", box3dGunColor, box3dGunEnabled)
-	drawObjectBoxes("Coin", box3dCoinColor, box3dCoinEnabled)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
