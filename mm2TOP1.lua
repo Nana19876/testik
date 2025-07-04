@@ -1044,3 +1044,4 @@ Players.PlayerRemoving:Connect(function(player)
 	RemoveLines("Player_" .. player.UserId)
 end)
 
+EspTab:CreateSection("FULL-Box")
