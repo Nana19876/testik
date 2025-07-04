@@ -1022,4 +1022,99 @@ Players.PlayerRemoving:Connect(function(player)
 	RemoveLines("Player_" .. player.UserId)
 end)
 
+-- Добавим раздел FULL-Box
 EspTab:CreateSection("FULL-Box")
+
+local fullBoxEnabled = false
+
+EspTab:CreateToggle({
+    Name = "FULL Box ESP",
+    CurrentValue = false,
+    Callback = function(Value)
+        fullBoxEnabled = Value
+        for _, box in pairs(FullESP) do
+            box.Visible = false
+        end
+    end
+})
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local FullESP = {}
+
+local function CreateBox()
+    local box = Drawing.new("Square")
+    box.Thickness = 1
+    box.Filled = true
+    box.Transparency = 0.4
+    box.Color = Color3.fromRGB(255, 100, 100)
+    box.Visible = false
+    return box
+end
+
+local function UpdateBox(box, player)
+    local character = player.Character
+    if not character then 
+        box.Visible = false 
+        return 
+    end
+
+    local head = character:FindFirstChild("Head")
+    local lowerTorso = character:FindFirstChild("LowerTorso") or character:FindFirstChild("HumanoidRootPart")
+
+    if not head or not lowerTorso then 
+        box.Visible = false 
+        return 
+    end
+
+    local offset = Vector3.new(0, lowerTorso:IsA("BasePart") and lowerTorso.Size.Y / 2 or 0, 0)
+    local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
+    local footPos, footOnScreen = Camera:WorldToViewportPoint(lowerTorso.Position - offset)
+
+    if not headOnScreen or not footOnScreen then 
+        box.Visible = false 
+        return 
+    end
+
+    local boxHeight = math.abs(footPos.Y - headPos.Y) * 1.2
+    local boxWidth = boxHeight * 0.5 * 1
+
+    local centerX = (headPos.X + footPos.X) / 2
+    local centerY = (headPos.Y + footPos.Y) / 2
+
+    box.Position = Vector2.new(centerX - boxWidth / 2, centerY - boxHeight / 2)
+    box.Size = Vector2.new(boxWidth, boxHeight)
+    box.Visible = true
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        FullESP[player] = CreateBox()
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        FullESP[player] = CreateBox()
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if FullESP[player] then
+        FullESP[player]:Remove()
+        FullESP[player] = nil
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not fullBoxEnabled then
+        for _, box in pairs(FullESP) do box.Visible = false end
+        return
+    end
+    for player, box in pairs(FullESP) do
+        UpdateBox(box, player)
+    end
+end)
