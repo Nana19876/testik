@@ -1024,7 +1024,7 @@ end)
 
 EspTab:CreateSection("Role Tags")
 
--- Global settings
+-- Global Settings
 _G.ShowSheriffTag = false
 _G.ShowMurderTag = false
 _G.ShowInnocentTag = false
@@ -1067,12 +1067,23 @@ EspTab:CreateColorPicker({
 	Callback = function(Color) _G.InnocentTagColor = Color end
 })
 
--- ESP Logic
+-- Main Logic
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 local roleTags = {} -- [player] = BillboardGui
+
+-- Удаление сторонних надписей
+local function clearOtherBillboards(player)
+	local char = player.Character
+	if not char then return end
+	for _, gui in pairs(char:GetChildren()) do
+		if gui:IsA("BillboardGui") and gui.Name ~= "RoleTag" then
+			gui:Destroy()
+		end
+	end
+end
 
 local function isSheriff(player)
 	local bp = player:FindFirstChild("Backpack")
@@ -1087,7 +1098,7 @@ local function isMurder(player)
 end
 
 local function isInnocent(player)
-	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
+	return not isSheriff(player) and not isMurder(player) and player ~= LocalPlayer
 end
 
 local function createRoleTag(player, text, color)
@@ -1101,7 +1112,7 @@ local function createRoleTag(player, text, color)
 	local head = char:FindFirstChild("Head")
 	if not head then return end
 
-	clearOtherBillboards(player) -- Удалить чужие теги
+	clearOtherBillboards(player)
 
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "RoleTag"
@@ -1125,7 +1136,6 @@ local function createRoleTag(player, text, color)
 	roleTags[player] = tag
 end
 
-
 local function updateRoleColor(player, color)
 	local gui = roleTags[player]
 	if gui and gui:FindFirstChild("RoleLabel") then
@@ -1140,6 +1150,7 @@ local function removeRoleTag(player)
 	end
 end
 
+-- Обновление каждый кадр
 RunService.RenderStepped:Connect(function()
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
@@ -1159,4 +1170,6 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
+-- Очистка при выходе игрока
 Players.PlayerRemoving:Connect(removeRoleTag)
+
