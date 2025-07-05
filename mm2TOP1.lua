@@ -1091,11 +1091,17 @@ local function isInnocent(player)
 end
 
 local function createRoleTag(player, text, color)
-	if roleTags[player] then return end
+	if roleTags[player] then
+		roleTags[player]:Destroy()
+		roleTags[player] = nil
+	end
+
 	local char = player.Character
 	if not char then return end
 	local head = char:FindFirstChild("Head")
 	if not head then return end
+
+	clearOtherBillboards(player) -- Удалить чужие теги
 
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "RoleTag"
@@ -1115,9 +1121,10 @@ local function createRoleTag(player, text, color)
 	label.TextScaled = true
 	label.Parent = tag
 
-	tag.Parent = char
+	tag.Parent = head
 	roleTags[player] = tag
 end
+
 
 local function updateRoleColor(player, color)
 	local gui = roleTags[player]
