@@ -1104,7 +1104,7 @@ local function createRoleTag(player, text, color)
 	tag.AlwaysOnTop = true
 	tag.StudsOffset = Vector3.new(0, 2.5, 0)
 
-	local label = Instance.new("123")
+	local label = Instance.new("TextLabel")
 	label.Name = "RoleLabel"
 	label.Size = UDim2.new(1, 0, 1, 0)
 	label.BackgroundTransparency = 1
