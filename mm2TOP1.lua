@@ -1022,4 +1022,74 @@ Players.PlayerRemoving:Connect(function(player)
 	RemoveLines("Player_" .. player.UserId)
 end)
 
-EspTab:CreateSection("Skeleton")
+EspTab:CreateSection("esp-role")
+
+EspTab:CreateToggle({
+	Name = "Role Tag: Sheriff",
+	CurrentValue = false,
+	Callback = function(Value)
+		_G.ShowSheriffTag = Value
+	end
+})
+
+-- === Sheriff ESP надпись ===
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local sheriffTags = {}
+
+local function isSheriff(player)
+	local backpack = player:FindFirstChild("Backpack")
+	local character = player.Character
+	return (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun"))
+end
+
+local function createSheriffTag(player)
+	if sheriffTags[player] then return end
+	local character = player.Character
+	if not character then return end
+
+	local head = character:FindFirstChild("Head")
+	if not head then return end
+
+	local tag = Instance.new("BillboardGui")
+	tag.Name = "SheriffTag"
+	tag.Size = UDim2.new(0, 100, 0, 40)
+	tag.Adornee = head
+	tag.AlwaysOnTop = true
+	tag.StudsOffset = Vector3.new(0, 2.5, 0)
+
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.Text = "Sheriff"
+	textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	textLabel.TextStrokeTransparency = 1 -- без обводки
+	textLabel.Font = Enum.Font.GothamBold
+	textLabel.TextScaled = true
+	textLabel.Parent = tag
+
+	tag.Parent = character
+	sheriffTags[player] = tag
+end
+
+local function removeSheriffTag(player)
+	if sheriffTags[player] then
+		sheriffTags[player]:Destroy()
+		sheriffTags[player] = nil
+	end
+end
+
+RunService.RenderStepped:Connect(function()
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then
+			if _G.ShowSheriffTag and isSheriff(player) then
+				createSheriffTag(player)
+			else
+				removeSheriffTag(player)
+			end
+		end
+	end
+end)
+
+Players.PlayerRemoving:Connect(removeSheriffTag)
