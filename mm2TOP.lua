@@ -1022,16 +1022,6 @@ Players.PlayerRemoving:Connect(function(player)
 	RemoveLines("Player_" .. player.UserId)
 end)
 
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-
-local Window = Rayfield:CreateWindow({
-	Name = "ESP Menu",
-	LoadingTitle = "Loading...",
-	LoadingSubtitle = "Role Tags",
-	ConfigurationSaving = { Enabled = false }
-})
-
-local EspTab = Window:CreateTab("ESP", 4483362458)
 EspTab:CreateSection("Role Tags")
 
 -- Global settings
@@ -1163,4 +1153,3 @@ RunService.RenderStepped:Connect(function()
 end)
 
 Players.PlayerRemoving:Connect(removeRoleTag)
-
