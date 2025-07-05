@@ -1024,59 +1024,93 @@ end)
 
 EspTab:CreateSection("esp-role")
 
+-- ========== НАСТРОЙКИ ==========
+_G.ShowSheriffTag = false
+_G.ShowMurderTag = false
+_G.SheriffTagColor = Color3.fromRGB(255, 255, 255)
+_G.MurderTagColor = Color3.fromRGB(255, 0, 0)
+
 EspTab:CreateToggle({
 	Name = "Role Tag: Sheriff",
 	CurrentValue = false,
-	Callback = function(Value)
-		_G.ShowSheriffTag = Value
-	end
+	Callback = function(Value) _G.ShowSheriffTag = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Sheriff Tag Color",
+	Color = _G.SheriffTagColor,
+	Callback = function(Color) _G.SheriffTagColor = Color end
 })
 
--- === Sheriff ESP надпись ===
+EspTab:CreateToggle({
+	Name = "Role Tag: Murder",
+	CurrentValue = false,
+	Callback = function(Value) _G.ShowMurderTag = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Murder Tag Color",
+	Color = _G.MurderTagColor,
+	Callback = function(Color) _G.MurderTagColor = Color end
+})
+
+-- ========== ЛОГИКА ESP ==========
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local sheriffTags = {}
+
+local roleTags = {} -- [player] = BillboardGui
 
 local function isSheriff(player)
-	local backpack = player:FindFirstChild("Backpack")
-	local character = player.Character
-	return (backpack and backpack:FindFirstChild("Gun")) or (character and character:FindFirstChild("Gun"))
+	local bp = player:FindFirstChild("Backpack")
+	local ch = player.Character
+	return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
 end
 
-local function createSheriffTag(player)
-	if sheriffTags[player] then return end
-	local character = player.Character
-	if not character then return end
+local function isMurder(player)
+	local bp = player:FindFirstChild("Backpack")
+	local ch = player.Character
+	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
 
-	local head = character:FindFirstChild("Head")
+local function createRoleTag(player, text, color)
+	if roleTags[player] then return end
+	local char = player.Character
+	if not char then return end
+	local head = char:FindFirstChild("Head")
 	if not head then return end
 
 	local tag = Instance.new("BillboardGui")
-	tag.Name = "SheriffTag"
+	tag.Name = "RoleTag"
 	tag.Size = UDim2.new(0, 100, 0, 40)
 	tag.Adornee = head
 	tag.AlwaysOnTop = true
 	tag.StudsOffset = Vector3.new(0, 2.5, 0)
 
-	local textLabel = Instance.new("TextLabel")
-	textLabel.Size = UDim2.new(1, 0, 1, 0)
-	textLabel.BackgroundTransparency = 1
-	textLabel.Text = "Sheriff"
-	textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	textLabel.TextStrokeTransparency = 1 -- без обводки
-	textLabel.Font = Enum.Font.GothamBold
-	textLabel.TextScaled = true
-	textLabel.Parent = tag
+	local label = Instance.new("TextLabel")
+	label.Name = "RoleLabel"
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = color
+	label.TextStrokeTransparency = 1
+	label.Font = Enum.Font.GothamBold
+	label.TextScaled = true
+	label.Parent = tag
 
-	tag.Parent = character
-	sheriffTags[player] = tag
+	tag.Parent = char
+	roleTags[player] = tag
 end
 
-local function removeSheriffTag(player)
-	if sheriffTags[player] then
-		sheriffTags[player]:Destroy()
-		sheriffTags[player] = nil
+local function removeRoleTag(player)
+	if roleTags[player] then
+		roleTags[player]:Destroy()
+		roleTags[player] = nil
+	end
+end
+
+local function updateRoleColor(player, color)
+	local gui = roleTags[player]
+	if gui and gui:FindFirstChild("RoleLabel") then
+		gui.RoleLabel.TextColor3 = color
 	end
 end
 
@@ -1084,12 +1118,16 @@ RunService.RenderStepped:Connect(function()
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
 			if _G.ShowSheriffTag and isSheriff(player) then
-				createSheriffTag(player)
+				createRoleTag(player, "Sheriff", _G.SheriffTagColor)
+				updateRoleColor(player, _G.SheriffTagColor)
+			elseif _G.ShowMurderTag and isMurder(player) then
+				createRoleTag(player, "Murder", _G.MurderTagColor)
+				updateRoleColor(player, _G.MurderTagColor)
 			else
-				removeSheriffTag(player)
+				removeRoleTag(player)
 			end
 		end
 	end
 end)
 
-Players.PlayerRemoving:Connect(removeSheriffTag)
+Players.PlayerRemoving:Connect(removeRoleTag)
