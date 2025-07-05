@@ -1074,7 +1074,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local roleTags = {} -- [player] = BillboardGui
 
--- Удаление сторонних надписей
+-- Удаление лишних надписей, включая "Невиновен" и т.д.
 local function clearOtherBillboards(player)
 	local char = player.Character
 	if not char then return end
@@ -1085,6 +1085,7 @@ local function clearOtherBillboards(player)
 	end
 end
 
+-- Проверка ролей
 local function isSheriff(player)
 	local bp = player:FindFirstChild("Backpack")
 	local ch = player.Character
@@ -1101,6 +1102,7 @@ local function isInnocent(player)
 	return not isSheriff(player) and not isMurder(player) and player ~= LocalPlayer
 end
 
+-- Создание текстового тега
 local function createRoleTag(player, text, color)
 	if roleTags[player] then
 		roleTags[player]:Destroy()
@@ -1136,6 +1138,7 @@ local function createRoleTag(player, text, color)
 	roleTags[player] = tag
 end
 
+-- Обновление цвета
 local function updateRoleColor(player, color)
 	local gui = roleTags[player]
 	if gui and gui:FindFirstChild("RoleLabel") then
@@ -1143,6 +1146,7 @@ local function updateRoleColor(player, color)
 	end
 end
 
+-- Удаление тега
 local function removeRoleTag(player)
 	if roleTags[player] then
 		roleTags[player]:Destroy()
@@ -1172,4 +1176,5 @@ end)
 
 -- Очистка при выходе игрока
 Players.PlayerRemoving:Connect(removeRoleTag)
+
 
