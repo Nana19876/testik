@@ -1240,5 +1240,89 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
+-- ========== Gun Text ESP ==========
+local gunTextEnabled = false
+local gunTextColor = Color3.fromRGB(30, 144, 255)
 
+EspTab:CreateToggle({
+    Name = "Text: Gun",
+    CurrentValue = false,
+    Callback = function(Value)
+        gunTextEnabled = Value
+    end
+})
+
+EspTab:CreateColorPicker({
+    Name = "Text Color: Gun",
+    Color = gunTextColor,
+    Callback = function(Color)
+        gunTextColor = Color
+    end
+})
+
+local gunTextLabels = {}
+
+local function removeGunTextLabel(part)
+    if gunTextLabels[part] then
+        gunTextLabels[part]:Destroy()
+        gunTextLabels[part] = nil
+    end
+end
+
+game:GetService("Players").PlayerRemoving:Connect(function()
+    for part, label in pairs(gunTextLabels) do
+        if label then label:Destroy() end
+    end
+    gunTextLabels = {}
+end)
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not gunTextEnabled then
+        for _, label in pairs(gunTextLabels) do
+            if label then label.Enabled = false end
+        end
+        return
+    end
+
+    local gunParts = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name == "GunDrop" then
+            gunParts[obj] = true
+            if not gunTextLabels[obj] then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "GunTextESP"
+                billboard.Size = UDim2.new(0, 70, 0, 20)
+                billboard.Adornee = obj
+                billboard.AlwaysOnTop = true
+                billboard.StudsOffset = Vector3.new(0, 1.2, 0)
+
+                local text = Instance.new("TextLabel")
+                text.Name = "Text"
+                text.Size = UDim2.new(1, 0, 1, 0)
+                text.BackgroundTransparency = 1
+                text.Text = "Gun"
+                text.TextColor3 = gunTextColor
+                text.TextStrokeTransparency = 0.2
+                text.Font = Enum.Font.GothamBold
+                text.TextScaled = true
+                text.Parent = billboard
+
+                billboard.Parent = obj
+                gunTextLabels[obj] = billboard
+            else
+                gunTextLabels[obj].Enabled = true
+                if gunTextLabels[obj]:FindFirstChild("Text") then
+                    gunTextLabels[obj].Text.TextColor3 = gunTextColor
+                end
+            end
+        end
+    end
+
+    -- Remove labels from missing guns
+    for obj, _ in pairs(gunTextLabels) do
+        if not gunParts[obj] or not obj:IsDescendantOf(workspace) then
+            removeGunTextLabel(obj)
+        end
+    end
+end)
 
