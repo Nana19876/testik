@@ -1177,4 +1177,68 @@ end)
 -- Очистка при выходе игрока
 Players.PlayerRemoving:Connect(removeRoleTag)
 
+EspTab:CreateSection("other")
+
+-- ========== Новый раздел: ESP Nickname ==========
+local espNicknameEnabled = false
+
+EspTab:CreateToggle({
+    Name = "ESP-Nickname",
+    CurrentValue = false,
+    Callback = function(Value)
+        espNicknameEnabled = Value
+    end
+})
+
+-- ======== Логика отрисовки никнейма ========
+local nicknameLabels = {}
+
+local function removeNicknameLabel(player)
+    if nicknameLabels[player] then
+        nicknameLabels[player]:Destroy()
+        nicknameLabels[player] = nil
+    end
+end
+
+game:GetService("Players").PlayerRemoving:Connect(removeNicknameLabel)
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not espNicknameEnabled then
+        for _, label in pairs(nicknameLabels) do
+            if label then label.Enabled = false end
+        end
+        return
+    end
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            if not nicknameLabels[player] then
+                local head = player.Character.Head
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "ESP_Nickname"
+                billboard.Size = UDim2.new(0, 100, 0, 20)
+                billboard.Adornee = head
+                billboard.AlwaysOnTop = true
+                billboard.StudsOffset = Vector3.new(0, 2, 0)
+                local text = Instance.new("TextLabel")
+                text.Size = UDim2.new(1, 0, 1, 0)
+                text.BackgroundTransparency = 1
+                text.Text = player.DisplayName .. " [" .. player.Name .. "]"
+                text.TextColor3 = Color3.new(1,1,1)
+                text.TextStrokeTransparency = 0.4
+                text.Font = Enum.Font.GothamBold
+                text.TextScaled = true
+                text.Parent = billboard
+                billboard.Parent = head
+                nicknameLabels[player] = billboard
+            else
+                nicknameLabels[player].Enabled = true
+                nicknameLabels[player].RoleLabel.Text = player.DisplayName .. " [" .. player.Name .. "]"
+            end
+        else
+            removeNicknameLabel(player)
+        end
+    end
+end)
+
+
 
