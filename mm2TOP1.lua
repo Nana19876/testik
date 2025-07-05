@@ -1024,12 +1024,16 @@ end)
 
 EspTab:CreateSection("esp-role")
 
--- ========== НАСТРОЙКИ ==========
+-- ========== Глобальные настройки ==========
 _G.ShowSheriffTag = false
 _G.ShowMurderTag = false
-_G.SheriffTagColor = Color3.fromRGB(255, 255, 255)
-_G.MurderTagColor = Color3.fromRGB(255, 0, 0)
+_G.ShowInnocentTag = false
 
+_G.SheriffTagColor = Color3.fromRGB(40, 255, 60)
+_G.MurderTagColor = Color3.fromRGB(255, 30, 60)
+_G.InnocentTagColor = Color3.fromRGB(200, 255, 255)
+
+-- ========== Интерфейс Rayfield ==========
 EspTab:CreateToggle({
 	Name = "Role Tag: Sheriff",
 	CurrentValue = false,
@@ -1052,13 +1056,25 @@ EspTab:CreateColorPicker({
 	Callback = function(Color) _G.MurderTagColor = Color end
 })
 
--- ========== ЛОГИКА ESP ==========
+EspTab:CreateToggle({
+	Name = "Role Tag: Innocent",
+	CurrentValue = false,
+	Callback = function(Value) _G.ShowInnocentTag = Value end
+})
+EspTab:CreateColorPicker({
+	Name = "Innocent Tag Color",
+	Color = _G.InnocentTagColor,
+	Callback = function(Color) _G.InnocentTagColor = Color end
+})
+
+-- ========== ESP ЛОГИКА ==========
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 local roleTags = {} -- [player] = BillboardGui
 
+-- Проверки ролей
 local function isSheriff(player)
 	local bp = player:FindFirstChild("Backpack")
 	local ch = player.Character
@@ -1071,6 +1087,11 @@ local function isMurder(player)
 	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
 end
 
+local function isInnocent(player)
+	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
+end
+
+-- Создание тега
 local function createRoleTag(player, text, color)
 	if roleTags[player] then return end
 	local char = player.Character
@@ -1100,13 +1121,7 @@ local function createRoleTag(player, text, color)
 	roleTags[player] = tag
 end
 
-local function removeRoleTag(player)
-	if roleTags[player] then
-		roleTags[player]:Destroy()
-		roleTags[player] = nil
-	end
-end
-
+-- Обновление цвета
 local function updateRoleColor(player, color)
 	local gui = roleTags[player]
 	if gui and gui:FindFirstChild("RoleLabel") then
@@ -1114,6 +1129,15 @@ local function updateRoleColor(player, color)
 	end
 end
 
+-- Удаление
+local function removeRoleTag(player)
+	if roleTags[player] then
+		roleTags[player]:Destroy()
+		roleTags[player] = nil
+	end
+end
+
+-- Основной цикл
 RunService.RenderStepped:Connect(function()
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer then
@@ -1123,6 +1147,9 @@ RunService.RenderStepped:Connect(function()
 			elseif _G.ShowMurderTag and isMurder(player) then
 				createRoleTag(player, "Murder", _G.MurderTagColor)
 				updateRoleColor(player, _G.MurderTagColor)
+			elseif _G.ShowInnocentTag and isInnocent(player) then
+				createRoleTag(player, "Innocent", _G.InnocentTagColor)
+				updateRoleColor(player, _G.InnocentTagColor)
 			else
 				removeRoleTag(player)
 			end
