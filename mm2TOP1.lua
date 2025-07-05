@@ -1182,6 +1182,10 @@ EspTab:CreateSection("other")
 -- ========== Новый раздел: ESP Nickname ==========
 local espNicknameEnabled = false
 
+-- ========== ESP Nickname ==========
+local espNicknameEnabled = false
+local espNicknameColor = Color3.fromRGB(255, 255, 255)
+
 EspTab:CreateToggle({
     Name = "ESP-Nickname",
     CurrentValue = false,
@@ -1190,7 +1194,14 @@ EspTab:CreateToggle({
     end
 })
 
--- ======== Логика отрисовки никнейма ========
+EspTab:CreateColorPicker({
+    Name = "Nickname Color",
+    Color = espNicknameColor,
+    Callback = function(Color)
+        espNicknameColor = Color
+    end
+})
+
 local nicknameLabels = {}
 
 local function removeNicknameLabel(player)
@@ -1210,20 +1221,21 @@ game:GetService("RunService").RenderStepped:Connect(function()
         return
     end
     for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
             if not nicknameLabels[player] then
                 local head = player.Character.Head
                 local billboard = Instance.new("BillboardGui")
                 billboard.Name = "ESP_Nickname"
-                billboard.Size = UDim2.new(0, 100, 0, 20)
+                billboard.Size = UDim2.new(0, 120, 0, 22)
                 billboard.Adornee = head
                 billboard.AlwaysOnTop = true
                 billboard.StudsOffset = Vector3.new(0, 2, 0)
                 local text = Instance.new("TextLabel")
+                text.Name = "NickText"
                 text.Size = UDim2.new(1, 0, 1, 0)
                 text.BackgroundTransparency = 1
                 text.Text = player.DisplayName .. " [" .. player.Name .. "]"
-                text.TextColor3 = Color3.new(1,1,1)
+                text.TextColor3 = espNicknameColor
                 text.TextStrokeTransparency = 0.4
                 text.Font = Enum.Font.GothamBold
                 text.TextScaled = true
@@ -1232,13 +1244,17 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 nicknameLabels[player] = billboard
             else
                 nicknameLabels[player].Enabled = true
-                nicknameLabels[player].RoleLabel.Text = player.DisplayName .. " [" .. player.Name .. "]"
+                if nicknameLabels[player]:FindFirstChild("NickText") then
+                    nicknameLabels[player].NickText.Text = player.DisplayName .. " [" .. player.Name .. "]"
+                    nicknameLabels[player].NickText.TextColor3 = espNicknameColor
+                end
             end
         else
             removeNicknameLabel(player)
         end
     end
 end)
+
 
 -- ========== Gun Text ESP ==========
 local gunTextEnabled = false
@@ -1326,3 +1342,259 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
+-- ========== Coin Text ESP ==========
+local coinTextEnabled = false
+local coinTextColor = Color3.fromRGB(255, 215, 0)
+
+EspTab:CreateToggle({
+    Name = "Text: Coin",
+    CurrentValue = false,
+    Callback = function(Value)
+        coinTextEnabled = Value
+    end
+})
+
+EspTab:CreateColorPicker({
+    Name = "Text Color: Coin",
+    Color = coinTextColor,
+    Callback = function(Color)
+        coinTextColor = Color
+    end
+})
+
+local coinTextLabels = {}
+
+local function removeCoinTextLabel(part)
+    if coinTextLabels[part] then
+        coinTextLabels[part]:Destroy()
+        coinTextLabels[part] = nil
+    end
+end
+
+game:GetService("Players").PlayerRemoving:Connect(function()
+    for part, label in pairs(coinTextLabels) do
+        if label then label:Destroy() end
+    end
+    coinTextLabels = {}
+end)
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not coinTextEnabled then
+        for _, label in pairs(coinTextLabels) do
+            if label then label.Enabled = false end
+        end
+        return
+    end
+
+    local coinParts = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Name == "MainCoin" then
+            coinParts[obj] = true
+            if not coinTextLabels[obj] then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "CoinTextESP"
+                billboard.Size = UDim2.new(0, 70, 0, 20)
+                billboard.Adornee = obj
+                billboard.AlwaysOnTop = true
+                billboard.StudsOffset = Vector3.new(0, 1.2, 0)
+
+                local text = Instance.new("TextLabel")
+                text.Name = "Text"
+                text.Size = UDim2.new(1, 0, 1, 0)
+                text.BackgroundTransparency = 1
+                text.Text = "Coin"
+                text.TextColor3 = coinTextColor
+                text.TextStrokeTransparency = 0.2
+                text.Font = Enum.Font.GothamBold
+                text.TextScaled = true
+                text.Parent = billboard
+
+                billboard.Parent = obj
+                coinTextLabels[obj] = billboard
+            else
+                coinTextLabels[obj].Enabled = true
+                if coinTextLabels[obj]:FindFirstChild("Text") then
+                    coinTextLabels[obj].Text.TextColor3 = coinTextColor
+                end
+            end
+        end
+    end
+
+    -- Remove labels from missing coins
+    for obj, _ in pairs(coinTextLabels) do
+        if not coinParts[obj] or not obj:IsDescendantOf(workspace) then
+            removeCoinTextLabel(obj)
+        end
+    end
+end)
+
+-- Distance ESP
+local distanceEnabled = false
+
+EspTab:CreateToggle({
+    Name = "Distance",
+    CurrentValue = false,
+    Callback = function(Value)
+        distanceEnabled = Value
+    end
+})
+
+local DistanceLabels = {}
+
+local function ClearLabels()
+    for _, label in ipairs(DistanceLabels) do
+        if label.Remove then
+            label:Remove()
+        end
+    end
+    table.clear(DistanceLabels)
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not distanceEnabled then
+        ClearLabels()
+        return
+    end
+
+    ClearLabels()
+
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local distance = math.floor((rootPart.Position - workspace.CurrentCamera.CFrame.Position).Magnitude)
+            local screenPos, visible = workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
+            if visible then
+                local text = Drawing.new("Text")
+                text.Text = tostring(distance) .. "m"
+                text.Size = 16
+                text.Center = true
+                text.Outline = true
+                text.Color = Color3.fromRGB(255, 255, 0)
+                text.Position = Vector2.new(screenPos.X, screenPos.Y)
+                text.Visible = true
+                table.insert(DistanceLabels, text)
+            end
+        end
+    end
+end)
+
+local pingAllEnabled = false
+
+EspTab:CreateToggle({
+    Name = "Ping (All Players)",
+    CurrentValue = false,
+    Callback = function(Value)
+        pingAllEnabled = Value
+    end
+})
+
+local PingLabels = {}
+
+local function ClearPingLabels()
+    for _, label in ipairs(PingLabels) do
+        if label.Remove then
+            label:Remove()
+        end
+    end
+    table.clear(PingLabels)
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not pingAllEnabled then
+        ClearPingLabels()
+        return
+    end
+
+    ClearPingLabels()
+
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Ping") then
+            local hrp = player.Character.HumanoidRootPart
+            local pingValue = player.Character.Ping.Value
+            local screenPos, visible = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 4, 0))
+            if visible then
+                local text = Drawing.new("Text")
+                text.Text = "Ping: " .. tostring(pingValue) .. " ms"
+                text.Size = 16
+                text.Center = true
+                text.Outline = true
+                text.Color = Color3.fromRGB(0, 255, 255)
+                text.Position = Vector2.new(screenPos.X, screenPos.Y)
+                text.Visible = true
+                table.insert(PingLabels, text)
+            end
+        end
+    end
+end)
+
+-- ========= Переменные =========
+local visibilityCircleEnabled = false
+local visibilityCircleColor = Color3.fromRGB(0, 255, 0)
+local RADIUS = 2.5
+local SEGMENTS = 24
+local THICKNESS = 1.2
+local Circles = {}
+
+-- ========= Rayfield меню =========
+EspTab:CreateSection("Radius of Visibility")
+
+EspTab:CreateToggle({
+    Name = "Enable Radius of Visibility",
+    CurrentValue = false,
+    Callback = function(Value)
+        visibilityCircleEnabled = Value
+    end
+})
+
+EspTab:CreateColorPicker({
+    Name = "Circle Color",
+    Color = visibilityCircleColor,
+    Callback = function(Color)
+        visibilityCircleColor = Color
+    end
+})
+
+-- ========= Логика отрисовки круга =========
+local function ClearCircles()
+    for _, v in ipairs(Circles) do
+        if v.Remove then v:Remove() end
+    end
+    table.clear(Circles)
+end
+
+local function DrawCircle(center)
+    local step = math.pi * 2 / SEGMENTS
+    local lastScreen = nil
+    for i = 0, SEGMENTS do
+        local angle = i * step
+        local pos3d = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
+        local screen, visible, depth = workspace.CurrentCamera:WorldToViewportPoint(pos3d)
+        if visible and depth > 0 then
+            if lastScreen then
+                local line = Drawing.new("Line")
+                line.From = Vector2.new(lastScreen.X, lastScreen.Y)
+                line.To = Vector2.new(screen.X, screen.Y)
+                line.Color = visibilityCircleColor
+                line.Thickness = THICKNESS
+                line.Transparency = 1
+                line.Visible = true
+                table.insert(Circles, line)
+            end
+            lastScreen = screen
+        else
+            lastScreen = nil
+        end
+    end
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    ClearCircles()
+    if not visibilityCircleEnabled then return end
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local root = player.Character.HumanoidRootPart
+            local center = root.Position - Vector3.new(0, root.Size.Y / 2, 0)
+            DrawCircle(center)
+        end
+    end
+end)
