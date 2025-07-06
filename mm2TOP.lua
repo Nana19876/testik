@@ -1954,25 +1954,24 @@ UniversalTab:CreateSlider({
     CurrentValue = 16,
     Callback = function(val)
         normalSpeed = val
-        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") and not (_G.legitSpeedEnabled and _G.legitKeyDown) then
             player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
         end
     end
 })
 
 -- === Legit Speedhack ===
-local legitSpeedEnabled = false
+_G.legitSpeedEnabled = false
+_G.legitKeyDown = false
 local legitSpeedValue = 40
 local userInput = game:GetService("UserInputService")
-local legitKeyDown = false
 
 UniversalTab:CreateToggle({
     Name = "Legit Speedhack (X to Run)",
     CurrentValue = false,
     Callback = function(val)
-        legitSpeedEnabled = val
-        legitKeyDown = false -- сброс при выключении
-        -- При выключении вернём обычную скорость
+        _G.legitSpeedEnabled = val
+        _G.legitKeyDown = false
         if not val then
             if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
                 player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
@@ -1989,13 +1988,15 @@ UniversalTab:CreateSlider({
     CurrentValue = legitSpeedValue,
     Callback = function(val)
         legitSpeedValue = val
+        if _G.legitSpeedEnabled and _G.legitKeyDown and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
+        end
     end
 })
 
--- Управление скоростью по нажатию X
 userInput.InputBegan:Connect(function(input, processed)
-    if not processed and legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
-        legitKeyDown = true
+    if not processed and _G.legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
+        _G.legitKeyDown = true
         local char = player.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
             char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
@@ -2003,8 +2004,8 @@ userInput.InputBegan:Connect(function(input, processed)
     end
 end)
 userInput.InputEnded:Connect(function(input, processed)
-    if legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
-        legitKeyDown = false
+    if _G.legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
+        _G.legitKeyDown = false
         local char = player.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
             char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
@@ -2012,13 +2013,14 @@ userInput.InputEnded:Connect(function(input, processed)
     end
 end)
 
--- При респавне поддерживаем логику работы обоих спидхаков
 player.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid", 5)
-    if legitSpeedEnabled and legitKeyDown and char:FindFirstChildOfClass("Humanoid") then
-        char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
-    elseif char:FindFirstChildOfClass("Humanoid") then
-        char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+    if char:FindFirstChildOfClass("Humanoid") then
+        if _G.legitSpeedEnabled and _G.legitKeyDown then
+            char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
+        else
+            char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+        end
     end
 end)
 
