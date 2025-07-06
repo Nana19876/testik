@@ -2036,23 +2036,24 @@ local playerDropdown = MurderTab:CreateDropdown({
     Options = getPlayerList(),
     CurrentOption = "",
     Callback = function(option)
-        selectedPlayerName = option
+        if type(option) == "table" then
+            selectedPlayerName = option[1]
+        else
+            selectedPlayerName = option
+        end
     end
 })
-
--- Авто-обновление списка в дропдауне
-game:GetService("Players").PlayerAdded:Connect(function()
-    playerDropdown:Refresh(getPlayerList(), true)
-end)
-game:GetService("Players").PlayerRemoving:Connect(function()
-    playerDropdown:Refresh(getPlayerList(), true)
-end)
 
 -- Кнопка для телепорта выбранного игрока к себе
 MurderTab:CreateButton({
     Name = "Teleport Selected Player To Me",
     Callback = function()
-        if not selectedPlayerName then
+        local playerName = selectedPlayerName
+        if type(playerName) == "table" then
+            playerName = playerName[1]
+        end
+
+        if not playerName then
             warn("Не выбран игрок!")
             return
         end
@@ -2065,7 +2066,7 @@ MurderTab:CreateButton({
             return
         end
 
-        local targetPlayer = Players:FindFirstChild(selectedPlayerName)
+        local targetPlayer = Players:FindFirstChild(playerName)
         if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
             warn("Персонаж выбранного игрока не найден!")
             return
@@ -2083,3 +2084,4 @@ MurderTab:CreateButton({
             CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
     end
 })
+
