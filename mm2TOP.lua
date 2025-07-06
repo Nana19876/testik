@@ -1537,42 +1537,45 @@ local LocalPlayer = Players.LocalPlayer
 local RADIUS = 5
 local SEGMENTS = 30
 local THICKNESS = 1.5
-
 local circleColor = Color3.fromRGB(0, 255, 0)
 local visibilityCircleEnabled = false
-
 local PlayerCircles = {} -- [player.UserId] = {line1, line2, ...}
 local renderConnection = nil
+local playerRemovingConnection = nil
 
--- ColorPicker в меню
-EspTab:CreateColorPicker({
-    Name = "Circle Color",
-    Color = circleColor,
-    Callback = function(Color)
-        circleColor = Color
-    end
-})
-
--- Тоггл в меню
-EspTab:CreateToggle({
-    Name = "Enable Visibility Circle",
-    CurrentValue = false,
-    Callback = function(Value)
-        visibilityCircleEnabled = Value
-        if Value then
-            Connect()
-        else
-            Disconnect()
+-- СНАЧАЛА Тоггл в меню
+if EspTab then
+    EspTab:CreateToggle({
+        Name = "Enable Visibility Circle",
+        CurrentValue = false,
+        Callback = function(Value)
+            visibilityCircleEnabled = Value
+            if Value then
+                Connect()
+            else
+                Disconnect()
+            end
         end
-    end
-})
+    })
+
+    -- ПОТОМ ColorPicker в меню
+    EspTab:CreateColorPicker({
+        Name = "Circle Color",
+        Color = circleColor,
+        Callback = function(Color)
+            circleColor = Color
+        end
+    })
+end
 
 -- Очистка кругов для игрока
 local function ClearPlayerCircles(playerId)
     local lines = PlayerCircles[playerId]
     if lines then
         for _, line in ipairs(lines) do
-            if line.Remove then line:Remove() end
+            if line and line.Remove then 
+                pcall(function() line:Remove() end)
+            end
         end
         PlayerCircles[playerId] = nil
     end
@@ -1593,41 +1596,68 @@ end
 -- Рисование круга вокруг позиции
 local function DrawCircle(center, color)
     local step = math.pi * 2 / SEGMENTS
-    local lastScreen = nil
+    local points = {}
     local lines = {}
+    
+    -- Сначала вычисляем все точки круга
     for i = 0, SEGMENTS do
         local angle = i * step
-        local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
-        local screen, visible, depth = Camera:WorldToViewportPoint(pos)
-        if visible and depth ~= nil and depth > 0 then
-            if lastScreen then
-                local line = Drawing.new("Line")
-                line.From = Vector2.new(lastScreen.X, lastScreen.Y)
-                line.To = Vector2.new(screen.X, screen.Y)
-                line.Color = color
-                line.Thickness = THICKNESS
-                line.Transparency = 1
-                line.Visible = true
-                table.insert(lines, line)
-            end
-            lastScreen = screen
-        else
-            lastScreen = nil
+        local worldPos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
+        local screenPos, onScreen = Camera:WorldToViewportPoint(worldPos)
+        
+        if onScreen and screenPos.Z > 0 then
+            points[i] = Vector2.new(screenPos.X, screenPos.Y)
         end
     end
+    
+    -- Теперь соединяем соседние видимые точки
+    for i = 0, SEGMENTS - 1 do
+        local currentPoint = points[i]
+        local nextPoint = points[i + 1] or points[0] -- замыкаем круг
+        
+        if currentPoint and nextPoint then
+            local success, line = pcall(function()
+                local newLine = Drawing.new("Line")
+                newLine.From = currentPoint
+                newLine.To = nextPoint
+                newLine.Color = color
+                newLine.Thickness = THICKNESS
+                newLine.Transparency = 1
+                newLine.Visible = true
+                return newLine
+            end)
+            
+            if success and line then
+                table.insert(lines, line)
+            end
+        end
+    end
+    
     return lines
 end
 
 -- Основная функция обновления
 local function UpdateCircles()
-    ClearAllCircles()
-    if not visibilityCircleEnabled then return end
-
+    -- Обновляем только существующих игроков, не очищаем все каждый раз
+    local currentPlayers = {}
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            currentPlayers[player.UserId] = true
             local root = player.Character.HumanoidRootPart
             local pos = root.Position - Vector3.new(0, root.Size.Y / 2, 0)
+            
+            -- Очищаем старые круги этого игрока
+            ClearPlayerCircles(player.UserId)
+            -- Создаем новые
             PlayerCircles[player.UserId] = DrawCircle(pos, circleColor)
+        end
+    end
+    
+    -- Удаляем круги игроков, которых больше нет
+    for playerId, _ in pairs(PlayerCircles) do
+        if not currentPlayers[playerId] then
+            ClearPlayerCircles(playerId)
         end
     end
 end
@@ -1635,8 +1665,15 @@ end
 -- Корректное подключение событий
 local function Connect()
     if not renderConnection then
-        renderConnection = RunService.RenderStepped:Connect(UpdateCircles)
-        Players.PlayerRemoving:Connect(OnPlayerRemoving)
+        renderConnection = RunService.RenderStepped:Connect(function()
+            if visibilityCircleEnabled then
+                UpdateCircles()
+            end
+        end)
+    end
+    
+    if not playerRemovingConnection then
+        playerRemovingConnection = Players.PlayerRemoving:Connect(OnPlayerRemoving)
     end
 end
 
@@ -1646,8 +1683,37 @@ local function Disconnect()
         renderConnection:Disconnect()
         renderConnection = nil
     end
+    
+    if playerRemovingConnection then
+        playerRemovingConnection:Disconnect()
+        playerRemovingConnection = nil
+    end
+    
     ClearAllCircles()
 end
+
+-- Если EspTab не существует, можно использовать простое управление:
+if not EspTab then
+    -- Простое включение/выключение
+    visibilityCircleEnabled = false -- по умолчанию выключено
+    
+    if visibilityCircleEnabled then
+        Connect()
+    end
+end
+
+-- Функция для ручного управления
+local function ToggleCircles()
+    visibilityCircleEnabled = not visibilityCircleEnabled
+    if visibilityCircleEnabled then
+        Connect()
+    else
+        Disconnect()
+    end
+end
+
+-- Если хочешь вручную включить:
+-- ToggleCircles()
 
 -- Если хочешь вручную отключать:
 -- Disconnect()
