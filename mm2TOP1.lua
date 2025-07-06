@@ -1527,16 +1527,24 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- ========= Переменные =========
+-- Сервисы
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- Настройки
+local RADIUS = 5
+local SEGMENTS = 30
+local THICKNESS = 1.5
+
+local circleColor = Color3.fromRGB(0, 255, 0)
 local visibilityCircleEnabled = false
-local visibilityCircleColor = Color3.fromRGB(0, 255, 0)
-local RADIUS = 2.5
-local SEGMENTS = 24
-local THICKNESS = 1.2
 local Circles = {}
 
+-- Тоггл для включения/выключения круга
 EspTab:CreateToggle({
-    Name = "Enable Radius of Visibility",
+    Name = "Enable Visibility Circle",
     CurrentValue = false,
     Callback = function(Value)
         visibilityCircleEnabled = Value
@@ -1545,13 +1553,13 @@ EspTab:CreateToggle({
 
 EspTab:CreateColorPicker({
     Name = "Circle Color",
-    Color = visibilityCircleColor,
+    Color = circleColor,
     Callback = function(Color)
-        visibilityCircleColor = Color
+        circleColor = Color
     end
 })
 
--- ========= Логика отрисовки круга =========
+-- Очистка круга
 local function ClearCircles()
     for _, v in ipairs(Circles) do
         if v.Remove then v:Remove() end
@@ -1559,19 +1567,20 @@ local function ClearCircles()
     table.clear(Circles)
 end
 
+-- Рисование круга вокруг позиции
 local function DrawCircle(center)
     local step = math.pi * 2 / SEGMENTS
     local lastScreen = nil
     for i = 0, SEGMENTS do
         local angle = i * step
-        local pos3d = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
-        local screen, visible, depth = workspace.CurrentCamera:WorldToViewportPoint(pos3d)
-        if visible and depth ~= nil and depth > 0 then  -- <= исправлено!
+        local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
+        local screen, visible, depth = Camera:WorldToViewportPoint(pos)
+        if visible and depth ~= nil and depth > 0 then
             if lastScreen then
                 local line = Drawing.new("Line")
                 line.From = Vector2.new(lastScreen.X, lastScreen.Y)
                 line.To = Vector2.new(screen.X, screen.Y)
-                line.Color = visibilityCircleColor
+                line.Color = circleColor
                 line.Thickness = THICKNESS
                 line.Transparency = 1
                 line.Visible = true
@@ -1584,15 +1593,15 @@ local function DrawCircle(center)
     end
 end
 
-game:GetService("RunService").RenderStepped:Connect(function()
+-- Главный цикл
+RunService.RenderStepped:Connect(function()
     ClearCircles()
     if not visibilityCircleEnabled then return end
-    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local root = player.Character.HumanoidRootPart
-            local center = root.Position - Vector3.new(0, root.Size.Y / 2, 0)
-            DrawCircle(center)
+            local pos = root.Position - Vector3.new(0, root.Size.Y / 2, 0)
+            DrawCircle(pos)
         end
     end
 end)
-
