@@ -1910,15 +1910,29 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Создаём отдельную вкладку Murder
+-- Вкладка Murder
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
--- Добавляем кнопку "Kill All"
+-- Кнопка "Teleport All To Me"
 MurderTab:CreateButton({
-    Name = "Kill All",
+    Name = "Teleport All To Me",
     Callback = function()
-        -- Твой код для убийства всех
-        print("Kill All нажата!")
-        -- Здесь можно добавить реальный функционал убийства всех игроков, если знаешь, как реализовать в своей игре.
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            warn("Не найден HumanoidRootPart у вашего персонажа!")
+            return
+        end
+        local myPos = myChar.HumanoidRootPart.Position + Vector3.new(0, 3, 0) -- Телепорт на 3 юнита выше, чтобы не застряли
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                -- Телепортируем всех кроме себя
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(myPos)
+            end
+        end
+        print("Все игроки телепортированы к вам!")
     end
 })
+
