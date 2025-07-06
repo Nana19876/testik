@@ -1540,17 +1540,11 @@ local THICKNESS = 1.5
 
 local circleColor = Color3.fromRGB(0, 255, 0)
 local visibilityCircleEnabled = false
-local Circles = {}
 
--- Тоггл для включения/выключения круга
-EspTab:CreateToggle({
-    Name = "Enable Visibility Circle",
-    CurrentValue = false,
-    Callback = function(Value)
-        visibilityCircleEnabled = Value
-    end
-})
+local PlayerCircles = {} -- [player.UserId] = {line1, line2, ...}
+local renderConnection = nil
 
+-- ColorPicker в меню
 EspTab:CreateColorPicker({
     Name = "Circle Color",
     Color = circleColor,
@@ -1559,18 +1553,48 @@ EspTab:CreateColorPicker({
     end
 })
 
--- Очистка круга
-local function ClearCircles()
-    for _, v in ipairs(Circles) do
-        if v.Remove then v:Remove() end
+-- Тоггл в меню
+EspTab:CreateToggle({
+    Name = "Enable Visibility Circle",
+    CurrentValue = false,
+    Callback = function(Value)
+        visibilityCircleEnabled = Value
+        if Value then
+            Connect()
+        else
+            Disconnect()
+        end
     end
-    table.clear(Circles)
+})
+
+-- Очистка кругов для игрока
+local function ClearPlayerCircles(playerId)
+    local lines = PlayerCircles[playerId]
+    if lines then
+        for _, line in ipairs(lines) do
+            if line.Remove then line:Remove() end
+        end
+        PlayerCircles[playerId] = nil
+    end
+end
+
+-- Очистка всех кругов
+local function ClearAllCircles()
+    for playerId, _ in pairs(PlayerCircles) do
+        ClearPlayerCircles(playerId)
+    end
+end
+
+-- При выходе игрока
+local function OnPlayerRemoving(player)
+    ClearPlayerCircles(player.UserId)
 end
 
 -- Рисование круга вокруг позиции
-local function DrawCircle(center)
+local function DrawCircle(center, color)
     local step = math.pi * 2 / SEGMENTS
     local lastScreen = nil
+    local lines = {}
     for i = 0, SEGMENTS do
         local angle = i * step
         local pos = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
@@ -1580,28 +1604,51 @@ local function DrawCircle(center)
                 local line = Drawing.new("Line")
                 line.From = Vector2.new(lastScreen.X, lastScreen.Y)
                 line.To = Vector2.new(screen.X, screen.Y)
-                line.Color = circleColor
+                line.Color = color
                 line.Thickness = THICKNESS
                 line.Transparency = 1
                 line.Visible = true
-                table.insert(Circles, line)
+                table.insert(lines, line)
             end
             lastScreen = screen
         else
             lastScreen = nil
         end
     end
+    return lines
 end
 
--- Главный цикл
-RunService.RenderStepped:Connect(function()
-    ClearCircles()
+-- Основная функция обновления
+local function UpdateCircles()
+    ClearAllCircles()
     if not visibilityCircleEnabled then return end
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local root = player.Character.HumanoidRootPart
             local pos = root.Position - Vector3.new(0, root.Size.Y / 2, 0)
-            DrawCircle(pos)
+            PlayerCircles[player.UserId] = DrawCircle(pos, circleColor)
         end
     end
-end)
+end
+
+-- Корректное подключение событий
+local function Connect()
+    if not renderConnection then
+        renderConnection = RunService.RenderStepped:Connect(UpdateCircles)
+        Players.PlayerRemoving:Connect(OnPlayerRemoving)
+    end
+end
+
+-- Корректное отключение событий и чистка кругов
+local function Disconnect()
+    if renderConnection then
+        renderConnection:Disconnect()
+        renderConnection = nil
+    end
+    ClearAllCircles()
+end
+
+-- Если хочешь вручную отключать:
+-- Disconnect()
+
