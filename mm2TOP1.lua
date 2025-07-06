@@ -1912,104 +1912,108 @@ end)
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
--- Переключатель для проверки роли Murder
-local teleportOnlyIfMurder = false
+-- 1. Кнопка: разово телепортирует всех к тебе
+MurderTab:CreateButton({
+    Name = "Teleport All Super Close (Одиночное)",
+    Callback = function()
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            warn("Твой персонаж не найден!")
+            return
+        end
+
+        local root = myChar.HumanoidRootPart
+        local basePos = root.Position
+        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
+        local distance = 3.2
+        local spacing = 1.1
+
+        local targets = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                table.insert(targets, player)
+            end
+        end
+
+        local count = #targets
+        for i, player in ipairs(targets) do
+            local offset = (i - (count + 1) / 2) * spacing
+            local targetPos = basePos + lookVec * distance + rightVec * offset
+            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            player.Character.HumanoidRootPart.CFrame =
+                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+        end
+    end
+})
+
+-- 2. Переключатель авто-телепортации только если ты Murder
+local autoTpEnabled = false
+local connection = nil
+
+local function isMurderer(player)
+    local bp = player:FindFirstChild("Backpack")
+    local ch = player.Character
+    return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+
+local function autoTeleportAll()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
+    if not isMurderer(LocalPlayer) then return end
+
+    local root = myChar.HumanoidRootPart
+    local basePos = root.Position
+    local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+    local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
+    local distance = 3.2
+    local spacing = 1.1
+
+    local targets = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(targets, player)
+        end
+    end
+
+    local count = #targets
+    for i, player in ipairs(targets) do
+        local offset = (i - (count + 1) / 2) * spacing
+        local targetPos = basePos + lookVec * distance + rightVec * offset
+        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        player.Character.HumanoidRootPart.CFrame =
+            CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+    end
+end
 
 MurderTab:CreateToggle({
-    Name = "Teleport only if I am Murder",
+    Name = "Auto Teleport All (только если Murder)",
     CurrentValue = false,
-    Callback = function(v)
-        teleportOnlyIfMurder = v
-    end
-})
-
--- 1. Кнопка: Телепортировать всех к себе (всегда работает)
-MurderTab:CreateButton({
-    Name = "Teleport All Super Close (Всегда)",
-    Callback = function()
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
-        local myChar = LocalPlayer.Character
-        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
-            warn("Твой персонаж не найден!")
-            return
-        end
-
-        local root = myChar.HumanoidRootPart
-        local basePos = root.Position
-        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
-        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
-
-        local distance = 3.2
-        local spacing = 1.1
-
-        -- Собираем всех кроме себя
-        local targets = {}
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                table.insert(targets, player)
-            end
-        end
-
-        local count = #targets
-        for i, player in ipairs(targets) do
-            local offset = (i - (count + 1) / 2) * spacing
-            local targetPos = basePos + lookVec * distance + rightVec * offset
-            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
-            player.Character.HumanoidRootPart.CFrame =
-                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+    Callback = function(val)
+        autoTpEnabled = val
+        if val then
+            -- Включаем цикл автотп
+            connection = game:GetService("RunService").RenderStepped:Connect(function()
+                autoTeleportAll()
+            end)
+        else
+            -- Отключаем
+            if connection then connection:Disconnect() end
+            connection = nil
         end
     end
 })
 
--- 2. Кнопка: Телепортировать всех к себе только если ты Murder
-MurderTab:CreateButton({
-    Name = "Teleport All Super Close (Только если Murder)",
-    Callback = function()
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
-        local myChar = LocalPlayer.Character
-        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
-            warn("Твой персонаж не найден!")
-            return
-        end
-
-        -- Проверяем условие murder, если включен тумблер
-        if teleportOnlyIfMurder then
-            local isMurder = false
-            local bp = LocalPlayer:FindFirstChild("Backpack")
-            if bp and bp:FindFirstChild("Knife") then isMurder = true end
-            if myChar:FindFirstChild("Knife") then isMurder = true end
-            if not isMurder then
-                warn("Ты не Murder!")
-                return
-            end
-        end
-
-        local root = myChar.HumanoidRootPart
-        local basePos = root.Position
-        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
-        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
-
-        local distance = 3.2
-        local spacing = 1.1
-
-        -- Собираем всех кроме себя
-        local targets = {}
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                table.insert(targets, player)
-            end
-        end
-
-        local count = #targets
-        for i, player in ipairs(targets) do
-            local offset = (i - (count + 1) / 2) * spacing
-            local targetPos = basePos + lookVec * distance + rightVec * offset
-            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
-            player.Character.HumanoidRootPart.CFrame =
-                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
-        end
+-- На всякий случай отключаем при выходе
+game:GetService("Players").PlayerRemoving:Connect(function(p)
+    if p == game.Players.LocalPlayer and connection then
+        connection:Disconnect()
+        connection = nil
     end
-})
-
+end)
