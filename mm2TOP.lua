@@ -1939,77 +1939,14 @@ end
 
 local selectedPlayerName = nil
 
-local UniversalTab = Window:CreateTab("Universal", 4483362461)
-
-local player = game.Players.LocalPlayer
-
--- === Обычный спидхак ===
-local normalSpeed = 16
-
-UniversalTab:CreateSlider({
-    Name = "Player WalkSpeed",
-    Range = {8, 100},
-    Increment = 1,
-    Suffix = " WalkSpeed",
-    CurrentValue = 16,
-    Callback = function(val)
-        normalSpeed = val
-        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") and not (_G.legitSpeedEnabled and _G.legitKeyDown) then
-            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
-        end
-    end
-})
-
--- === Legit Speedhack ===
-_G.legitSpeedEnabled = false
-_G.legitKeyDown = false
-local legitSpeedValue = 40
-local userInput = game:GetService("UserInputService")
-
-UniversalTab:CreateToggle({
-    Name = "Legit Speedhack (X to Run)",
-    CurrentValue = false,
-    Callback = function(val)
-        _G.legitSpeedEnabled = val
-        _G.legitKeyDown = false
-        if not val then
-            if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-                player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
-            end
-        end
-    end
-})
-
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- Функции для определения ролей
-local function isMurderer(player)
-    local bp = player:FindFirstChild("Backpack")
-    local ch = player.Character
-    return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
-end
-local function isSheriff(player)
-    local bp = player:FindFirstChild("Backpack")
-    local ch = player.Character
-    return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
-end
-local function getRole(player)
-    if isMurderer(player) then
-        return "Murder"
-    elseif isSheriff(player) then
-        return "Sheriff"
-    else
-        return "Innocent"
-    end
-end
-
--- Одиночная кнопка: телепорт всех
+-- Одиночная кнопка
 MurderTab:CreateButton({
-    Name = "kill all",
+    Name = "Teleport All Super Close (Одиночное)",
     Callback = function()
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
             warn("Твой персонаж не найден!")
@@ -2042,9 +1979,19 @@ MurderTab:CreateButton({
     end
 })
 
--- Автотелепорт если ты Murder
+-- Автотелепорт только если ты Murder
+local autoTpMurderEnabled = false
 local autoTpMurderConnection = nil
+
+local function isMurderer(player)
+    local bp = player:FindFirstChild("Backpack")
+    local ch = player.Character
+    return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+
 local function autoTeleportAllIfMurder()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
     if not isMurderer(LocalPlayer) then return end
@@ -2078,6 +2025,7 @@ MurderTab:CreateToggle({
     Name = "Auto kill",
     CurrentValue = false,
     Callback = function(val)
+        autoTpMurderEnabled = val
         if val then
             autoTpMurderConnection = game:GetService("RunService").RenderStepped:Connect(function()
                 autoTeleportAllIfMurder()
@@ -2089,67 +2037,58 @@ MurderTab:CreateToggle({
     end
 })
 
-Players.PlayerRemoving:Connect(function(p)
-    if p == LocalPlayer then
+-- Очищаем подключение при выходе
+game:GetService("Players").PlayerRemoving:Connect(function(p)
+    if p == game.Players.LocalPlayer then
         if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
         autoTpMurderConnection = nil
     end
 end)
 
--- Получение списка игроков с ролями
-local function getPlayerListWithRoles()
+-- Dropdown для выбора игрока
+local function getPlayerList()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
     local list = {}
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            table.insert(list, player.Name .. " (" .. getRole(player) .. ")")
+            table.insert(list, player.Name)
         end
     end
     return list
 end
 
 local selectedPlayerName = nil
-local playerDropdown
 
-local function refreshDropdown()
-    playerDropdown:Refresh(getPlayerListWithRoles(), true)
-end
-
-playerDropdown = MurderTab:CreateDropdown({
+local playerDropdown = MurderTab:CreateDropdown({
     Name = "Выбери игрока для телепортации",
-    Options = getPlayerListWithRoles(),
+    Options = getPlayerList(),
     CurrentOption = "",
     Callback = function(option)
-        local str = (type(option) == "table") and option[1] or option
-        if str then
-            local name = str:match("^(.-) %(") or str
-            selectedPlayerName = name
+        if type(option) == "table" then
+            selectedPlayerName = option[1]
         else
-            selectedPlayerName = nil
+            selectedPlayerName = option
         end
     end
 })
 
-Players.PlayerAdded:Connect(refreshDropdown)
-Players.PlayerRemoving:Connect(refreshDropdown)
-
--- Кнопка для ручного обновления ролей (если хочешь, можно убрать)
+-- Кнопка для телепорта выбранного игрока к себе
 MurderTab:CreateButton({
-    Name = "update role",
-    Callback = function()
-        refreshDropdown()
-    end
-})
-
--- Кнопка телепорта выбранного игрока
-MurderTab:CreateButton({
-    Name = "teleport player",
+    Name = "Teleport Selected Player To Me",
     Callback = function()
         local playerName = selectedPlayerName
+        if type(playerName) == "table" then
+            playerName = playerName[1]
+        end
+
         if not playerName then
             warn("Не выбран игрок!")
             return
         end
 
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
             warn("Твой персонаж не найден!")
