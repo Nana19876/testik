@@ -1939,6 +1939,34 @@ end
 
 local selectedPlayerName = nil
 
+local UniversalTab = Window:CreateTab("Universal", 4483362461)
+
+local speedValue = 16 -- Стандартная скорость
+
+UniversalTab:CreateSlider({
+    Name = "Player WalkSpeed",
+    Range = {8, 100},
+    Increment = 1,
+    Suffix = " WalkSpeed",
+    CurrentValue = 16,
+    Callback = function(val)
+        speedValue = val
+        local player = game.Players.LocalPlayer
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
+        end
+    end
+})
+
+-- Сохраняем скорость при респавне
+game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid", 5)
+    if char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
+    end
+end)
+
+
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
@@ -1967,7 +1995,7 @@ end
 
 -- Одиночная кнопка: телепорт всех
 MurderTab:CreateButton({
-    Name = "Teleport All Super Close (Одиночное)",
+    Name = "kill all",
     Callback = function()
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
@@ -2093,7 +2121,7 @@ Players.PlayerRemoving:Connect(refreshDropdown)
 
 -- Кнопка для ручного обновления ролей (если хочешь, можно убрать)
 MurderTab:CreateButton({
-    Name = "Обновить роли в списке",
+    Name = "update role",
     Callback = function()
         refreshDropdown()
     end
@@ -2101,7 +2129,7 @@ MurderTab:CreateButton({
 
 -- Кнопка телепорта выбранного игрока
 MurderTab:CreateButton({
-    Name = "Teleport Selected Player To Me",
+    Name = "teleport player",
     Callback = function()
         local playerName = selectedPlayerName
         if not playerName then
