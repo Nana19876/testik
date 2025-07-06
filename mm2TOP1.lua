@@ -1943,7 +1943,7 @@ MurderTab:CreateButton({
         for i, player in ipairs(targets) do
             local offset = (i - (count + 1) / 2) * spacing
             local targetPos = basePos + lookVec * distance + rightVec * offset
-            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
             player.Character.HumanoidRootPart.CFrame =
                 CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
         end
@@ -1986,7 +1986,7 @@ local function autoTeleportAllIfMurder()
     for i, player in ipairs(targets) do
         local offset = (i - (count + 1) / 2) * spacing
         local targetPos = basePos + lookVec * distance + rightVec * offset
-        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
         player.Character.HumanoidRootPart.CFrame =
             CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
     end
@@ -2008,15 +2008,15 @@ MurderTab:CreateToggle({
     end
 })
 
--- Очищаем подключения при выходе
+-- Очищаем подключение при выходе
 game:GetService("Players").PlayerRemoving:Connect(function(p)
     if p == game.Players.LocalPlayer then
-        if autoTpAlwaysConnection then autoTpAlwaysConnection:Disconnect() end
         if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
+        autoTpMurderConnection = nil
     end
 end)
 
--- Собираем список игроков (кроме себя)
+-- Dropdown для выбора игрока
 local function getPlayerList()
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
@@ -2031,7 +2031,6 @@ end
 
 local selectedPlayerName = nil
 
--- Dropdown для выбора игрока
 local playerDropdown = MurderTab:CreateDropdown({
     Name = "Выбери игрока для телепортации",
     Options = getPlayerList(),
@@ -2079,7 +2078,7 @@ MurderTab:CreateButton({
         local distance = 3.2
 
         local targetPos = basePos + lookVec * distance
-        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
         targetPlayer.Character.HumanoidRootPart.CFrame =
             CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
     end
