@@ -1944,7 +1944,7 @@ local MurderTab = Window:CreateTab("Murder", 4483362462)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- === ROLE HELPERS ===
+-- Функции для определения ролей
 local function isMurderer(player)
     local bp = player:FindFirstChild("Backpack")
     local ch = player.Character
@@ -1965,7 +1965,7 @@ local function getRole(player)
     end
 end
 
--- === TELEPORT ALL BUTTON ===
+-- Одиночная кнопка: телепорт всех
 MurderTab:CreateButton({
     Name = "Teleport All Super Close (Одиночное)",
     Callback = function()
@@ -2001,7 +2001,7 @@ MurderTab:CreateButton({
     end
 })
 
--- === AUTO TELEPORT IF MURDER ===
+-- Автотелепорт если ты Murder
 local autoTpMurderConnection = nil
 local function autoTeleportAllIfMurder()
     local myChar = LocalPlayer.Character
@@ -2048,7 +2048,6 @@ MurderTab:CreateToggle({
     end
 })
 
--- Очищаем подключение при выходе
 Players.PlayerRemoving:Connect(function(p)
     if p == LocalPlayer then
         if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
@@ -2056,7 +2055,7 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- === PLAYER DROPDOWN WITH ROLES ===
+-- Получение списка игроков с ролями
 local function getPlayerListWithRoles()
     local list = {}
     for _, player in ipairs(Players:GetPlayers()) do
@@ -2068,7 +2067,7 @@ local function getPlayerListWithRoles()
 end
 
 local selectedPlayerName = nil
-local playerDropdown -- объявление заранее
+local playerDropdown
 
 local function refreshDropdown()
     playerDropdown:Refresh(getPlayerListWithRoles(), true)
@@ -2092,15 +2091,15 @@ playerDropdown = MurderTab:CreateDropdown({
 Players.PlayerAdded:Connect(refreshDropdown)
 Players.PlayerRemoving:Connect(refreshDropdown)
 
--- Можно по желанию обновлять список раз в 0.5 секунды для динамики ролей:
-task.spawn(function()
-    while true do
-        task.wait(0.5)
+-- Кнопка для ручного обновления ролей (если хочешь, можно убрать)
+MurderTab:CreateButton({
+    Name = "Обновить роли в списке",
+    Callback = function()
         refreshDropdown()
     end
-end)
+})
 
--- === TELEPORT SELECTED PLAYER ===
+-- Кнопка телепорта выбранного игрока
 MurderTab:CreateButton({
     Name = "Teleport Selected Player To Me",
     Callback = function()
@@ -2134,4 +2133,3 @@ MurderTab:CreateButton({
             CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
     end
 })
-
