@@ -1989,6 +1989,22 @@ local function isMurderer(player)
     return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
 end
 
+local function isSheriff(player)
+    local bp = player:FindFirstChild("Backpack")
+    local ch = player.Character
+    return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
+end
+
+local function getRole(player)
+    if isMurderer(player) then
+        return "Murder"
+    elseif isSheriff(player) then
+        return "Sheriff"
+    else
+        return "Innocent"
+    end
+end
+
 local function autoTeleportAllIfMurder()
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
@@ -2045,14 +2061,15 @@ game:GetService("Players").PlayerRemoving:Connect(function(p)
     end
 end)
 
--- Dropdown для выбора игрока
-local function getPlayerList()
+-- Dropdown для выбора игрока с ролями
+local function getPlayerListWithRoles()
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local list = {}
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            table.insert(list, player.Name)
+            local role = getRole(player)
+            table.insert(list, player.Name .. " (" .. role .. ")")
         end
     end
     return list
@@ -2062,16 +2079,28 @@ local selectedPlayerName = nil
 
 local playerDropdown = MurderTab:CreateDropdown({
     Name = "Выбери игрока для телепортации",
-    Options = getPlayerList(),
+    Options = getPlayerListWithRoles(),
     CurrentOption = "",
     Callback = function(option)
-        if type(option) == "table" then
-            selectedPlayerName = option[1]
-        else
-            selectedPlayerName = option
+        local str = (type(option) == "table") and option[1] or option
+        if str then
+            local name = str:match("^(.-) %(") or str
+            selectedPlayerName = name
         end
     end
 })
+
+-- Авто-обновление списка в дропдауне при изменении игроков или ролей
+local RunService = game:GetService("RunService")
+RunService.RenderStepped:Connect(function()
+    playerDropdown:Refresh(getPlayerListWithRoles(), false)
+end)
+game:GetService("Players").PlayerAdded:Connect(function()
+    playerDropdown:Refresh(getPlayerListWithRoles(), true)
+end)
+game:GetService("Players").PlayerRemoving:Connect(function()
+    playerDropdown:Refresh(getPlayerListWithRoles(), true)
+end)
 
 -- Кнопка для телепорта выбранного игрока к себе
 MurderTab:CreateButton({
