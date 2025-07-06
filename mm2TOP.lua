@@ -1430,6 +1430,7 @@ end)
 
 -- Distance ESP
 local distanceEnabled = false
+local distanceColor = Color3.fromRGB(255, 255, 0) -- желтый по умолчанию
 
 EspTab:CreateToggle({
     Name = "Distance",
@@ -1439,8 +1440,15 @@ EspTab:CreateToggle({
     end
 })
 
-local DistanceLabels = {}
+EspTab:CreateColorPicker({
+    Name = "Distance Color",
+    Color = distanceColor,
+    Callback = function(Color)
+        distanceColor = Color
+    end
+})
 
+local DistanceLabels = {}
 local function ClearLabels()
     for _, label in ipairs(DistanceLabels) do
         if label.Remove then
@@ -1455,9 +1463,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         ClearLabels()
         return
     end
-
     ClearLabels()
-
     for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
         if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local rootPart = player.Character.HumanoidRootPart
@@ -1469,7 +1475,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 text.Size = 16
                 text.Center = true
                 text.Outline = true
-                text.Color = Color3.fromRGB(255, 255, 0)
+                text.Color = distanceColor -- используем настраиваемый цвет
                 text.Position = Vector2.new(screenPos.X, screenPos.Y)
                 text.Visible = true
                 table.insert(DistanceLabels, text)
@@ -1478,7 +1484,9 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
+-- Ping ESP (исправленная версия)
 local pingAllEnabled = false
+local pingColor = Color3.fromRGB(0, 255, 255) -- голубой по умолчанию
 
 EspTab:CreateToggle({
     Name = "Ping (All Players)",
@@ -1488,8 +1496,15 @@ EspTab:CreateToggle({
     end
 })
 
-local PingLabels = {}
+EspTab:CreateColorPicker({
+    Name = "Ping Color",
+    Color = pingColor,
+    Callback = function(Color)
+        pingColor = Color
+    end
+})
 
+local PingLabels = {}
 local function ClearPingLabels()
     for _, label in ipairs(PingLabels) do
         if label.Remove then
@@ -1504,13 +1519,28 @@ game:GetService("RunService").RenderStepped:Connect(function()
         ClearPingLabels()
         return
     end
-
     ClearPingLabels()
-
     for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("Ping") then
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
-            local pingValue = player.Character.Ping.Value
+            -- Получаем пинг из статистики игрока
+            local pingValue = 0
+            pcall(function()
+                local stats = player:FindFirstChild("leaderstats")
+                if stats and stats:FindFirstChild("Ping") then
+                    pingValue = stats.Ping.Value
+                else
+                    -- Альтернативный способ получения пинга
+                    local networkClient = game:GetService("NetworkClient")
+                    if networkClient then
+                        pingValue = math.floor(player:GetNetworkPing() * 1000)
+                    else
+                        -- Если нет доступа к пингу, показываем 0
+                        pingValue = 0
+                    end
+                end
+            end)
+            
             local screenPos, visible = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 4, 0))
             if visible then
                 local text = Drawing.new("Text")
@@ -1518,7 +1548,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 text.Size = 16
                 text.Center = true
                 text.Outline = true
-                text.Color = Color3.fromRGB(0, 255, 255)
+                text.Color = pingColor -- используем настраиваемый цвет
                 text.Position = Vector2.new(screenPos.X, screenPos.Y)
                 text.Visible = true
                 table.insert(PingLabels, text)
