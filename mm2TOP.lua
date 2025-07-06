@@ -1941,12 +1941,34 @@ local selectedPlayerName = nil
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
--- Одиночная кнопка
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- === ROLE HELPERS ===
+local function isMurderer(player)
+    local bp = player:FindFirstChild("Backpack")
+    local ch = player.Character
+    return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+local function isSheriff(player)
+    local bp = player:FindFirstChild("Backpack")
+    local ch = player.Character
+    return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
+end
+local function getRole(player)
+    if isMurderer(player) then
+        return "Murder"
+    elseif isSheriff(player) then
+        return "Sheriff"
+    else
+        return "Innocent"
+    end
+end
+
+-- === TELEPORT ALL BUTTON ===
 MurderTab:CreateButton({
     Name = "Teleport All Super Close (Одиночное)",
     Callback = function()
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
             warn("Твой персонаж не найден!")
@@ -1979,35 +2001,9 @@ MurderTab:CreateButton({
     end
 })
 
--- Автотелепорт только если ты Murder
-local autoTpMurderEnabled = false
+-- === AUTO TELEPORT IF MURDER ===
 local autoTpMurderConnection = nil
-
-local function isMurderer(player)
-    local bp = player:FindFirstChild("Backpack")
-    local ch = player.Character
-    return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
-end
-
-local function isSheriff(player)
-    local bp = player:FindFirstChild("Backpack")
-    local ch = player.Character
-    return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
-end
-
-local function getRole(player)
-    if isMurderer(player) then
-        return "Murder"
-    elseif isSheriff(player) then
-        return "Sheriff"
-    else
-        return "Innocent"
-    end
-end
-
 local function autoTeleportAllIfMurder()
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
     if not isMurderer(LocalPlayer) then return end
@@ -2041,7 +2037,6 @@ MurderTab:CreateToggle({
     Name = "Auto kill",
     CurrentValue = false,
     Callback = function(val)
-        autoTpMurderEnabled = val
         if val then
             autoTpMurderConnection = game:GetService("RunService").RenderStepped:Connect(function()
                 autoTeleportAllIfMurder()
@@ -2054,30 +2049,32 @@ MurderTab:CreateToggle({
 })
 
 -- Очищаем подключение при выходе
-game:GetService("Players").PlayerRemoving:Connect(function(p)
-    if p == game.Players.LocalPlayer then
+Players.PlayerRemoving:Connect(function(p)
+    if p == LocalPlayer then
         if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
         autoTpMurderConnection = nil
     end
 end)
 
--- Dropdown для выбора игрока с ролями
+-- === PLAYER DROPDOWN WITH ROLES ===
 local function getPlayerListWithRoles()
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
     local list = {}
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            local role = getRole(player)
-            table.insert(list, player.Name .. " (" .. role .. ")")
+            table.insert(list, player.Name .. " (" .. getRole(player) .. ")")
         end
     end
     return list
 end
 
 local selectedPlayerName = nil
+local playerDropdown -- объявление заранее
 
-local playerDropdown = MurderTab:CreateDropdown({
+local function refreshDropdown()
+    playerDropdown:Refresh(getPlayerListWithRoles(), true)
+end
+
+playerDropdown = MurderTab:CreateDropdown({
     Name = "Выбери игрока для телепортации",
     Options = getPlayerListWithRoles(),
     CurrentOption = "",
@@ -2086,38 +2083,33 @@ local playerDropdown = MurderTab:CreateDropdown({
         if str then
             local name = str:match("^(.-) %(") or str
             selectedPlayerName = name
+        else
+            selectedPlayerName = nil
         end
     end
 })
 
--- Авто-обновление списка в дропдауне при изменении игроков или ролей
-local RunService = game:GetService("RunService")
-RunService.RenderStepped:Connect(function()
-    playerDropdown:Refresh(getPlayerListWithRoles(), false)
-end)
-game:GetService("Players").PlayerAdded:Connect(function()
-    playerDropdown:Refresh(getPlayerListWithRoles(), true)
-end)
-game:GetService("Players").PlayerRemoving:Connect(function()
-    playerDropdown:Refresh(getPlayerListWithRoles(), true)
+Players.PlayerAdded:Connect(refreshDropdown)
+Players.PlayerRemoving:Connect(refreshDropdown)
+
+-- Можно по желанию обновлять список раз в 0.5 секунды для динамики ролей:
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        refreshDropdown()
+    end
 end)
 
--- Кнопка для телепорта выбранного игрока к себе
+-- === TELEPORT SELECTED PLAYER ===
 MurderTab:CreateButton({
     Name = "Teleport Selected Player To Me",
     Callback = function()
         local playerName = selectedPlayerName
-        if type(playerName) == "table" then
-            playerName = playerName[1]
-        end
-
         if not playerName then
             warn("Не выбран игрок!")
             return
         end
 
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
             warn("Твой персонаж не найден!")
