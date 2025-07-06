@@ -1566,7 +1566,7 @@ local function DrawCircle(center)
         local angle = i * step
         local pos3d = center + Vector3.new(math.cos(angle) * RADIUS, 0, math.sin(angle) * RADIUS)
         local screen, visible, depth = workspace.CurrentCamera:WorldToViewportPoint(pos3d)
-        if visible and depth > 0 then
+        if visible and depth and depth > 0 then  -- исправлено!
             if lastScreen then
                 local line = Drawing.new("Line")
                 line.From = Vector2.new(lastScreen.X, lastScreen.Y)
