@@ -1980,50 +1980,6 @@ UniversalTab:CreateToggle({
     end
 })
 
-UniversalTab:CreateSlider({
-    Name = "Legit Speed Value",
-    Range = {16, 100},
-    Increment = 1,
-    Suffix = " WalkSpeed",
-    CurrentValue = legitSpeedValue,
-    Callback = function(val)
-        legitSpeedValue = val
-        if _G.legitSpeedEnabled and _G.legitKeyDown and player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
-        end
-    end
-})
-
-userInput.InputBegan:Connect(function(input, processed)
-    if not processed and _G.legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
-        _G.legitKeyDown = true
-        local char = player.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
-        end
-    end
-end)
-userInput.InputEnded:Connect(function(input, processed)
-    if _G.legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
-        _G.legitKeyDown = false
-        local char = player.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
-        end
-    end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    char:WaitForChild("Humanoid", 5)
-    if char:FindFirstChildOfClass("Humanoid") then
-        if _G.legitSpeedEnabled and _G.legitKeyDown then
-            char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
-        else
-            char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
-        end
-    end
-end)
-
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
