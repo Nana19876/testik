@@ -1912,7 +1912,7 @@ end)
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
--- 1. Кнопка: разово телепортирует всех к тебе
+-- Одиночная кнопка
 MurderTab:CreateButton({
     Name = "Teleport All Super Close (Одиночное)",
     Callback = function()
@@ -1950,9 +1950,60 @@ MurderTab:CreateButton({
     end
 })
 
--- 2. Переключатель авто-телепортации только если ты Murder
-local autoTpEnabled = false
-local connection = nil
+-- Автотелепорт всегда
+local autoTpAlwaysEnabled = false
+local autoTpAlwaysConnection = nil
+
+local function autoTeleportAllAlways()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local myChar = LocalPlayer.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
+
+    local root = myChar.HumanoidRootPart
+    local basePos = root.Position
+    local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+    local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
+    local distance = 3.2
+    local spacing = 1.1
+
+    local targets = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            table.insert(targets, player)
+        end
+    end
+
+    local count = #targets
+    for i, player in ipairs(targets) do
+        local offset = (i - (count + 1) / 2) * spacing
+        local targetPos = basePos + lookVec * distance + rightVec * offset
+        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        player.Character.HumanoidRootPart.CFrame =
+            CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+    end
+end
+
+MurderTab:CreateToggle({
+    Name = "Auto Teleport All (ВСЕГДА)",
+    CurrentValue = false,
+    Callback = function(val)
+        autoTpAlwaysEnabled = val
+        if val then
+            autoTpAlwaysConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                autoTeleportAllAlways()
+            end)
+        else
+            if autoTpAlwaysConnection then autoTpAlwaysConnection:Disconnect() end
+            autoTpAlwaysConnection = nil
+        end
+    end
+})
+
+-- Автотелепорт только если ты Murder
+local autoTpMurderEnabled = false
+local autoTpMurderConnection = nil
 
 local function isMurderer(player)
     local bp = player:FindFirstChild("Backpack")
@@ -1960,7 +2011,7 @@ local function isMurderer(player)
     return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
 end
 
-local function autoTeleportAll()
+local function autoTeleportAllIfMurder()
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     local myChar = LocalPlayer.Character
@@ -1996,24 +2047,23 @@ MurderTab:CreateToggle({
     Name = "Auto Teleport All (только если Murder)",
     CurrentValue = false,
     Callback = function(val)
-        autoTpEnabled = val
+        autoTpMurderEnabled = val
         if val then
-            -- Включаем цикл автотп
-            connection = game:GetService("RunService").RenderStepped:Connect(function()
-                autoTeleportAll()
+            autoTpMurderConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                autoTeleportAllIfMurder()
             end)
         else
-            -- Отключаем
-            if connection then connection:Disconnect() end
-            connection = nil
+            if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
+            autoTpMurderConnection = nil
         end
     end
 })
 
--- На всякий случай отключаем при выходе
+-- Очищаем подключения при выходе
 game:GetService("Players").PlayerRemoving:Connect(function(p)
-    if p == game.Players.LocalPlayer and connection then
-        connection:Disconnect()
-        connection = nil
+    if p == game.Players.LocalPlayer then
+        if autoTpAlwaysConnection then autoTpAlwaysConnection:Disconnect() end
+        if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
     end
 end)
+
