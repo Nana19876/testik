@@ -1535,9 +1535,6 @@ local SEGMENTS = 24
 local THICKNESS = 1.2
 local Circles = {}
 
--- ========= Rayfield меню =========
-EspTab:CreateSection("Radius of Visibility")
-
 EspTab:CreateToggle({
     Name = "Enable Radius of Visibility",
     CurrentValue = false,
