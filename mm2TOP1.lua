@@ -1912,18 +1912,40 @@ end)
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
-MurderTab:CreateToggle({
-    Name = "kill all",
-    CurrentValue = false,
-    Callback = function(val)
-        autoTpAlwaysEnabled = val
-        if val then
-            autoTpAlwaysConnection = game:GetService("RunService").RenderStepped:Connect(function()
-                autoTeleportAllAlways()
-            end)
-        else
-            if autoTpAlwaysConnection then autoTpAlwaysConnection:Disconnect() end
-            autoTpAlwaysConnection = nil
+-- Одиночная кнопка
+MurderTab:CreateButton({
+    Name = "Teleport All Super Close (Одиночное)",
+    Callback = function()
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            warn("Твой персонаж не найден!")
+            return
+        end
+
+        local root = myChar.HumanoidRootPart
+        local basePos = root.Position
+        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
+        local distance = 3.2
+        local spacing = 1.1
+
+        local targets = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                table.insert(targets, player)
+            end
+        end
+
+        local count = #targets
+        for i, player in ipairs(targets) do
+            local offset = (i - (count + 1) / 2) * spacing
+            local targetPos = basePos + lookVec * distance + rightVec * offset
+            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            player.Character.HumanoidRootPart.CFrame =
+                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
         end
     end
 })
