@@ -1912,8 +1912,20 @@ end)
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
+-- Переключатель для проверки роли Murder
+local teleportOnlyIfMurder = false
+
+MurderTab:CreateToggle({
+    Name = "Teleport only if I am Murder",
+    CurrentValue = false,
+    Callback = function(v)
+        teleportOnlyIfMurder = v
+    end
+})
+
+-- 1. Кнопка: Телепортировать всех к себе (всегда работает)
 MurderTab:CreateButton({
-    Name = "Teleport All Stacked In Front",
+    Name = "Teleport All Super Close (Всегда)",
     Callback = function()
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
@@ -1926,17 +1938,77 @@ MurderTab:CreateButton({
         local root = myChar.HumanoidRootPart
         local basePos = root.Position
         local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
 
-        local distance = 3      -- насколько далеко перед тобой
+        local distance = 3.2
+        local spacing = 1.1
 
-        -- Список всех целей
+        -- Собираем всех кроме себя
+        local targets = {}
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local targetPos = basePos + lookVec * distance
-                targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z) -- на твоём уровне
-                player.Character.HumanoidRootPart.CFrame =
-                    CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+                table.insert(targets, player)
             end
+        end
+
+        local count = #targets
+        for i, player in ipairs(targets) do
+            local offset = (i - (count + 1) / 2) * spacing
+            local targetPos = basePos + lookVec * distance + rightVec * offset
+            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            player.Character.HumanoidRootPart.CFrame =
+                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+        end
+    end
+})
+
+-- 2. Кнопка: Телепортировать всех к себе только если ты Murder
+MurderTab:CreateButton({
+    Name = "Teleport All Super Close (Только если Murder)",
+    Callback = function()
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            warn("Твой персонаж не найден!")
+            return
+        end
+
+        -- Проверяем условие murder, если включен тумблер
+        if teleportOnlyIfMurder then
+            local isMurder = false
+            local bp = LocalPlayer:FindFirstChild("Backpack")
+            if bp and bp:FindFirstChild("Knife") then isMurder = true end
+            if myChar:FindFirstChild("Knife") then isMurder = true end
+            if not isMurder then
+                warn("Ты не Murder!")
+                return
+            end
+        end
+
+        local root = myChar.HumanoidRootPart
+        local basePos = root.Position
+        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
+        local distance = 3.2
+        local spacing = 1.1
+
+        -- Собираем всех кроме себя
+        local targets = {}
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                table.insert(targets, player)
+            end
+        end
+
+        local count = #targets
+        for i, player in ipairs(targets) do
+            local offset = (i - (count + 1) / 2) * spacing
+            local targetPos = basePos + lookVec * distance + rightVec * offset
+            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            player.Character.HumanoidRootPart.CFrame =
+                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
         end
     end
 })
