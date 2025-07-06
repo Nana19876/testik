@@ -1543,31 +1543,6 @@ local PlayerCircles = {} -- [player.UserId] = {line1, line2, ...}
 local renderConnection = nil
 local playerRemovingConnection = nil
 
--- СНАЧАЛА Тоггл в меню
-if EspTab then
-    EspTab:CreateToggle({
-        Name = "Enable Visibility Circle",
-        CurrentValue = false,
-        Callback = function(Value)
-            visibilityCircleEnabled = Value
-            if Value then
-                Connect()
-            else
-                Disconnect()
-            end
-        end
-    })
-
-    -- ПОТОМ ColorPicker в меню
-    EspTab:CreateColorPicker({
-        Name = "Circle Color",
-        Color = circleColor,
-        Callback = function(Color)
-            circleColor = Color
-        end
-    })
-end
-
 -- Очистка кругов для игрока
 local function ClearPlayerCircles(playerId)
     local lines = PlayerCircles[playerId]
@@ -1638,7 +1613,9 @@ end
 
 -- Основная функция обновления
 local function UpdateCircles()
-    -- Обновляем только существующих игроков, не очищаем все каждый раз
+    if not visibilityCircleEnabled then return end
+    
+    -- Обновляем только существующих игроков
     local currentPlayers = {}
     
     for _, player in ipairs(Players:GetPlayers()) do
@@ -1662,14 +1639,10 @@ local function UpdateCircles()
     end
 end
 
--- Корректное подключение событий
+-- ОПРЕДЕЛЯЕМ ФУНКЦИИ CONNECT И DISCONNECT ПЕРЕД ИСПОЛЬЗОВАНИЕМ
 local function Connect()
     if not renderConnection then
-        renderConnection = RunService.RenderStepped:Connect(function()
-            if visibilityCircleEnabled then
-                UpdateCircles()
-            end
-        end)
+        renderConnection = RunService.RenderStepped:Connect(UpdateCircles)
     end
     
     if not playerRemovingConnection then
@@ -1677,7 +1650,6 @@ local function Connect()
     end
 end
 
--- Корректное отключение событий и чистка кругов
 local function Disconnect()
     if renderConnection then
         renderConnection:Disconnect()
@@ -1690,6 +1662,32 @@ local function Disconnect()
     end
     
     ClearAllCircles()
+end
+
+-- ТЕПЕРЬ СОЗДАЕМ ЭЛЕМЕНТЫ МЕНЮ (функции уже определены)
+if EspTab then
+    -- СНАЧАЛА Тоггл в меню
+    EspTab:CreateToggle({
+        Name = "Enable Visibility Circle",
+        CurrentValue = false,
+        Callback = function(Value)
+            visibilityCircleEnabled = Value
+            if Value then
+                Connect()
+            else
+                Disconnect()
+            end
+        end
+    })
+
+    -- ПОТОМ ColorPicker в меню
+    EspTab:CreateColorPicker({
+        Name = "Circle Color",
+        Color = circleColor,
+        Callback = function(Color)
+            circleColor = Color
+        end
+    })
 end
 
 -- Если EspTab не существует, можно использовать простое управление:
@@ -1714,6 +1712,3 @@ end
 
 -- Если хочешь вручную включить:
 -- ToggleCircles()
-
--- Если хочешь вручную отключать:
--- Disconnect()
