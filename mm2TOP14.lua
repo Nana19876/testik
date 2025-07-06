@@ -1914,7 +1914,7 @@ local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 -- Одиночная кнопка
 MurderTab:CreateButton({
-    Name = "Teleport All Super Close (Одиночное)",
+    Name = "kill all",
     Callback = function()
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
@@ -2032,7 +2032,7 @@ end
 local selectedPlayerName = nil
 
 local playerDropdown = MurderTab:CreateDropdown({
-    Name = "Выбери игрока для телепортации",
+    Name = "player kill",
     Options = getPlayerList(),
     CurrentOption = "",
     Callback = function(option)
@@ -2046,7 +2046,7 @@ local playerDropdown = MurderTab:CreateDropdown({
 
 -- Кнопка для телепорта выбранного игрока к себе
 MurderTab:CreateButton({
-    Name = "Teleport Selected Player To Me",
+    Name = "Teleport player",
     Callback = function()
         local playerName = selectedPlayerName
         if type(playerName) == "table" then
