@@ -1701,3 +1701,128 @@ end
 game:GetService("Players").PlayerRemoving:Connect(function()
     StopCircles()
 end)
+
+-- === CHAMS TAB ===
+local ChamsTab = Window:CreateTab("Chams", 4483362459) -- (иконку можешь поменять)
+
+ChamsTab:CreateSection("Chams ESP (Player Fill)")
+
+-- Состояния Chams
+local chamsAllEnabled = false
+local chamsMurderEnabled = false
+local chamsSheriffEnabled = false
+local chamsInnocentEnabled = false
+
+-- Цвета Chams
+local chamsAllColor = Color3.fromRGB(130, 180, 255)
+local chamsMurderColor = Color3.fromRGB(255, 60, 90)
+local chamsSheriffColor = Color3.fromRGB(30, 240, 120)
+local chamsInnocentColor = Color3.fromRGB(210, 250, 255)
+
+-- Меню Chams
+ChamsTab:CreateToggle({
+    Name = "Chams: Все игроки",
+    CurrentValue = false,
+    Callback = function(v) chamsAllEnabled = v end
+})
+ChamsTab:CreateColorPicker({
+    Name = "Chams Цвет: Все игроки",
+    Color = chamsAllColor,
+    Callback = function(c) chamsAllColor = c end
+})
+
+ChamsTab:CreateToggle({
+    Name = "Chams: Murder",
+    CurrentValue = false,
+    Callback = function(v) chamsMurderEnabled = v end
+})
+ChamsTab:CreateColorPicker({
+    Name = "Chams Цвет: Murder",
+    Color = chamsMurderColor,
+    Callback = function(c) chamsMurderColor = c end
+})
+
+ChamsTab:CreateToggle({
+    Name = "Chams: Sheriff",
+    CurrentValue = false,
+    Callback = function(v) chamsSheriffEnabled = v end
+})
+ChamsTab:CreateColorPicker({
+    Name = "Chams Цвет: Sheriff",
+    Color = chamsSheriffColor,
+    Callback = function(c) chamsSheriffColor = c end
+})
+
+ChamsTab:CreateToggle({
+    Name = "Chams: Innocent",
+    CurrentValue = false,
+    Callback = function(v) chamsInnocentEnabled = v end
+})
+ChamsTab:CreateColorPicker({
+    Name = "Chams Цвет: Innocent",
+    Color = chamsInnocentColor,
+    Callback = function(c) chamsInnocentColor = c end
+})
+
+-- === ЛОГИКА CHAMS (тот же код, но привязан к новым переменным) ===
+local function isChamsMurder(p)
+    local bp, ch = p:FindFirstChild("Backpack"), p.Character
+    return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
+end
+local function isChamsSheriff(p)
+    local bp, ch = p:FindFirstChild("Backpack"), p.Character
+    return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
+end
+local function isChamsInnocent(p)
+    return not isChamsMurder(p) and not isChamsSheriff(p) and p ~= LocalPlayer
+end
+
+local function ApplyChams(player)
+    if player == LocalPlayer then return end
+    if not player.Character then return end
+    local char = player.Character
+    local highlight = char:FindFirstChild("ChamsHighlight")
+    if not highlight then
+        highlight = Instance.new("Highlight")
+        highlight.Name = "ChamsHighlight"
+        highlight.FillTransparency = 0.3
+        highlight.OutlineTransparency = 1
+        highlight.Adornee = char
+        highlight.Parent = char
+    end
+
+    highlight.Enabled = false
+
+    if chamsMurderEnabled and isChamsMurder(player) then
+        highlight.FillColor = chamsMurderColor
+        highlight.Enabled = true
+    elseif chamsSheriffEnabled and isChamsSheriff(player) then
+        highlight.FillColor = chamsSheriffColor
+        highlight.Enabled = true
+    elseif chamsInnocentEnabled and isChamsInnocent(player) then
+        highlight.FillColor = chamsInnocentColor
+        highlight.Enabled = true
+    elseif chamsAllEnabled then
+        highlight.FillColor = chamsAllColor
+        highlight.Enabled = true
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(1)
+        ApplyChams(player)
+    end)
+end)
+for _, player in ipairs(Players:GetPlayers()) do
+    if player.Character then ApplyChams(player) end
+    player.CharacterAdded:Connect(function() task.wait(1) ApplyChams(player) end)
+end
+
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            ApplyChams(player)
+        end
+    end
+end)
