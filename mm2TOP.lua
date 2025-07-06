@@ -1484,7 +1484,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- Ping ESP (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+-- Ping ESP (С ОБНОВЛЕНИЕМ РАЗ В СЕКУНДУ)
 local pingAllEnabled = false
 local pingColor = Color3.fromRGB(0, 255, 255)
 
@@ -1505,6 +1505,9 @@ EspTab:CreateColorPicker({
 })
 
 local PingLabels = {}
+local PlayerPings = {} -- Хранилище пинга для каждого игрока
+local lastPingUpdate = 0 -- Время последнего обновления пинга
+
 local function ClearPingLabels()
     for _, label in ipairs(PingLabels) do
         if label.Remove then
@@ -1518,64 +1521,72 @@ end
 local function GetPlayerPing(player)
     local ping = 0
     
-    -- Метод 1: Через Stats (самый надежный)
+    -- Метод 1: Через Stats
     pcall(function()
         local stats = game:GetService("Stats")
         local network = stats:FindFirstChild("Network")
         if network then
             local serverStatsItem = network:FindFirstChild("ServerStatsItem")
             if serverStatsItem then
-                local dataReceiveKbps = serverStatsItem:FindFirstChild("Data Ping")
-                if dataReceiveKbps then
-                    ping = math.floor(dataReceiveKbps.Value)
+                local dataPing = serverStatsItem:FindFirstChild("Data Ping")
+                if dataPing then
+                    ping = math.floor(dataPing.Value)
                 end
             end
         end
     end)
     
-    -- Метод 2: Если первый не сработал, используем GetNetworkPing
+    -- Метод 2: GetNetworkPing
     if ping <= 0 then
         pcall(function()
             ping = math.floor(player:GetNetworkPing() * 1000)
         end)
     end
     
-    -- Метод 3: Альтернативный способ через ReplicatedStorage
-    if ping <= 0 then
-        pcall(function()
-            local replicatedStorage = game:GetService("ReplicatedStorage")
-            local pingRemote = replicatedStorage:FindFirstChild("GetPing")
-            if pingRemote then
-                ping = math.floor(pingRemote:InvokeServer() or 0)
-            end
-        end)
-    end
-    
-    -- Метод 4: Симуляция пинга на основе расстояния (если ничего не работает)
+    -- Метод 3: Симуляция если ничего не работает
     if ping <= 0 then
         if player == game.Players.LocalPlayer then
-            ping = math.random(20, 80) -- Локальный игрок
+            ping = math.random(20, 80)
         else
-            ping = math.random(50, 200) -- Другие игроки
+            ping = math.random(50, 200)
         end
     end
     
-    -- Ограничиваем пинг разумными значениями
+    -- Ограничиваем значения
     ping = math.max(1, math.min(ping, 999))
     
     return ping
 end
 
+-- Функция обновления пинга (вызывается раз в секунду)
+local function UpdatePlayerPings()
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            PlayerPings[player.UserId] = GetPlayerPing(player)
+        end
+    end
+end
+
+-- Основной цикл отрисовки пинга
 game:GetService("RunService").RenderStepped:Connect(function()
     if not pingAllEnabled then
         ClearPingLabels()
         return
     end
+    
+    -- Обновляем пинг раз в секунду
+    local currentTime = tick()
+    if currentTime - lastPingUpdate >= 1 then
+        UpdatePlayerPings()
+        lastPingUpdate = currentTime
+    end
+    
     ClearPingLabels()
+    
     for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
-            local pingValue = GetPlayerPing(player)
+            local pingValue = PlayerPings[player.UserId] or 0
             
             local screenPos, visible = workspace.CurrentCamera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 4, 0))
             if visible then
