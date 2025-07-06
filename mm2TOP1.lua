@@ -1913,7 +1913,7 @@ end)
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 MurderTab:CreateButton({
-    Name = "kill al",
+    Name = "Teleport All In Front (Standing)",
     Callback = function()
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
@@ -1925,13 +1925,13 @@ MurderTab:CreateButton({
 
         local root = myChar.HumanoidRootPart
         local basePos = root.Position
-        local lookVec = root.CFrame.LookVector
-        local rightVec = root.CFrame.RightVector
+        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+        local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
 
-        local distance = 5 -- расстояние до тебя
-        local scatter = 3  -- расстояние между игроками
+        local distance = 5
+        local scatter = 3
 
-        -- Считаем всех, кроме себя
+        -- Собираем всех кроме себя
         local targets = {}
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -1942,13 +1942,14 @@ MurderTab:CreateButton({
         local count = #targets
         for i, player in ipairs(targets) do
             local offset = (i - (count+1)/2) * scatter
-            local targetPos = basePos + lookVec * distance + rightVec * offset
-            -- Y всегда твой (чтобы не висели!)
-            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
-            -- Смотрят на тебя (без наклона вниз)
+            local pos = basePos + lookVec * distance + rightVec * offset
+            -- Принудительно ставим Y = твой Y минус половина роста (чтобы не висели)
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            local rootSizeY = player.Character.HumanoidRootPart.Size.Y
+            local targetY = basePos.Y - rootSizeY/2 + 2 -- +2 чтобы стояли не "утоплены" в пол
+            pos = Vector3.new(pos.X, targetY, pos.Z)
             player.Character.HumanoidRootPart.CFrame =
-                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+                CFrame.new(pos, Vector3.new(basePos.X, targetY, basePos.Z))
         end
     end
 })
-
