@@ -1941,69 +1941,12 @@ local selectedPlayerName = nil
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
-local playerDropdown = MurderTab:CreateDropdown({
-    Name = "Выбери игрока для телепортации",
-    Options = getPlayerListWithRoles(),
-    CurrentOption = "",
-    Callback = function(option)
-        local str = (type(option) == "table") and option[1] or option
-        if str then
-            local name = str:match("^(.-) %(") or str
-            selectedPlayerName = name
-        end
-    end
-})
-
--- Авто-обновление ролей в дропдауне
-RunService.RenderStepped:Connect(function()
-    playerDropdown:Refresh(getPlayerListWithRoles(), false)
-end)
-Players.PlayerAdded:Connect(function()
-    playerDropdown:Refresh(getPlayerListWithRoles(), true)
-end)
-Players.PlayerRemoving:Connect(function()
-    playerDropdown:Refresh(getPlayerListWithRoles(), true)
-end)
-
--- Кнопка для телепорта выбранного игрока к себе
-MurderTab:CreateButton({
-    Name = "Teleport Selected Player To Me",
-    Callback = function()
-        local playerName = selectedPlayerName
-        if not playerName then
-            warn("Не выбран игрок!")
-            return
-        end
-
-        local myChar = LocalPlayer.Character
-        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
-            warn("Твой персонаж не найден!")
-            return
-        end
-
-        local targetPlayer = Players:FindFirstChild(playerName)
-        if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            warn("Персонаж выбранного игрока не найден!")
-            return
-        end
-
-        local root = myChar.HumanoidRootPart
-        local basePos = root.Position
-        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
-
-        local distance = 3.2
-
-        local targetPos = basePos + lookVec * distance
-        targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
-        targetPlayer.Character.HumanoidRootPart.CFrame =
-            CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
-    end
-})
-
--- Одиночная кнопка телепорта всех
+-- Одиночная кнопка
 MurderTab:CreateButton({
     Name = "Teleport All Super Close (Одиночное)",
     Callback = function()
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
             warn("Твой персонаж не найден!")
@@ -2037,6 +1980,7 @@ MurderTab:CreateButton({
 })
 
 -- Автотелепорт только если ты Murder
+local autoTpMurderEnabled = false
 local autoTpMurderConnection = nil
 
 local function isMurderer(player)
@@ -2046,6 +1990,8 @@ local function isMurderer(player)
 end
 
 local function autoTeleportAllIfMurder()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
     if not isMurderer(LocalPlayer) then return end
@@ -2079,8 +2025,9 @@ MurderTab:CreateToggle({
     Name = "Auto kill",
     CurrentValue = false,
     Callback = function(val)
+        autoTpMurderEnabled = val
         if val then
-            autoTpMurderConnection = RunService.RenderStepped:Connect(function()
+            autoTpMurderConnection = game:GetService("RunService").RenderStepped:Connect(function()
                 autoTeleportAllIfMurder()
             end)
         else
@@ -2091,9 +2038,77 @@ MurderTab:CreateToggle({
 })
 
 -- Очищаем подключение при выходе
-Players.PlayerRemoving:Connect(function(p)
-    if p == LocalPlayer then
+game:GetService("Players").PlayerRemoving:Connect(function(p)
+    if p == game.Players.LocalPlayer then
         if autoTpMurderConnection then autoTpMurderConnection:Disconnect() end
         autoTpMurderConnection = nil
     end
 end)
+
+-- Dropdown для выбора игрока
+local function getPlayerList()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local list = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(list, player.Name)
+        end
+    end
+    return list
+end
+
+local selectedPlayerName = nil
+
+local playerDropdown = MurderTab:CreateDropdown({
+    Name = "Выбери игрока для телепортации",
+    Options = getPlayerList(),
+    CurrentOption = "",
+    Callback = function(option)
+        selectedPlayerName = option
+    end
+})
+
+-- Авто-обновление списка в дропдауне
+game:GetService("Players").PlayerAdded:Connect(function()
+    playerDropdown:Refresh(getPlayerList(), true)
+end)
+game:GetService("Players").PlayerRemoving:Connect(function()
+    playerDropdown:Refresh(getPlayerList(), true)
+end)
+
+-- Кнопка для телепорта выбранного игрока к себе
+MurderTab:CreateButton({
+    Name = "Teleport Selected Player To Me",
+    Callback = function()
+        if not selectedPlayerName then
+            warn("Не выбран игрок!")
+            return
+        end
+
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            warn("Твой персонаж не найден!")
+            return
+        end
+
+        local targetPlayer = Players:FindFirstChild(selectedPlayerName)
+        if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            warn("Персонаж выбранного игрока не найден!")
+            return
+        end
+
+        local root = myChar.HumanoidRootPart
+        local basePos = root.Position
+        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+
+        local distance = 3.2
+
+        local targetPos = basePos + lookVec * distance
+        targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
+        targetPlayer.Character.HumanoidRootPart.CFrame =
+            CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+    end
+})
