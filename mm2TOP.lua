@@ -1913,7 +1913,7 @@ end)
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 MurderTab:CreateButton({
-    Name = "kill all",
+    Name = "kill al",
     Callback = function()
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
@@ -1926,25 +1926,29 @@ MurderTab:CreateButton({
         local root = myChar.HumanoidRootPart
         local basePos = root.Position
         local lookVec = root.CFrame.LookVector
-        local upVec = root.CFrame.UpVector
         local rightVec = root.CFrame.RightVector
 
-        local distance = 6 -- сколько юнитов впереди тебя
-        local scatter = 3  -- "разброс" игроков по сторонам
+        local distance = 5 -- расстояние до тебя
+        local scatter = 3  -- расстояние между игроками
 
-        local n = 0
+        -- Считаем всех, кроме себя
+        local targets = {}
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                n = n + 1
-                -- Вычисляем точку прямо перед тобой + разбрасываем по X для каждого игрока
-                local offset = ((n - 1) - 0.5*(#Players:GetPlayers()-2)) * scatter
-                local targetPos = basePos + lookVec * distance + rightVec * offset + upVec * 2
-                player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos, basePos)
+                table.insert(targets, player)
             end
         end
 
-        print("Игроки телепортированы перед тобой!")
+        local count = #targets
+        for i, player in ipairs(targets) do
+            local offset = (i - (count+1)/2) * scatter
+            local targetPos = basePos + lookVec * distance + rightVec * offset
+            -- Y всегда твой (чтобы не висели!)
+            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            -- Смотрят на тебя (без наклона вниз)
+            player.Character.HumanoidRootPart.CFrame =
+                CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+        end
     end
 })
-
 
