@@ -1927,7 +1927,7 @@ MurderTab:CreateButton({
         local basePos = root.Position
         local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
 
-        local distance = 5      -- насколько далеко перед тобой
+        local distance = 3      -- насколько далеко перед тобой
 
         -- Список всех целей
         for _, player in ipairs(Players:GetPlayers()) do
