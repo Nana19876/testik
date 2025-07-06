@@ -2016,3 +2016,71 @@ game:GetService("Players").PlayerRemoving:Connect(function(p)
     end
 end)
 
+-- Собираем список игроков (кроме себя)
+local function getPlayerList()
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local list = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            table.insert(list, player.Name)
+        end
+    end
+    return list
+end
+
+local selectedPlayerName = nil
+
+-- Dropdown для выбора игрока
+local playerDropdown = MurderTab:CreateDropdown({
+    Name = "Выбери игрока для телепортации",
+    Options = getPlayerList(),
+    CurrentOption = "",
+    Callback = function(option)
+        selectedPlayerName = option
+    end
+})
+
+-- Авто-обновление списка в дропдауне
+game:GetService("Players").PlayerAdded:Connect(function()
+    playerDropdown:Refresh(getPlayerList(), true)
+end)
+game:GetService("Players").PlayerRemoving:Connect(function()
+    playerDropdown:Refresh(getPlayerList(), true)
+end)
+
+-- Кнопка для телепорта выбранного игрока к себе
+MurderTab:CreateButton({
+    Name = "Teleport Selected Player To Me",
+    Callback = function()
+        if not selectedPlayerName then
+            warn("Не выбран игрок!")
+            return
+        end
+
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
+        local myChar = LocalPlayer.Character
+        if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
+            warn("Твой персонаж не найден!")
+            return
+        end
+
+        local targetPlayer = Players:FindFirstChild(selectedPlayerName)
+        if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            warn("Персонаж выбранного игрока не найден!")
+            return
+        end
+
+        local root = myChar.HumanoidRootPart
+        local basePos = root.Position
+        local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+
+        local distance = 3.2
+
+        local targetPos = basePos + lookVec * distance
+        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        targetPlayer.Character.HumanoidRootPart.CFrame =
+            CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
+    end
+})
