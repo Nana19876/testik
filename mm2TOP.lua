@@ -1712,21 +1712,23 @@ local chamsAllEnabled = false
 local chamsMurderEnabled = false
 local chamsSheriffEnabled = false
 local chamsInnocentEnabled = false
+local chamsCoinEnabled = false
 
 -- Переменные цвета
 local chamsAllColor = Color3.fromRGB(130, 180, 255)
 local chamsMurderColor = Color3.fromRGB(255, 60, 90)
 local chamsSheriffColor = Color3.fromRGB(30, 240, 120)
 local chamsInnocentColor = Color3.fromRGB(210, 250, 255)
+local chamsCoinColor = Color3.fromRGB(255, 215, 0)
 
--- Меню
+-- Меню игроков
 ChamsTab:CreateToggle({
-    Name = "Chams: Все игроки",
+    Name = "Chams: player",
     CurrentValue = false,
     Callback = function(v) chamsAllEnabled = v end
 })
 ChamsTab:CreateColorPicker({
-    Name = "Chams Цвет: Все игроки",
+    Name = "Chams color: player",
     Color = chamsAllColor,
     Callback = function(c) chamsAllColor = c end
 })
@@ -1737,7 +1739,7 @@ ChamsTab:CreateToggle({
     Callback = function(v) chamsMurderEnabled = v end
 })
 ChamsTab:CreateColorPicker({
-    Name = "Chams Цвет: Murder",
+    Name = "Chams color: Murder",
     Color = chamsMurderColor,
     Callback = function(c) chamsMurderColor = c end
 })
@@ -1748,7 +1750,7 @@ ChamsTab:CreateToggle({
     Callback = function(v) chamsSheriffEnabled = v end
 })
 ChamsTab:CreateColorPicker({
-    Name = "Chams Цвет: Sheriff",
+    Name = "Chams color: Sheriff",
     Color = chamsSheriffColor,
     Callback = function(c) chamsSheriffColor = c end
 })
@@ -1759,12 +1761,24 @@ ChamsTab:CreateToggle({
     Callback = function(v) chamsInnocentEnabled = v end
 })
 ChamsTab:CreateColorPicker({
-    Name = "Chams Цвет: Innocent",
+    Name = "Chams color: Innocent",
     Color = chamsInnocentColor,
     Callback = function(c) chamsInnocentColor = c end
 })
 
--- Логика ролей
+-- Меню монет
+ChamsTab:CreateToggle({
+    Name = "Chams: Coin",
+    CurrentValue = false,
+    Callback = function(v) chamsCoinEnabled = v end
+})
+ChamsTab:CreateColorPicker({
+    Name = "Chams color: Coin",
+    Color = chamsCoinColor,
+    Callback = function(c) chamsCoinColor = c end
+})
+
+-- Игроки (логика)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -1781,13 +1795,12 @@ local function isChamsInnocent(p)
     return not isChamsMurder(p) and not isChamsSheriff(p) and p ~= LocalPlayer
 end
 
--- Применение Chams
 local function ApplyChams(player)
     if player == LocalPlayer then return end
     if not player.Character then return end
     local char = player.Character
 
-    -- Удалить предыдущий Highlight, если не соответствует роли/цвету
+    -- Удалить предыдущий Highlight для Chams (не конфликтует с Outline)
     for _, inst in ipairs(char:GetChildren()) do
         if inst:IsA("Highlight") and inst.Name == "ChamsHighlight" then
             inst:Destroy()
@@ -1820,7 +1833,6 @@ local function ApplyChams(player)
     end
 end
 
--- События на спавн персонажа
 Players.PlayerAdded:Connect(function(player)
     player.CharacterAdded:Connect(function()
         task.wait(0.5)
@@ -1835,7 +1847,6 @@ for _, player in ipairs(Players:GetPlayers()) do
     end)
 end
 
--- Автообновление на каждый кадр (переключает чамсы если роль/цвет сменился)
 RunService.RenderStepped:Connect(function()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
@@ -1843,3 +1854,59 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
+
+-- === CHAMS COIN LOGIC ===
+local Workspace = game:GetService("Workspace")
+local CoreGui = game:GetService("CoreGui")
+local COIN_NAME = "Coin" -- Измени на своё имя монеты, если нужно
+
+local coinHighlights = {}
+
+local function highlightCoin(coin)
+    if coinHighlights[coin] then
+        local h = coinHighlights[coin]
+        h.FillColor = chamsCoinColor
+        h.Enabled = chamsCoinEnabled
+        return
+    end
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "CoinCham"
+    highlight.Adornee = coin
+    highlight.FillColor = chamsCoinColor
+    highlight.FillTransparency = 0.2
+    highlight.OutlineColor = Color3.new(0, 0, 0)
+    highlight.OutlineTransparency = 1
+    highlight.Enabled = chamsCoinEnabled
+    highlight.Parent = CoreGui
+    coinHighlights[coin] = highlight
+end
+
+local function cleanupCoinChams()
+    for coin, highlight in pairs(coinHighlights) do
+        if not coin:IsDescendantOf(Workspace) then
+            highlight:Destroy()
+            coinHighlights[coin] = nil
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if chamsCoinEnabled then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Name:lower():find(COIN_NAME:lower()) then
+                highlightCoin(obj)
+            end
+        end
+    end
+    -- обновление видимости и цвета + очистка старых
+    for coin, h in pairs(coinHighlights) do
+        if coin:IsDescendantOf(Workspace) then
+            h.FillColor = chamsCoinColor
+            h.Enabled = chamsCoinEnabled
+        else
+            h:Destroy()
+            coinHighlights[coin] = nil
+        end
+    end
+end)
+
