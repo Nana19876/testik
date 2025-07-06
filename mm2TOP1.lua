@@ -1910,3 +1910,15 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Создаём отдельную вкладку Murder
+local MurderTab = Window:CreateTab("Murder", 4483362462)
+
+-- Добавляем кнопку "Kill All"
+MurderTab:CreateButton({
+    Name = "Kill All",
+    Callback = function()
+        -- Твой код для убийства всех
+        print("Kill All нажата!")
+        -- Здесь можно добавить реальный функционал убийства всех игроков, если знаешь, как реализовать в своей игре.
+    end
+})
