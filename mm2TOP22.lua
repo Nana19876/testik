@@ -2022,8 +2022,6 @@ player.CharacterAdded:Connect(function(char)
     end
 end)
 
-
-
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
