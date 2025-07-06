@@ -1910,29 +1910,41 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Вкладка Murder
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
--- Кнопка "Teleport All To Me"
 MurderTab:CreateButton({
-    Name = "Teleport All To Me",
+    Name = "kill all",
     Callback = function()
         local Players = game:GetService("Players")
         local LocalPlayer = Players.LocalPlayer
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
-            warn("Не найден HumanoidRootPart у вашего персонажа!")
+            warn("Твой персонаж не найден!")
             return
         end
-        local myPos = myChar.HumanoidRootPart.Position + Vector3.new(0, 3, 0) -- Телепорт на 3 юнита выше, чтобы не застряли
 
+        local root = myChar.HumanoidRootPart
+        local basePos = root.Position
+        local lookVec = root.CFrame.LookVector
+        local upVec = root.CFrame.UpVector
+        local rightVec = root.CFrame.RightVector
+
+        local distance = 6 -- сколько юнитов впереди тебя
+        local scatter = 3  -- "разброс" игроков по сторонам
+
+        local n = 0
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                -- Телепортируем всех кроме себя
-                player.Character.HumanoidRootPart.CFrame = CFrame.new(myPos)
+                n = n + 1
+                -- Вычисляем точку прямо перед тобой + разбрасываем по X для каждого игрока
+                local offset = ((n - 1) - 0.5*(#Players:GetPlayers()-2)) * scatter
+                local targetPos = basePos + lookVec * distance + rightVec * offset + upVec * 2
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(targetPos, basePos)
             end
         end
-        print("Все игроки телепортированы к вам!")
+
+        print("Игроки телепортированы перед тобой!")
     end
 })
+
 
