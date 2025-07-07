@@ -1,5 +1,33 @@
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+-- Безопасная загрузка Rayfield с проверкой ошибок
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+end)
 
+if not success or not Rayfield then
+    warn("Ошибка загрузки Rayfield! Попробуйте альтернативный URL или проверьте интернет.")
+    -- Альтернативный способ загрузки
+    local success2, Rayfield2 = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
+    end)
+    
+    if success2 and Rayfield2 then
+        Rayfield = Rayfield2
+        print("Rayfield загружен с альтернативного источника!")
+    else
+        error("Не удалось загрузить Rayfield ни с одного источника!")
+        return
+    end
+else
+    print("Rayfield успешно загружен!")
+end
+
+-- Проверяем, что Rayfield действительно загрузился
+if not Rayfield or type(Rayfield) ~= "table" then
+    error("Rayfield не является корректным объектом!")
+    return
+end
+
+-- Остальная часть вашего кода остается без изменений
 local Window = Rayfield:CreateWindow({
     Name = "ESP Menu",
     LoadingTitle = "Загрузка...",
