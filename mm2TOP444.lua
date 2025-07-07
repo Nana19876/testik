@@ -1941,6 +1941,7 @@ local selectedPlayerName = nil
 
 local PlayerTab = Window:CreateTab("Player", 4483362458)
 
+-- SpeedHack переменные
 local speedHackEnabled = false
 local speedValue = 50
 
@@ -1970,7 +1971,7 @@ PlayerTab:CreateSlider({
     end,
 })
 
--- Клавиши
+-- Управление по клавише X
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -1997,6 +1998,7 @@ UserInputService.InputEnded:Connect(function(input, processed)
         end
     end
 end)
+
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
