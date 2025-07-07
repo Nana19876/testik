@@ -1971,8 +1971,6 @@ PlayerTab:CreateSlider({
     end,
 })
 
-PlayerTab:CreateLabel("Зажмите X чтобы ускориться")
-
 -- Клавиши
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
