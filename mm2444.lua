@@ -1997,9 +1997,10 @@ UserInputService.InputEnded:Connect(function(input, processed)
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("Humanoid") then
             char.Humanoid.WalkSpeed = 16
-        end
-    end
-end)
+
+	end,
+
+})
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
