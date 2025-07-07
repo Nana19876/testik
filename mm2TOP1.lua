@@ -1939,7 +1939,6 @@ end
 
 local selectedPlayerName = nil
 
--- === Universal Tab ===
 local UniversalTab = Window:CreateTab("Universal", 4483362461)
 
 local player = game.Players.LocalPlayer
@@ -2022,7 +2021,7 @@ player.CharacterAdded:Connect(function(char)
             char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
         end
     end
-end)
+})
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
