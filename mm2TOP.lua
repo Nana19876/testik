@@ -1966,6 +1966,68 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+-- === Legit Speedhack ===
+local legitSpeedEnabled = false
+local legitSpeedValue = 40
+local userInput = game:GetService("UserInputService")
+local legitKeyDown = false
+
+UniversalTab:CreateToggle({
+    Name = "Legit Speedhack (X to Run)",
+    CurrentValue = false,
+    Callback = function(val)
+        legitSpeedEnabled = val
+        legitKeyDown = false -- сброс при выключении
+        -- При выключении вернём обычную скорость
+        if not val then
+            if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+                player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+            end
+        end
+    end
+})
+
+UniversalTab:CreateSlider({
+    Name = "Legit Speed Value",
+    Range = {16, 100},
+    Increment = 1,
+    Suffix = " WalkSpeed",
+    CurrentValue = legitSpeedValue,
+    Callback = function(val)
+        legitSpeedValue = val
+    end
+})
+
+-- Управление скоростью по нажатию X
+userInput.InputBegan:Connect(function(input, processed)
+    if not processed and legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
+        legitKeyDown = true
+        local char = player.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
+        end
+    end
+end)
+userInput.InputEnded:Connect(function(input, processed)
+    if legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
+        legitKeyDown = false
+        local char = player.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+        end
+    end
+end)
+
+-- При респавне поддерживаем логику работы обоих спидхаков
+player.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid", 5)
+    if legitSpeedEnabled and legitKeyDown and char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
+    elseif char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+    end
+end)
+
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
