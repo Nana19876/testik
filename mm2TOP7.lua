@@ -1945,26 +1945,197 @@ local UniversalTab = Window:CreateTab("Universal", 4483362461)
 -- Объявляем все необходимые переменные в начале
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
+-- Переменные для скорости
 local speedValue = 16 -- Стандартная скорость
 local normalSpeed = 16 -- Нормальная скорость для возврата
+local speedConnection = nil
+
+-- Переменные для Legit Speedhack
+local legitSpeedEnabled = false
+local legitSpeedValue = 40
+local legitKeyDown = false
+
+-- Переменные для Jump Power
+local jumpValue = 50 -- Стандартная сила прыжка
+local jumpConnection = nil
+
+-- === СЕКЦИЯ: MOVEMENT ===
+UniversalTab:CreateSection("Movement")
 
 -- === Basic WalkSpeed Slider ===
 UniversalTab:CreateSlider({
     Name = "Player WalkSpeed",
     Range = {8, 100},
     Increment = 1,
-    Suffix = " WalkSpeed",
+    Suffix = " Speed",
     CurrentValue = 16,
     Callback = function(val)
         speedValue = val
-        local player = LocalPlayer
-        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
+        normalSpeed = val -- Обновляем нормальную скорость
+        
+        -- Применяем скорость немедленно, если персонаж существует
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
         end
     end
 })
+
+-- === Jump Power Slider ===
+UniversalTab:CreateSlider({
+    Name = "Jump Power",
+    Range = {16, 200},
+    Increment = 1,
+    Suffix = " Power",
+    CurrentValue = 50,
+    Callback = function(val)
+        jumpValue = val
+        
+        -- Применяем силу прыжка немедленно
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").JumpPower = jumpValue
+        end
+    end
+})
+
+-- === Legit Speedhack Toggle ===
+UniversalTab:CreateToggle({
+    Name = "Legit Speedhack (Hold X)",
+    CurrentValue = false,
+    Callback = function(val)
+        legitSpeedEnabled = val
+        legitKeyDown = false -- Сброс при выключении
+        
+        -- При выключении возвращаем обычную скорость
+        if not val and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+        end
+    end
+})
+
+-- === Legit Speed Value Slider ===
+UniversalTab:CreateSlider({
+    Name = "Legit Speed Value",
+    Range = {16, 150},
+    Increment = 1,
+    Suffix = " Speed",
+    CurrentValue = 40,
+    Callback = function(val)
+        legitSpeedValue = val
+    end
+})
+
+-- === СЕКЦИЯ: UTILITIES ===
+UniversalTab:CreateSection("Utilities")
+
+-- === Infinite Jump Toggle ===
+local infiniteJumpEnabled = false
+local jumpConnection = nil
+
+UniversalTab:CreateToggle({
+    Name = "Infinite Jump",
+    CurrentValue = false,
+    Callback = function(val)
+        infiniteJumpEnabled = val
+        
+        if val then
+            jumpConnection = UserInputService.JumpRequest:Connect(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end)
+        else
+            if jumpConnection then
+                jumpConnection:Disconnect()
+                jumpConnection = nil
+            end
+        end
+    end
+})
+
+-- === ОБРАБОТЧИКИ СОБЫТИЙ ===
+
+-- Обработчик нажатий клавиш для Legit Speedhack
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
+        legitKeyDown = true
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, processed)
+    if legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
+        legitKeyDown = false
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+        end
+    end
+end)
+
+-- Обработчик респавна персонажа
+LocalPlayer.CharacterAdded:Connect(function(character)
+    -- Ждем появления Humanoid
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    if not humanoid then return end
+    
+    -- Применяем настройки скорости
+    if legitSpeedEnabled and legitKeyDown then
+        humanoid.WalkSpeed = legitSpeedValue
+    else
+        humanoid.WalkSpeed = speedValue
+    end
+    
+    -- Применяем настройки прыжка
+    humanoid.JumpPower = jumpValue
+    
+    -- Восстанавливаем Infinite Jump если был включен
+    if infiniteJumpEnabled and not jumpConnection then
+        jumpConnection = UserInputService.JumpRequest:Connect(function()
+            if humanoid and humanoid.Parent then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+    end
+end)
+
+-- Постоянное обновление скорости (защита от сброса)
+RunService.Heartbeat:Connect(function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        
+        -- Проверяем и корректируем скорость
+        local targetSpeed = (legitSpeedEnabled and legitKeyDown) and legitSpeedValue or speedValue
+        if math.abs(humanoid.WalkSpeed - targetSpeed) > 1 then
+            humanoid.WalkSpeed = targetSpeed
+        end
+        
+        -- Проверяем и корректируем силу прыжка
+        if math.abs(humanoid.JumpPower - jumpValue) > 1 then
+            humanoid.JumpPower = jumpValue
+        end
+    end
+end)
+
+-- Очистка при выходе игрока
+Players.PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        -- Отключаем все соединения
+        if jumpConnection then jumpConnection:Disconnect() end
+        if speedConnection then speedConnection:Disconnect() end
+    end
+end)
+
+-- Уведомление о загрузке
+print("✅ Universal Tab загружен успешно!")
+print("📋 Доступные функции:")
+print("   • WalkSpeed Slider - изменение скорости ходьбы")
+print("   • Jump Power Slider - изменение силы прыжка") 
+print("   • Legit Speedhack - ускорение по нажатию X")
+print("   • Infinite Jump - бесконечные прыжки")
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
