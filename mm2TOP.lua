@@ -19,8 +19,8 @@ local categories = {
     Innocent = Color3.fromRGB(200,255,255),
     Coin     = Color3.fromRGB(255,215,0),
 }
-
 local boxStates, boxColors = {}, {}
+
 local box2dEnabled = false
 local box2dColor = Color3.fromRGB(255,255,255)
 local murderBoxEnabled = false
@@ -38,6 +38,7 @@ local gunBoxColor = Color3.fromRGB(30,144,255)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
+
 local espCache = {}
 local newVector2 = Vector2.new
 local tan, rad = math.tan, math.rad
@@ -124,11 +125,9 @@ end
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then create2dEsp(player) end
 end
-
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then create2dEsp(player) end
 end)
-
 Players.PlayerRemoving:Connect(function(player)
     remove2dEsp(player)
 end)
@@ -171,7 +170,6 @@ end
 
 -- ========== GunDrop ESP (4 линии) ==========
 local gunDropLines = {} -- [GunDrop] = {Line,Line,Line,Line}
-
 local function updateGunDropESP()
     if not gunBoxEnabled then
         for obj, box in pairs(gunDropLines) do
@@ -233,6 +231,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
     for player, esp in pairs(espCache) do
         update2dEsp(player, esp)
     end
+
     -- COIN ESP
     if coinBoxEnabled then
         local coins = {}
@@ -277,6 +276,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
             end
         end
     end
+
     -- GunDrop ESP (4 линии)
     updateGunDropESP()
 end)
@@ -285,6 +285,7 @@ end)
 for category, defaultColor in pairs(categories) do
     boxStates[category] = false
     boxColors[category] = defaultColor
+
     EspTab:CreateToggle({
         Name = "Box ESP: " .. category,
         CurrentValue = false,
@@ -305,6 +306,7 @@ for category, defaultColor in pairs(categories) do
             end
         end
     })
+
     EspTab:CreateColorPicker({
         Name = "color" .. category,
         Color = defaultColor,
@@ -398,6 +400,7 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local Tracers = {} -- [object or player] = Drawing.Line
+
 local tracerMurderEnabled = false
 local tracerSheriffEnabled = false
 local tracerInnocentEnabled = false
@@ -413,25 +416,21 @@ local gunColor = Color3.fromRGB(30,144,255)
 local coinColor = Color3.fromRGB(255,215,0)
 
 local tracerThickness = 3.5
+
 local TRAP_PART_NAME = "Trap"
 local GUN_PART_NAME = "GunDrop"
 local COIN_PART_NAME = "MainCoin"
 
 EspTab:CreateToggle({Name="Tracer: Murder",CurrentValue=false,Callback=function(Value)tracerMurderEnabled=Value;if not Value then for obj,line in pairs(Tracers)do if line.Role=="Murder"then line.Visible=false end end end end})
 EspTab:CreateColorPicker({Name="color Tracer: Murder",Color=murderColor,Callback=function(Color)murderColor=Color;for obj,line in pairs(Tracers)do if line.Role=="Murder"then line.Color=murderColor end end end})
-
 EspTab:CreateToggle({Name="Tracer: Sheriff",CurrentValue=false,Callback=function(Value)tracerSheriffEnabled=Value;if not Value then for obj,line in pairs(Tracers)do if line.Role=="Sheriff"then line.Visible=false end end end end})
 EspTab:CreateColorPicker({Name="color Tracer: Sheriff",Color=sheriffColor,Callback=function(Color)sheriffColor=Color;for obj,line in pairs(Tracers)do if line.Role=="Sheriff"then line.Color=sheriffColor end end end})
-
 EspTab:CreateToggle({Name="Tracer: Innocent",CurrentValue=false,Callback=function(Value)tracerInnocentEnabled=Value;if not Value then for obj,line in pairs(Tracers)do if line.Role=="Innocent"then line.Visible=false end end end end})
 EspTab:CreateColorPicker({Name="color Tracer: Innocent",Color=innocentColor,Callback=function(Color)innocentColor=Color;for obj,line in pairs(Tracers)do if line.Role=="Innocent"then line.Color=innocentColor end end end})
-
 EspTab:CreateToggle({Name="Tracer: Trap",CurrentValue=false,Callback=function(Value)tracerTrapEnabled=Value;if not Value then for obj,line in pairs(Tracers)do if line.ObjType=="Trap"then line.Visible=false end end end end})
 EspTab:CreateColorPicker({Name="color Tracer: Trap",Color=trapColor,Callback=function(Color)trapColor=Color;for obj,line in pairs(Tracers)do if line.ObjType=="Trap"then line.Color=trapColor end end end})
-
 EspTab:CreateToggle({Name="Tracer: Gun",CurrentValue=false,Callback=function(Value)tracerGunEnabled=Value;if not Value then for obj,line in pairs(Tracers)do if line.ObjType=="Gun"then line.Visible=false end end end end})
 EspTab:CreateColorPicker({Name="color Tracer: Gun",Color=gunColor,Callback=function(Color)gunColor=Color;for obj,line in pairs(Tracers)do if line.ObjType=="Gun"then line.Color=gunColor end end end})
-
 EspTab:CreateToggle({Name="Tracer: Coin",CurrentValue=false,Callback=function(Value)tracerCoinEnabled=Value;if not Value then for obj,line in pairs(Tracers)do if line.ObjType=="Coin"then line.Visible=false end end end end})
 EspTab:CreateColorPicker({Name="color Tracer: Coin",Color=coinColor,Callback=function(Color)coinColor=Color;for obj,line in pairs(Tracers)do if line.ObjType=="Coin"then line.Color=coinColor end end end})
 
@@ -440,13 +439,11 @@ local function clampToScreen(x, y)
     y = math.clamp(y, 0, Camera.ViewportSize.Y)
     return Vector2.new(x, y)
 end
-
 local function isMurderer(player)local backpack=player:FindFirstChild("Backpack")local character=player.Character;return(backpack and backpack:FindFirstChild("Knife"))or(character and character:FindFirstChild("Knife"))end
 local function isSheriff(player)local backpack=player:FindFirstChild("Backpack")local character=player.Character;return(backpack and backpack:FindFirstChild("Gun"))or(character and character:FindFirstChild("Gun"))end
 local function isInnocent(player)return not isMurderer(player)and not isSheriff(player)and player~=LocalPlayer end
 
 Players.PlayerRemoving:Connect(function(player)if Tracers[player]then Tracers[player]:Remove()Tracers[player]=nil end end)
-
 local function cleanupTracers(valid)for obj,line in pairs(Tracers)do if not valid[obj]then line:Remove()Tracers[obj]=nil end end end
 
 RunService.RenderStepped:Connect(function()
@@ -472,6 +469,7 @@ RunService.RenderStepped:Connect(function()
                 tracer.Color = color
                 tracer.Role = role
                 tracer.Thickness = tracerThickness
+
                 local rootPart = player.Character.HumanoidRootPart
                 local screenPos, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
                 local toPos
@@ -508,6 +506,7 @@ RunService.RenderStepped:Connect(function()
                 local line = Tracers[obj]
                 line.Color = trapColor
                 line.Thickness = tracerThickness
+
                 local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
                 local toPos
                 if onScreen and screenPos.Z > 0 then
@@ -523,6 +522,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     else for obj, line in pairs(Tracers) do if line.ObjType == "Trap" then line.Visible = false end end end
+
     if tracerGunEnabled then
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") and obj.Name == GUN_PART_NAME then
@@ -539,6 +539,7 @@ RunService.RenderStepped:Connect(function()
                 local line = Tracers[obj]
                 line.Color = gunColor
                 line.Thickness = tracerThickness
+
                 local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
                 local toPos
                 if onScreen and screenPos.Z > 0 then
@@ -554,6 +555,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     else for obj, line in pairs(Tracers) do if line.ObjType == "Gun" then line.Visible = false end end end
+
     if tracerCoinEnabled then
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("BasePart") and obj.Name == COIN_PART_NAME then
@@ -570,6 +572,7 @@ RunService.RenderStepped:Connect(function()
                 local line = Tracers[obj]
                 line.Color = coinColor
                 line.Thickness = tracerThickness
+
                 local screenPos, onScreen = Camera:WorldToViewportPoint(obj.Position)
                 local toPos
                 if onScreen and screenPos.Z > 0 then
@@ -585,6 +588,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     else for obj, line in pairs(Tracers) do if line.ObjType == "Coin" then line.Visible = false end end end
+
     cleanupTracers(valid)
 end)
 
@@ -625,6 +629,7 @@ local colorPlayerEnabled = false
 local murderHighlightEnabled = false
 local sheriffHighlightEnabled = false
 local innocentHighlightEnabled = false
+
 local trapHighlightEnabled = false
 local gunHighlightEnabled = false
 local coinHighlightEnabled = false
@@ -647,12 +652,10 @@ local function isMurder(player)
 	local bp, ch = player:FindFirstChild("Backpack"), player.Character
 	return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
 end
-
 local function isSheriff(player)
 	local bp, ch = player:FindFirstChild("Backpack"), player.Character
 	return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
 end
-
 local function isInnocent(player)
 	return not isMurder(player) and not isSheriff(player) and player ~= LocalPlayer
 end
@@ -693,7 +696,6 @@ Players.PlayerAdded:Connect(function(player)
 		ApplyHighlight(player)
 	end)
 end)
-
 for _, player in ipairs(Players:GetPlayers()) do
 	if player.Character then
 		ApplyHighlight(player)
@@ -756,7 +758,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) colorPlayerEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: All Players",
 	Color = colorPlayerColor,
@@ -768,7 +769,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) murderHighlightEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Murder",
 	Color = murderHighlightColor,
@@ -780,7 +780,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) sheriffHighlightEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Sheriff",
 	Color = sheriffHighlightColor,
@@ -792,7 +791,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) innocentHighlightEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Innocent",
 	Color = innocentHighlightColor,
@@ -804,7 +802,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) trapHighlightEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Trap",
 	Color = trapHighlightColor,
@@ -816,7 +813,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) gunHighlightEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Gun",
 	Color = gunHighlightColor,
@@ -828,7 +824,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) coinHighlightEnabled = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Outline Color: Coin",
 	Color = coinHighlightColor,
@@ -853,13 +848,10 @@ local box3dInnocentColor = Color3.fromRGB(200, 255, 255)
 -- GUI Binds
 EspTab:CreateToggle({ Name = "3D Box: Players", CurrentValue = false, Callback = function(v) box3dEnabled = v end })
 EspTab:CreateColorPicker({ Name = "3D Box Color: Players", Color = box3dColor, Callback = function(c) box3dColor = c end })
-
 EspTab:CreateToggle({ Name = "3D Box: Murder", CurrentValue = false, Callback = function(v) box3dMurderEnabled = v end })
 EspTab:CreateColorPicker({ Name = "3D Box Color: Murder", Color = box3dMurderColor, Callback = function(c) box3dMurderColor = c end })
-
 EspTab:CreateToggle({ Name = "3D Box: Sheriff", CurrentValue = false, Callback = function(v) box3dSheriffEnabled = v end })
 EspTab:CreateColorPicker({ Name = "3D Box Color: Sheriff", Color = box3dSheriffColor, Callback = function(c) box3dSheriffColor = c end })
-
 EspTab:CreateToggle({ Name = "3D Box: Innocent", CurrentValue = false, Callback = function(v) box3dInnocentEnabled = v end })
 EspTab:CreateColorPicker({ Name = "3D Box Color: Innocent", Color = box3dInnocentColor, Callback = function(c) box3dInnocentColor = c end })
 
@@ -869,7 +861,6 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
-
 local BoxData = {}
 
 local function IsValidVector2(v)
@@ -932,6 +923,7 @@ RunService.RenderStepped:Connect(function()
 		{5, 6}, {6, 8}, {8, 7}, {7, 5},
 		{1, 5}, {2, 6}, {3, 7}, {4, 8}
 	}
+
 	-- Игроки
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -942,6 +934,7 @@ RunService.RenderStepped:Connect(function()
 			elseif isSheriff(player) and box3dSheriffEnabled then show = true; color = box3dSheriffColor
 			elseif isInnocent(player) and box3dInnocentEnabled then show = true; color = box3dInnocentColor
 			elseif box3dEnabled then show = true; color = box3dColor end
+
 			if show then
 				local verts = GetCorners(hrp.CFrame, Vector3.new(3, 5, 1.5))
 				local lines = GetOrCreateLines(id)
@@ -976,6 +969,7 @@ EspTab:CreateSection("Role Tags")
 _G.ShowSheriffTag = false
 _G.ShowMurderTag = false
 _G.ShowInnocentTag = false
+
 _G.SheriffTagColor = Color3.fromRGB(40, 255, 60)
 _G.MurderTagColor = Color3.fromRGB(255, 30, 60)
 _G.InnocentTagColor = Color3.fromRGB(200, 255, 255)
@@ -986,7 +980,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) _G.ShowSheriffTag = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Tag Color: Sheriff",
 	Color = _G.SheriffTagColor,
@@ -998,7 +991,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) _G.ShowMurderTag = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Tag Color: Murder",
 	Color = _G.MurderTagColor,
@@ -1010,7 +1002,6 @@ EspTab:CreateToggle({
 	CurrentValue = false,
 	Callback = function(Value) _G.ShowInnocentTag = Value end
 })
-
 EspTab:CreateColorPicker({
 	Name = "Tag Color: Innocent",
 	Color = _G.InnocentTagColor,
@@ -1058,17 +1049,21 @@ local function createRoleTag(player, text, color)
 		roleTags[player]:Destroy()
 		roleTags[player] = nil
 	end
+
 	local char = player.Character
 	if not char then return end
 	local head = char:FindFirstChild("Head")
 	if not head then return end
+
 	clearOtherBillboards(player)
+
 	local tag = Instance.new("BillboardGui")
 	tag.Name = "RoleTag"
 	tag.Size = UDim2.new(0, 100, 0, 40)
 	tag.Adornee = head
 	tag.AlwaysOnTop = true
 	tag.StudsOffset = Vector3.new(0, 2.5, 0)
+
 	local label = Instance.new("TextLabel")
 	label.Name = "RoleLabel"
 	label.Size = UDim2.new(1, 0, 1, 0)
@@ -1079,6 +1074,7 @@ local function createRoleTag(player, text, color)
 	label.Font = Enum.Font.GothamBold
 	label.TextScaled = true
 	label.Parent = tag
+
 	tag.Parent = head
 	roleTags[player] = tag
 end
@@ -1200,6 +1196,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
+
 -- ========== Gun Text ESP ==========
 local gunTextEnabled = false
 local gunTextColor = Color3.fromRGB(30, 144, 255)
@@ -1243,6 +1240,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         end
         return
     end
+
     local gunParts = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") and obj.Name == "GunDrop" then
@@ -1254,6 +1252,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 billboard.Adornee = obj
                 billboard.AlwaysOnTop = true
                 billboard.StudsOffset = Vector3.new(0, 1.2, 0)
+
                 local text = Instance.new("TextLabel")
                 text.Name = "Text"
                 text.Size = UDim2.new(1, 0, 1, 0)
@@ -1264,6 +1263,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 text.Font = Enum.Font.GothamBold
                 text.TextScaled = true
                 text.Parent = billboard
+
                 billboard.Parent = obj
                 gunTextLabels[obj] = billboard
             else
@@ -1274,6 +1274,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
             end
         end
     end
+
     -- Remove labels from missing guns
     for obj, _ in pairs(gunTextLabels) do
         if not gunParts[obj] or not obj:IsDescendantOf(workspace) then
@@ -1325,6 +1326,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         end
         return
     end
+
     local coinParts = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") and obj.Name == "MainCoin" then
@@ -1336,6 +1338,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 billboard.Adornee = obj
                 billboard.AlwaysOnTop = true
                 billboard.StudsOffset = Vector3.new(0, 1.2, 0)
+
                 local text = Instance.new("TextLabel")
                 text.Name = "Text"
                 text.Size = UDim2.new(1, 0, 1, 0)
@@ -1346,6 +1349,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 text.Font = Enum.Font.GothamBold
                 text.TextScaled = true
                 text.Parent = billboard
+
                 billboard.Parent = obj
                 coinTextLabels[obj] = billboard
             else
@@ -1356,6 +1360,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
             end
         end
     end
+
     -- Remove labels from missing coins
     for obj, _ in pairs(coinTextLabels) do
         if not coinParts[obj] or not obj:IsDescendantOf(workspace) then
@@ -1385,7 +1390,6 @@ EspTab:CreateColorPicker({
 })
 
 local DistanceLabels = {}
-
 local function ClearLabels()
     for _, label in ipairs(DistanceLabels) do
         if label.Remove then
@@ -1497,7 +1501,7 @@ end
 
 -- Функция обновления пинга (вызывается раз в секунду)
 local function UpdatePlayerPings()
-    for _, player in ipairs(game:GetService("Players"):GetPlayers())  do
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             PlayerPings[player.UserId] = GetPlayerPing(player)
         end
@@ -1700,6 +1704,7 @@ end)
 
 -- === CHAMS TAB ===
 local ChamsTab = Window:CreateTab("Chams", 4483362459)
+
 ChamsTab:CreateSection("Chams ESP (Player Fill)")
 
 -- Переменные состояния
@@ -1722,7 +1727,6 @@ ChamsTab:CreateToggle({
     CurrentValue = false,
     Callback = function(v) chamsAllEnabled = v end
 })
-
 ChamsTab:CreateColorPicker({
     Name = "Chams color: player",
     Color = chamsAllColor,
@@ -1734,7 +1738,6 @@ ChamsTab:CreateToggle({
     CurrentValue = false,
     Callback = function(v) chamsMurderEnabled = v end
 })
-
 ChamsTab:CreateColorPicker({
     Name = "Chams color: Murder",
     Color = chamsMurderColor,
@@ -1746,7 +1749,6 @@ ChamsTab:CreateToggle({
     CurrentValue = false,
     Callback = function(v) chamsSheriffEnabled = v end
 })
-
 ChamsTab:CreateColorPicker({
     Name = "Chams color: Sheriff",
     Color = chamsSheriffColor,
@@ -1758,7 +1760,6 @@ ChamsTab:CreateToggle({
     CurrentValue = false,
     Callback = function(v) chamsInnocentEnabled = v end
 })
-
 ChamsTab:CreateColorPicker({
     Name = "Chams color: Innocent",
     Color = chamsInnocentColor,
@@ -1771,7 +1772,6 @@ ChamsTab:CreateToggle({
     CurrentValue = false,
     Callback = function(v) chamsCoinEnabled = v end
 })
-
 ChamsTab:CreateColorPicker({
     Name = "Chams color: Coin",
     Color = chamsCoinColor,
@@ -1787,12 +1787,10 @@ local function isChamsMurder(p)
     local bp, ch = p:FindFirstChild("Backpack"), p.Character
     return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
 end
-
 local function isChamsSheriff(p)
     local bp, ch = p:FindFirstChild("Backpack"), p.Character
     return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
 end
-
 local function isChamsInnocent(p)
     return not isChamsMurder(p) and not isChamsSheriff(p) and p ~= LocalPlayer
 end
@@ -1801,19 +1799,23 @@ local function ApplyChams(player)
     if player == LocalPlayer then return end
     if not player.Character then return end
     local char = player.Character
+
     -- Удалить предыдущий Highlight для Chams (не конфликтует с Outline)
     for _, inst in ipairs(char:GetChildren()) do
         if inst:IsA("Highlight") and inst.Name == "ChamsHighlight" then
             inst:Destroy()
         end
     end
+
     local highlight = Instance.new("Highlight")
     highlight.Name = "ChamsHighlight"
     highlight.FillTransparency = 0.28
     highlight.OutlineTransparency = 1
     highlight.Adornee = char
     highlight.Parent = char
+
     highlight.Enabled = false
+
     if chamsMurderEnabled and isChamsMurder(player) then
         highlight.FillColor = chamsMurderColor
         highlight.Enabled = true
@@ -1837,7 +1839,6 @@ Players.PlayerAdded:Connect(function(player)
         ApplyChams(player)
     end)
 end)
-
 for _, player in ipairs(Players:GetPlayers()) do
     if player.Character then ApplyChams(player) end
     player.CharacterAdded:Connect(function()
@@ -1949,13 +1950,11 @@ local function isMurderer(player)
     local ch = player.Character
     return (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife"))
 end
-
 local function isSheriff(player)
     local bp = player:FindFirstChild("Backpack")
     local ch = player.Character
     return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
 end
-
 local function getRole(player)
     if isMurderer(player) then
         return "Murder"
@@ -1975,23 +1974,27 @@ MurderTab:CreateButton({
             warn("Твой персонаж не найден!")
             return
         end
+
         local root = myChar.HumanoidRootPart
         local basePos = root.Position
         local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
         local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
         local distance = 3.2
         local spacing = 1.1
+
         local targets = {}
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                 table.insert(targets, player)
             end
         end
+
         local count = #targets
         for i, player in ipairs(targets) do
             local offset = (i - (count + 1) / 2) * spacing
             local targetPos = basePos + lookVec * distance + rightVec * offset
-            targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+            targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
             player.Character.HumanoidRootPart.CFrame =
                 CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
         end
@@ -2000,28 +2003,31 @@ MurderTab:CreateButton({
 
 -- Автотелепорт если ты Murder
 local autoTpMurderConnection = nil
-
 local function autoTeleportAllIfMurder()
     local myChar = LocalPlayer.Character
     if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
     if not isMurderer(LocalPlayer) then return end
+
     local root = myChar.HumanoidRootPart
     local basePos = root.Position
     local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
     local rightVec = Vector3.new(root.CFrame.RightVector.X, 0, root.CFrame.RightVector.Z).Unit
+
     local distance = 3.2
     local spacing = 1.1
+
     local targets = {}
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             table.insert(targets, player)
         end
     end
+
     local count = #targets
     for i, player in ipairs(targets) do
         local offset = (i - (count + 1) / 2) * spacing
         local targetPos = basePos + lookVec * distance + rightVec * offset
-        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
         player.Character.HumanoidRootPart.CFrame =
             CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
     end
@@ -2102,149 +2108,28 @@ MurderTab:CreateButton({
             warn("Не выбран игрок!")
             return
         end
+
         local myChar = LocalPlayer.Character
         if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then
             warn("Твой персонаж не найден!")
             return
         end
+
         local targetPlayer = Players:FindFirstChild(playerName)
         if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
             warn("Персонаж выбранного игрока не найден!")
             return
         end
+
         local root = myChar.HumanoidRootPart
         local basePos = root.Position
         local lookVec = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+
         local distance = 3.2
+
         local targetPos = basePos + lookVec * distance
-        targetPos = Vector3.new(targetPos.X, basePos.Y, targetPos.Z)
+        targetPos = Vector3.new(targetPos.X, basePos.Y, basePos.Z)
         targetPlayer.Character.HumanoidRootPart.CFrame =
             CFrame.new(targetPos, Vector3.new(basePos.X, basePos.Y, basePos.Z))
     end
 })
-
--- === UNIVERSAL TAB (ТОЛЬКО СПИДХАК) ===
-local UniversalTab = Window:CreateTab("Universal", 4483362461)
-
--- Объявляем все необходимые переменные в начале
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-
--- Переменные для скорости
-local speedValue = 16 -- Стандартная скорость
-local normalSpeed = 16 -- Нормальная скорость для возврата
-
--- Переменные для Legit Speedhack
-local legitSpeedEnabled = false
-local legitSpeedValue = 40
-local legitKeyDown = false
-
--- === СЕКЦИЯ: SPEEDHACK ===
-UniversalTab:CreateSection("Speedhack")
-
--- === Basic WalkSpeed Slider ===
-UniversalTab:CreateSlider({
-    Name = "Player WalkSpeed",
-    Range = {8, 100},
-    Increment = 1,
-    Suffix = " Speed",
-    CurrentValue = 16,
-    Callback = function(val)
-        speedValue = val
-        normalSpeed = val -- Обновляем нормальную скорость
-        
-        -- Применяем скорость немедленно, если персонаж существует
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
-        end
-    end
-})
-
--- === Legit Speedhack Toggle ===
-UniversalTab:CreateToggle({
-    Name = "Legit Speedhack (Hold X)",
-    CurrentValue = false,
-    Callback = function(val)
-        legitSpeedEnabled = val
-        legitKeyDown = false -- Сброс при выключении
-        
-        -- При выключении возвращаем обычную скорость
-        if not val and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
-        end
-    end
-})
-
--- === Legit Speed Value Slider ===
-UniversalTab:CreateSlider({
-    Name = "Legit Speed Value",
-    Range = {16, 150},
-    Increment = 1,
-    Suffix = " Speed",
-    CurrentValue = 40,
-    Callback = function(val)
-        legitSpeedValue = val
-    end
-})
-
--- === ОБРАБОТЧИКИ СОБЫТИЙ ===
-
--- Обработчик нажатий клавиш для Legit Speedhack
-UserInputService.InputBegan:Connect(function(input, processed)
-    if not processed and legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
-        legitKeyDown = true
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input, processed)
-    if legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
-        legitKeyDown = false
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
-        end
-    end
-end)
-
--- Обработчик респавна персонажа
-LocalPlayer.CharacterAdded:Connect(function(character)
-    -- Ждем появления Humanoid
-    local humanoid = character:WaitForChild("Humanoid", 10)
-    if not humanoid then return end
-
-    -- Применяем настройки скорости
-    if legitSpeedEnabled and legitKeyDown then
-        humanoid.WalkSpeed = legitSpeedValue
-    else
-        humanoid.WalkSpeed = speedValue
-    end
-end)
-
--- Постоянное обновление скорости (защита от сброса)
-RunService.Heartbeat:Connect(function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        
-        -- Проверяем и корректируем скорость
-        local targetSpeed = (legitSpeedEnabled and legitKeyDown) and legitSpeedValue or speedValue
-        if math.abs(humanoid.WalkSpeed - targetSpeed) > 1 then
-            humanoid.WalkSpeed = targetSpeed
-        end
-    end
-end)
-
--- Уведомление о загрузке
-print("✅ ESP Menu загружен успешно!")
-print("📋 Доступные функции:")
-print("   • Box ESP для всех ролей и предметов")
-print("   • Tracer ESP для игроков и объектов")
-print("   • Outlining ESP с подсветкой")
-print("   • 3D Box ESP")
-print("   • Role Tags")
-print("   • Chams ESP")
-print("   • Murder Tab с телепортацией")
-print("   • Universal Tab со Speedhack")
-print("   • Speedhack с легит режимом на клавишу X")
-print("   • Настройка цветов для каждой категории")
