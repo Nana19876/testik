@@ -1939,10 +1939,18 @@ end
 
 local selectedPlayerName = nil
 
+-- === UNIVERSAL TAB ===
 local UniversalTab = Window:CreateTab("Universal", 4483362461)
 
-local speedValue = 16 -- Стандартная скорость
+-- Объявляем все необходимые переменные в начале
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
+local speedValue = 16 -- Стандартная скорость
+local normalSpeed = 16 -- Нормальная скорость для возврата
+
+-- === Basic WalkSpeed Slider ===
 UniversalTab:CreateSlider({
     Name = "Player WalkSpeed",
     Range = {8, 100},
@@ -1951,7 +1959,7 @@ UniversalTab:CreateSlider({
     CurrentValue = 16,
     Callback = function(val)
         speedValue = val
-        local player = game.Players.LocalPlayer
+        local player = LocalPlayer
         if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
             player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
         end
@@ -1959,7 +1967,7 @@ UniversalTab:CreateSlider({
 })
 
 -- Сохраняем скорость при респавне
-game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+LocalPlayer.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid", 5)
     if char:FindFirstChildOfClass("Humanoid") then
         char:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
@@ -1969,7 +1977,6 @@ end)
 -- === Legit Speedhack ===
 local legitSpeedEnabled = false
 local legitSpeedValue = 40
-local userInput = game:GetService("UserInputService")
 local legitKeyDown = false
 
 UniversalTab:CreateToggle({
@@ -1978,8 +1985,10 @@ UniversalTab:CreateToggle({
     Callback = function(val)
         legitSpeedEnabled = val
         legitKeyDown = false -- сброс при выключении
+        
         -- При выключении вернём обычную скорость
         if not val then
+            local player = LocalPlayer
             if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
                 player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
             end
@@ -1999,18 +2008,21 @@ UniversalTab:CreateSlider({
 })
 
 -- Управление скоростью по нажатию X
-userInput.InputBegan:Connect(function(input, processed)
+UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
         legitKeyDown = true
+        local player = LocalPlayer
         local char = player.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
             char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
         end
     end
 end)
-userInput.InputEnded:Connect(function(input, processed)
+
+UserInputService.InputEnded:Connect(function(input, processed)
     if legitSpeedEnabled and input.KeyCode == Enum.KeyCode.X then
         legitKeyDown = false
+        local player = LocalPlayer
         local char = player.Character
         if char and char:FindFirstChildOfClass("Humanoid") then
             char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
@@ -2019,12 +2031,30 @@ userInput.InputEnded:Connect(function(input, processed)
 end)
 
 -- При респавне поддерживаем логику работы обоих спидхаков
-player.CharacterAdded:Connect(function(char)
+LocalPlayer.CharacterAdded:Connect(function(char)
     char:WaitForChild("Humanoid", 5)
-    if legitSpeedEnabled and legitKeyDown and char:FindFirstChildOfClass("Humanoid") then
-        char:FindFirstChildOfClass("Humanoid").WalkSpeed = legitSpeedValue
-    elseif char:FindFirstChildOfClass("Humanoid") then
-        char:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    
+    -- Если легит спидхак включен и клавиша зажата
+    if legitSpeedEnabled and legitKeyDown then
+        humanoid.WalkSpeed = legitSpeedValue
+    else
+        -- Иначе используем обычную скорость (которая может быть изменена слайдером)
+        humanoid.WalkSpeed = speedValue
+    end
+end)
+
+-- Дополнительная защита: обновляем normalSpeed при изменении основной скорости
+local function updateNormalSpeed()
+    normalSpeed = speedValue
+end
+
+-- Вызываем обновление при изменении speedValue
+spawn(function()
+    while true do
+        updateNormalSpeed()
+        wait(0.1)
     end
 end)
 
