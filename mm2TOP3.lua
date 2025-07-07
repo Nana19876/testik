@@ -1940,6 +1940,9 @@ end
 local selectedPlayerName = nil
 
 local UniversalTab = Window:CreateTab("Universal", 4483362461)
+
+local speedValue = 16 -- Стандартная скорость
+
 UniversalTab:CreateSlider({
     Name = "Player WalkSpeed",
     Range = {8, 100},
@@ -1947,13 +1950,21 @@ UniversalTab:CreateSlider({
     Suffix = " WalkSpeed",
     CurrentValue = 16,
     Callback = function(val)
-        normalSpeed = val
-        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") and not (_G.legitSpeedEnabled and _G.legitKeyDown) then
-            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+        speedValue = val
+        local player = game.Players.LocalPlayer
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
         end
     end
 })
 
+-- Сохраняем скорость при респавне
+game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid", 5)
+    if char:FindFirstChildOfClass("Humanoid") then
+        char:FindFirstChildOfClass("Humanoid").WalkSpeed = speedValue
+    end
+end)
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
