@@ -1980,30 +1980,51 @@ PlayerTab:CreateParagraph({
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-
 local holdingX = false
+
+-- Функция для безопасного получения персонажа
+local function getCharacter()
+    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+end
+
+-- Функция для установки скорости
+local function setWalkSpeed(speed)
+    local char = getCharacter()
+    if char then
+        local humanoid = char:WaitForChild("Humanoid", 5)
+        if humanoid then
+            humanoid.WalkSpeed = speed
+        end
+    end
+end
 
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
+    
     if input.KeyCode == Enum.KeyCode.X and speedHackEnabled and not holdingX then
         holdingX = true
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.WalkSpeed = speedValue
-        end
+        setWalkSpeed(speedValue)
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.X and holdingX then
         holdingX = false
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.WalkSpeed = 16
-        end
+        setWalkSpeed(16)
     end
 end)
 
+-- Дополнительная проверка на респавн персонажа
+LocalPlayer.CharacterAdded:Connect(function(character)
+    -- Сбрасываем состояние при респавне
+    holdingX = false
+    
+    -- Ждем загрузки Humanoid
+    local humanoid = character:WaitForChild("Humanoid", 10)
+    if humanoid then
+        humanoid.WalkSpeed = 16
+    end
+end)
 
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
