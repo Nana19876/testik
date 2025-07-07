@@ -1940,7 +1940,6 @@ end
 local selectedPlayerName = nil
 
 local PlayerTab = Window:CreateTab("Player", 4483362458)
-PlayerTab:CreateSection("Speed Hack")
 
 local speedHackEnabled = false
 local speedValue = 50
