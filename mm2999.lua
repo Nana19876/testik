@@ -1,33 +1,5 @@
--- Безопасная загрузка Rayfield с проверкой ошибок
-local success, Rayfield = pcall(function()
-    return loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
-end)
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
-if not success or not Rayfield then
-    warn("Ошибка загрузки Rayfield! Попробуйте альтернативный URL или проверьте интернет.")
-    -- Альтернативный способ загрузки
-    local success2, Rayfield2 = pcall(function()
-        return loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
-    end)
-    
-    if success2 and Rayfield2 then
-        Rayfield = Rayfield2
-        print("Rayfield загружен с альтернативного источника!")
-    else
-        error("Не удалось загрузить Rayfield ни с одного источника!")
-        return
-    end
-else
-    print("Rayfield успешно загружен!")
-end
-
--- Проверяем, что Rayfield действительно загрузился
-if not Rayfield or type(Rayfield) ~= "table" then
-    error("Rayfield не является корректным объектом!")
-    return
-end
-
--- Остальная часть вашего кода остается без изменений
 local Window = Rayfield:CreateWindow({
     Name = "ESP Menu",
     LoadingTitle = "Загрузка...",
@@ -1978,7 +1950,7 @@ PlayerTab:CreateToggle({
     CurrentValue = false,
     Callback = function(Value)
         speedHackEnabled = Value
-        -- Если выключили, возвращаем стандартную скорость
+        -- Если выключили, сразу возвращаем стандартную скорость
         if not Value then
             local char = game.Players.LocalPlayer.Character
             if char and char:FindFirstChild("Humanoid") then
@@ -1999,58 +1971,33 @@ PlayerTab:CreateSlider({
     end,
 })
 
-PlayerTab:CreateParagraph({
-    Title = "Клавиша ускорения",
-    Content = "Зажмите X чтобы ускориться"
-})
+PlayerTab:CreateLabel("Зажмите X чтобы ускориться")
 
 -- Клавиши
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+
 local holdingX = false
-
--- Функция для безопасного получения персонажа
-local function getCharacter()
-    return LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-end
-
--- Функция для установки скорости
-local function setWalkSpeed(speed)
-    local char = getCharacter()
-    if char then
-        local humanoid = char:WaitForChild("Humanoid", 5)
-        if humanoid then
-            humanoid.WalkSpeed = speed
-        end
-    end
-end
 
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
-    
     if input.KeyCode == Enum.KeyCode.X and speedHackEnabled and not holdingX then
         holdingX = true
-        setWalkSpeed(speedValue)
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = speedValue
+        end
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.X and holdingX then
         holdingX = false
-        setWalkSpeed(16)
-    end
-end)
-
--- Дополнительная проверка на респавн персонажа
-LocalPlayer.CharacterAdded:Connect(function(character)
-    -- Сбрасываем состояние при респавне
-    holdingX = false
-    
-    -- Ждем загрузки Humanoid
-    local humanoid = character:WaitForChild("Humanoid", 10)
-    if humanoid then
-        humanoid.WalkSpeed = 16
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = 16
+        end
     end
 end)
 
