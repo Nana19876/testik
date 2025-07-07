@@ -1939,6 +1939,50 @@ end
 
 local selectedPlayerName = nil
 
+-- SpeedHack Section (Rayfield, без кнопок)
+local PlayerTab = Window:CreateTab("Player", 4483362458)
+PlayerTab:CreateSection("Speed Hack")
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local speedHackEnabled = false
+local speedValue = 50
+local DEFAULT_SPEED = 16
+
+PlayerTab:CreateToggle({
+    Name = "Speed Hack",
+    CurrentValue = false,
+    Callback = function(Value)
+        speedHackEnabled = Value
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then
+            if Value then
+                char.Humanoid.WalkSpeed = speedValue
+            else
+                char.Humanoid.WalkSpeed = DEFAULT_SPEED
+            end
+        end
+    end
+})
+
+PlayerTab:CreateSlider({
+    Name = "Speed Value",
+    Range = {16, 150},
+    Increment = 1,
+    Suffix = "WalkSpeed",
+    CurrentValue = 50,
+    Callback = function(Value)
+        speedValue = Value
+        if speedHackEnabled then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                char.Humanoid.WalkSpeed = speedValue
+            end
+        end
+    end
+})
+
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
