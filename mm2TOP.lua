@@ -1939,67 +1939,6 @@ end
 
 local selectedPlayerName = nil
 
-local PlayerTab = Window:CreateTab("Player", 4483362458)
-
--- SpeedHack переменные
-local speedHackEnabled = false
-local speedValue = 50
-
-PlayerTab:CreateToggle({
-    Name = "Speed Hack",
-    CurrentValue = false,
-    Callback = function(Value)
-        speedHackEnabled = Value
-        -- Если выключили, сразу возвращаем стандартную скорость
-        if not Value then
-            local char = game.Players.LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") then
-                char.Humanoid.WalkSpeed = 16
-            end
-        end
-    end
-})
-
-PlayerTab:CreateSlider({
-    Name = "Speed Value",
-    Range = {16, 150},
-    Increment = 1,
-    Suffix = "WalkSpeed",
-    CurrentValue = 50,
-    Callback = function(Value)
-        speedValue = Value
-    end,
-})
-
--- Управление по клавише X
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-local holdingX = false
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.X and speedHackEnabled and not holdingX then
-        holdingX = true
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.WalkSpeed = speedValue
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input, processed)
-    if input.KeyCode == Enum.KeyCode.X and holdingX then
-        holdingX = false
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then
-            char.Humanoid.WalkSpeed = 16
-        end
-    end
-end)
-
-
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
