@@ -1939,6 +1939,22 @@ end
 
 local selectedPlayerName = nil
 
+local UniversalTab = Window:CreateTab("Universal", 4483362461)
+UniversalTab:CreateSlider({
+    Name = "Player WalkSpeed",
+    Range = {8, 100},
+    Increment = 1,
+    Suffix = " WalkSpeed",
+    CurrentValue = 16,
+    Callback = function(val)
+        normalSpeed = val
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") and not (_G.legitSpeedEnabled and _G.legitKeyDown) then
+            player.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = normalSpeed
+        end
+    end
+})
+
+
 local MurderTab = Window:CreateTab("Murder", 4483362462)
 
 local Players = game:GetService("Players")
